@@ -1,9 +1,14 @@
 import React from 'react'
 import Link from 'next/link'
-import { CATEGORIES, ACCOUNT_MENU_ITEMS } from './constants'
+import { ACCOUNT_MENU_ITEMS } from './constants'
 import Logo from '../Logo'
+import type { CategoryItem } from '.'
 
-export default function DesktopNavbar() {
+interface DesktopNavbarProps {
+  categories: CategoryItem[]
+}
+
+export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
   return (
     <div className="hidden lg:block">
       {/* Simplified Desktop Navbar */}
@@ -101,15 +106,17 @@ export default function DesktopNavbar() {
             >
               All Products
             </Link>
-            {CATEGORIES.filter((cat) => cat.value !== 'all').map((category) => (
-              <Link
-                key={category.value}
-                href={`/category/${category.value}`}
-                className="text-sm text-base-content/80 hover:text-primary transition-colors whitespace-nowrap"
-              >
-                {category.label}
-              </Link>
-            ))}
+            {categories
+              .filter((cat) => cat.value !== 'all')
+              .map((category) => (
+                <Link
+                  key={category.value}
+                  href={`/category/${category.slug}`}
+                  className="text-sm text-base-content/80 hover:text-primary transition-colors whitespace-nowrap"
+                >
+                  {category.label}
+                </Link>
+              ))}
             <Link
               href="/deals"
               className="text-sm text-warning hover:text-warning-focus transition-colors whitespace-nowrap font-medium"
