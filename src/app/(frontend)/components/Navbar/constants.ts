@@ -1,0 +1,45 @@
+export interface Category {
+  value: string
+  label: string
+}
+
+export interface MobileMenuItem {
+  href: string
+  label: string
+  isSignIn?: boolean
+}
+
+export interface AccountMenuItem {
+  href?: string
+  label?: string
+  isBold?: boolean
+  isDivider?: boolean
+}
+
+export const CATEGORIES: Category[] = [
+  { value: 'all', label: 'All Departments' },
+  { value: 'electronics', label: 'Electronics' },
+  { value: 'books', label: 'Books' },
+  { value: 'clothing', label: 'Clothing' },
+  { value: 'home-garden', label: 'Home & Garden' },
+  { value: 'sports', label: 'Sports' },
+]
+
+export const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
+  { href: '/signin', label: 'Sign in', isSignIn: true },
+  { href: '/', label: 'Home' },
+  { href: '/deals', label: "Today's Deals" },
+  { href: '/orders', label: 'Your Orders' },
+  { href: '/account', label: 'Your Account' },
+  { href: '/lists', label: 'Your Lists' },
+  { href: '/customer-service', label: 'Customer Service' },
+]
+
+export const ACCOUNT_MENU_ITEMS: AccountMenuItem[] = [
+  { href: '/signin', label: 'Sign in', isBold: true },
+  { href: '/register', label: 'New customer? Start here.' },
+  { isDivider: true },
+  { href: '/orders', label: 'Your Orders' },
+  { href: '/account', label: 'Your Account' },
+  { href: '/lists', label: 'Your Lists' },
+]
