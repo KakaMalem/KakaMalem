@@ -72,6 +72,7 @@ export interface Config {
     categories: Category;
     products: Product;
     orders: Order;
+    reviews: Review;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -87,6 +88,7 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
+    reviews: ReviewsSelect<false> | ReviewsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -244,6 +246,14 @@ export interface Product {
   id: string;
   name: string;
   slug: string;
+  /**
+   * Average rating (calculated from approved reviews)
+   */
+  averageRating?: number | null;
+  /**
+   * Number of approved reviews
+   */
+  reviewCount?: number | null;
   description?: {
     root: {
       type: string;
@@ -325,6 +335,43 @@ export interface Category {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reviews".
+ */
+export interface Review {
+  id: string;
+  product: string | Product;
+  user: string | User;
+  /**
+   * Rating from 1 to 5 stars
+   */
+  rating: number;
+  title: string;
+  comment: string;
+  status: 'pending' | 'approved' | 'rejected';
+  /**
+   * User purchased this product
+   */
+  verifiedPurchase?: boolean | null;
+  /**
+   * Number of users who found this helpful
+   */
+  helpful?: number | null;
+  images?:
+    | {
+        image: string | Media;
+        alt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  adminResponse?: {
+    response?: string | null;
+    respondedAt?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
@@ -349,6 +396,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'orders';
         value: string | Order;
+      } | null)
+    | ({
+        relationTo: 'reviews';
+        value: string | Review;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -490,6 +541,8 @@ export interface CategoriesSelect<T extends boolean = true> {
 export interface ProductsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  averageRating?: T;
+  reviewCount?: T;
   description?: T;
   shortDescription?: T;
   price?: T;
@@ -552,6 +605,35 @@ export interface OrdersSelect<T extends boolean = true> {
   paymentStatus?: T;
   paymentMethod?: T;
   currency?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reviews_select".
+ */
+export interface ReviewsSelect<T extends boolean = true> {
+  product?: T;
+  user?: T;
+  rating?: T;
+  title?: T;
+  comment?: T;
+  status?: T;
+  verifiedPurchase?: T;
+  helpful?: T;
+  images?:
+    | T
+    | {
+        image?: T;
+        alt?: T;
+        id?: T;
+      };
+  adminResponse?:
+    | T
+    | {
+        response?: T;
+        respondedAt?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
