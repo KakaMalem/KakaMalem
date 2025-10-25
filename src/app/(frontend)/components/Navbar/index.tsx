@@ -38,21 +38,31 @@ async function Navbar() {
 
   return (
     <nav
-      className="relative bg-base-300 text-base-content overflow-hidden"
+      className="relative bg-base-300 text-base-content overflow-visible z-[60]"
       role="navigation"
       aria-label="Main navigation"
     >
-      {/* Simplified Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/8 to-accent/8"></div>
+      {/* Background (decorative) — placed behind interactive content */}
+      <div
+        className="absolute inset-0 bg-gradient-to-r from-primary/8 to-accent/8 z-0 pointer-events-none"
+        aria-hidden
+      />
 
-      {/* Elegant Border Accent */}
-      <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+      {/* Elegant Border Accent (decorative) */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent z-10 pointer-events-none"
+        aria-hidden
+      />
 
-      {/* Mobile Navbar Component */}
-      <MobileNavbar categories={categories} />
+      {/* Mobile Navbar Component — interactive content above decorations */}
+      <div className="relative z-20">
+        <MobileNavbar categories={categories} />
+      </div>
 
-      {/* Desktop Navbar Component */}
-      <DesktopNavbar categories={categories} />
+      {/* Desktop Navbar Component — interactive content above decorations */}
+      <div className="relative z-20">
+        <DesktopNavbar categories={categories} />
+      </div>
     </nav>
   )
 }
