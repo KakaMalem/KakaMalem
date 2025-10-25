@@ -356,13 +356,7 @@ export interface Review {
    * Number of users who found this helpful
    */
   helpful?: number | null;
-  images?:
-    | {
-        image: string | Media;
-        alt?: string | null;
-        id?: string | null;
-      }[]
-    | null;
+  images?: (string | null) | Media;
   adminResponse?: {
     response?: string | null;
     respondedAt?: string | null;
@@ -621,13 +615,7 @@ export interface ReviewsSelect<T extends boolean = true> {
   status?: T;
   verifiedPurchase?: T;
   helpful?: T;
-  images?:
-    | T
-    | {
-        image?: T;
-        alt?: T;
-        id?: T;
-      };
+  images?: T;
   adminResponse?:
     | T
     | {
