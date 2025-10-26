@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { Mail, Facebook, Twitter, Instagram, Github } from 'lucide-react'
+import Logo from './Logo'
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -24,12 +25,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Branding + blurb */}
           <div>
-            <a href="/" className="inline-flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold select-none">
-                K
-              </div>
-              <span className="font-bold text-lg">Kaka Malem</span>
-            </a>
+            <Logo />
             <p className="mt-4 text-sm opacity-80">
               Online shop for groceries, food, gadgets and more. Fast shipping, honest prices, and
               customer care that actually cares.

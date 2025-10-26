@@ -12,7 +12,7 @@ export interface AccountMenuItem {
 }
 
 export const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
-  { href: '/signin', label: 'Sign in', isSignIn: true },
+  { href: '/auth/login', label: 'Sign in', isSignIn: true },
   { href: '/', label: 'Home' },
   { href: '/deals', label: "Today's Deals" },
   { href: '/orders', label: 'Your Orders' },
@@ -22,8 +22,8 @@ export const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
 ]
 
 export const ACCOUNT_MENU_ITEMS: AccountMenuItem[] = [
-  { href: '/signin', label: 'Sign in', isBold: true },
-  { href: '/register', label: 'New customer? Start here.' },
+  { href: '/auth/login', label: 'Sign in', isBold: true },
+  { href: '/auth/register', label: 'New customer? Start here.' },
   { isDivider: true },
   { href: '/orders', label: 'Your Orders' },
   { href: '/account', label: 'Your Account' },

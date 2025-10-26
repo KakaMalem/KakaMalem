@@ -12,8 +12,8 @@ import {
   ArrowRight,
   ShoppingCart,
 } from 'lucide-react'
-import { ProductCard } from './components/ProductCard'
-import { CategoryCard } from './components/CategoryCard'
+import { ProductCard } from '../components/ProductCard'
+import { CategoryCard } from '../components/CategoryCard'
 import { Category, Product } from '@/payload-types'
 
 interface HomeData {
