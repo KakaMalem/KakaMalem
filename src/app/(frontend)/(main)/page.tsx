@@ -15,6 +15,7 @@ import {
 import { ProductCard } from '../components/ProductCard'
 import { CategoryCard } from '../components/CategoryCard'
 import { Category, Product } from '@/payload-types'
+import { MOCK_PRODUCTS } from '@/lib/mockProducts' // <- shared mock products
 
 interface HomeData {
   heroProducts: Product[]
@@ -31,40 +32,22 @@ const getMediaUrl = (media?: string | { url?: string } | any): string | undefine
   return media.url ?? media.data?.url ?? undefined
 }
 
-// Mock data generator - Replace with actual Payload API calls
-const generateMockData = (): HomeData => ({
-  heroProducts: [
-    {
-      id: '1',
-      name: 'Premium Wireless Headphones',
-      slug: 'premium-wireless-headphones',
-      price: 299,
-      salePrice: 249,
-      currency: 'USD',
-      images: [
-        {
-          alt: 'Headphones',
-          image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
-        },
-      ],
-      shortDescription: 'Crystal clear sound with active noise cancellation',
-    } as unknown as Product,
-    {
-      id: '2',
-      name: 'Smart Watch Pro',
-      slug: 'smart-watch-pro',
-      price: 399,
-      currency: 'USD',
-      images: [
-        {
-          alt: 'Smart Watch',
-          image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',
-        },
-      ],
-      shortDescription: 'Track your fitness and stay connected',
-    } as unknown as Product,
-  ],
-  categories: [
+// Mock data generator - now uses shared MOCK_PRODUCTS
+const generateMockData = (): HomeData => {
+  // Use the shared product list & pick subsets by index (safe if mock has >= 12 items)
+  const all = MOCK_PRODUCTS ?? ([] as Product[])
+
+  // Hero: first 2 products (fallback to first available)
+  const heroProducts = all.slice(0, 2)
+
+  // Featured deals: use products 3..6 (if fewer, fallback to whatever exists)
+  const featuredDeals = all.slice(2, 6)
+
+  // Trending: products 6..10
+  const trendingProducts = all.slice(6, 10)
+
+  // Categories are still small inline mocks (move to lib if you want)
+  const categories: Category[] = [
     {
       id: '1',
       name: 'Electronics',
@@ -101,144 +84,15 @@ const generateMockData = (): HomeData => ({
       slug: 'books',
       image: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=300',
     } as unknown as Category,
-  ],
-  featuredDeals: [
-    {
-      id: '3',
-      name: 'Samsung Galaxy S24 Ultra',
-      slug: 'samsung-galaxy-s24',
-      price: 1299,
-      salePrice: 1199,
-      currency: 'USD',
-      averageRating: 4.8,
-      reviewCount: 342,
-      images: [
-        {
-          alt: 'Samsung',
-          image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400',
-        },
-      ],
-      shortDescription: 'Latest flagship smartphone',
-    } as unknown as Product,
-    {
-      id: '4',
-      name: 'Nike Air Max 270',
-      slug: 'nike-air-max',
-      price: 159,
-      salePrice: 129,
-      currency: 'USD',
-      averageRating: 4.7,
-      reviewCount: 678,
-      images: [
-        {
-          alt: 'Nike',
-          image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
-        },
-      ],
-      shortDescription: 'Ultimate comfort and style',
-    } as unknown as Product,
-    {
-      id: '5',
-      name: 'KitchenAid Mixer',
-      slug: 'kitchenaid-mixer',
-      price: 449,
-      salePrice: 349,
-      currency: 'USD',
-      averageRating: 4.9,
-      reviewCount: 892,
-      images: [
-        {
-          alt: 'Mixer',
-          image: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=400',
-        },
-      ],
-      shortDescription: 'Professional kitchen appliance',
-    } as unknown as Product,
-    {
-      id: '6',
-      name: 'Dyson V15 Vacuum',
-      slug: 'dyson-vacuum',
-      price: 649,
-      salePrice: 549,
-      currency: 'USD',
-      averageRating: 4.8,
-      reviewCount: 423,
-      images: [
-        {
-          alt: 'Dyson',
-          image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400',
-        },
-      ],
-      shortDescription: 'Laser dust detection',
-    } as unknown as Product,
-  ],
-  trendingProducts: [
-    {
-      id: '7',
-      name: 'Apple AirPods Pro',
-      slug: 'airpods-pro',
-      price: 249,
-      currency: 'USD',
-      averageRating: 4.9,
-      reviewCount: 1234,
-      images: [
-        {
-          alt: 'AirPods',
-          image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400',
-        },
-      ],
-    } as unknown as Product,
-    {
-      id: '8',
-      name: "Levi's 501 Jeans",
-      slug: 'levis-jeans',
-      price: 89,
-      salePrice: 69,
-      currency: 'USD',
-      averageRating: 4.6,
-      reviewCount: 567,
-      images: [
-        {
-          alt: 'Jeans',
-          image:
-            'https://plus.unsplash.com/premium_photo-1674828601017-2b8d4ea90aca?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=732',
-        },
-      ],
-    } as unknown as Product,
-    {
-      id: '9',
-      name: 'Instant Pot Duo',
-      slug: 'instant-pot',
-      price: 119,
-      salePrice: 89,
-      currency: 'USD',
-      averageRating: 4.9,
-      reviewCount: 2341,
-      images: [
-        {
-          alt: 'Instant Pot',
-          image: 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=400',
-        },
-      ],
-    } as unknown as Product,
-    {
-      id: '10',
-      name: 'Canon EOS R6',
-      slug: 'canon-eos-r6',
-      price: 2499,
-      currency: 'USD',
-      averageRating: 4.8,
-      reviewCount: 189,
-      images: [
-        {
-          alt: 'Camera',
-          image:
-            'https://images.unsplash.com/photo-1599664223843-9349c75196bc?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1470',
-        },
-      ],
-    } as unknown as Product,
-  ],
-})
+  ]
+
+  return {
+    heroProducts,
+    categories,
+    featuredDeals,
+    trendingProducts,
+  }
+}
 
 export default function Homepage() {
   const [data, setData] = useState<HomeData | null>(null)
@@ -264,8 +118,8 @@ export default function Homepage() {
     )
   }
 
-  const currentHero = data.heroProducts[currentHeroIndex]
-  const bgImageUrl = getMediaUrl(currentHero.images?.[0]?.image) ?? ''
+  const currentHero = data.heroProducts[currentHeroIndex] ?? (data.heroProducts[0] as Product)
+  const bgImageUrl = getMediaUrl(currentHero?.images?.[0]?.image) ?? ''
 
   return (
     <div className="min-h-screen">
@@ -285,10 +139,10 @@ export default function Homepage() {
               <Sparkles className="w-4 h-4" />
               Featured Deal
             </div>
-            <h1 className="mb-5 text-6xl font-bold">{currentHero.name}</h1>
-            <p className="mb-5 text-xl">{currentHero.shortDescription}</p>
+            <h1 className="mb-5 text-6xl font-bold">{currentHero?.name}</h1>
+            <p className="mb-5 text-xl">{currentHero?.shortDescription}</p>
             <div className="flex items-center justify-center gap-4 mb-8">
-              {currentHero.salePrice && (
+              {currentHero?.salePrice && (
                 <>
                   <span className="text-5xl font-bold text-primary">${currentHero.salePrice}</span>
                   <span className="text-3xl line-through opacity-60">${currentHero.price}</span>
@@ -296,13 +150,38 @@ export default function Homepage() {
               )}
             </div>
             <div className="flex gap-4 justify-center">
-              <button className="btn btn-primary btn-lg">
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={() => {
+                  try {
+                    const raw = localStorage.getItem('cart')
+                    const cart = raw ? JSON.parse(raw) : []
+                    const item = {
+                      id: currentHero.id,
+                      name: currentHero.name,
+                      price: currentHero.salePrice ?? currentHero.price,
+                      qty: 1,
+                      image: getMediaUrl(currentHero.images?.[0]?.image) ?? '',
+                      slug: currentHero.slug,
+                    }
+                    const existing = cart.find((c: any) => c.id === item.id)
+                    if (existing) existing.qty += 1
+                    else cart.push(item)
+                    localStorage.setItem('cart', JSON.stringify(cart))
+                  } catch (e) {
+                    console.error('cart error', e)
+                  }
+                }}
+              >
                 <ShoppingCart className="w-5 h-5" />
                 Add to Cart
               </button>
-              <button className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary">
+              <a
+                href={`/product/${currentHero.slug}`}
+                className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary"
+              >
                 View Details
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -311,9 +190,7 @@ export default function Homepage() {
             <button
               key={index}
               onClick={() => setCurrentHeroIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                index === currentHeroIndex ? 'bg-primary w-8' : 'bg-white/50'
-              }`}
+              className={`w-3 h-3 rounded-full transition-all ${index === currentHeroIndex ? 'bg-primary w-8' : 'bg-white/50'}`}
             />
           ))}
         </div>
