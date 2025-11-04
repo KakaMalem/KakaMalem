@@ -135,11 +135,7 @@ export default function LoginPage() {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              className={`btn btn-primary btn-block ${loading ? 'loading' : ''}`}
-              disabled={loading}
-            >
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
               {loading ? (
                 <>
                   <span className="loading loading-spinner" />

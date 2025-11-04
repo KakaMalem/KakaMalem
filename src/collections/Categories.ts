@@ -36,6 +36,11 @@ export const Categories: CollectionConfig = {
       unique: true,
     },
     {
+      name: 'categoryImage',
+      type: 'upload',
+      relationTo: 'media',
+    },
+    {
       name: 'description',
       type: 'textarea',
     },

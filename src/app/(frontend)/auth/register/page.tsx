@@ -51,8 +51,8 @@ export default function RegisterPage() {
     }
 
     try {
-      // Replace with your actual Payload registration API call
-      const response = await fetch('/api/users', {
+      // Call the custom register endpoint
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,19 +62,31 @@ export default function RegisterPage() {
           password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          phone: formData.phone,
-          roles: ['customer'],
+          phone: formData.phone || undefined,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.errors?.[0]?.message || data.message || 'Registration failed')
+        throw new Error(data.error || data.details || 'Registration failed')
       }
 
-      // Auto-login or redirect to login
-      window.location.href = '/login?registered=true'
+      console.log('Registration response:', data)
+
+      // With HTTP-only cookies, the token is automatically set by the server
+      // We don't need to manually store it in localStorage
+
+      if (data.success) {
+        // Store user data only (not the token)
+        localStorage.setItem('user', JSON.stringify(data.user))
+
+        // Redirect to home (cookie will be automatically sent with requests)
+        window.location.href = '/'
+      } else {
+        // Registration succeeded but login might have failed
+        window.location.href = '/auth/login?registered=true'
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration')
     } finally {
@@ -104,7 +116,7 @@ export default function RegisterPage() {
             <p className="text-base-content/70">Join us and start shopping today</p>
           </div>
 
-          {/* Error Alert (keeps red/error for validation) */}
+          {/* Error Alert */}
           {error && (
             <div className="alert alert-error mb-6">
               <svg
@@ -287,11 +299,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              className={`btn btn-primary btn-block ${loading ? 'loading' : ''}`}
-              disabled={loading}
-            >
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
               {loading ? (
                 <>
                   <span className="loading loading-spinner" />

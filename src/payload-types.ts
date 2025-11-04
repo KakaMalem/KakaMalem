@@ -279,11 +279,7 @@ export interface Product {
   sku?: string | null;
   quantity: number;
   lowStockThreshold?: number | null;
-  images: {
-    image: string | Media;
-    alt: string;
-    id?: string | null;
-  }[];
+  image: string | Media;
   categories?: (string | Category)[] | null;
   status: 'draft' | 'published' | 'out_of_stock' | 'discontinued';
   featured?: boolean | null;
@@ -320,6 +316,7 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
+  categoryImage?: (string | null) | Media;
   description?: string | null;
   /**
    * Parent category for hierarchy
@@ -518,6 +515,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  categoryImage?: T;
   description?: T;
   parent?: T;
   image?: T;
@@ -545,13 +543,7 @@ export interface ProductsSelect<T extends boolean = true> {
   sku?: T;
   quantity?: T;
   lowStockThreshold?: T;
-  images?:
-    | T
-    | {
-        image?: T;
-        alt?: T;
-        id?: T;
-      };
+  image?: T;
   categories?: T;
   status?: T;
   featured?: T;
