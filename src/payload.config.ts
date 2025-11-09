@@ -14,7 +14,7 @@ import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
 import { registerUser } from './endpoints/registerUser'
-import { searchProducts } from './endpoints/searchProducts'
+import { getProducts } from './endpoints/getProducts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -27,7 +27,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Products, Orders, Reviews],
-  endpoints: [registerUser, searchProducts],
+  endpoints: [registerUser, getProducts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

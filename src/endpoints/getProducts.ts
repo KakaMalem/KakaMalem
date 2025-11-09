@@ -11,8 +11,8 @@ interface SearchQuery {
   limit?: number
 }
 
-export const searchProducts: Endpoint = {
-  path: '/search',
+export const getProducts: Endpoint = {
+  path: '/products',
   method: 'get',
   handler: async (req) => {
     const { payload } = req
@@ -158,12 +158,12 @@ export const searchProducts: Endpoint = {
         { status: 200 },
       )
     } catch (error: unknown) {
-      console.error('Search error:', error)
+      console.error('Products fetch error:', error)
 
       return Response.json(
         {
           success: false,
-          error: 'Search failed. Please try again.',
+          error: 'Failed to fetch products. Please try again.',
           products: [],
           pagination: {
             page: 1,
