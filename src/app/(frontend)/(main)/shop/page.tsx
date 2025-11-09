@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Search, Grid3x3, List, ChevronDown } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { ProductCard } from '../../components/ProductCard'
 import { Product } from '@/payload-types'
-import { MOCK_PRODUCTS } from '@/lib/mockProducts'
 
 interface ShopPageData {
   products: Product[]
@@ -13,53 +12,23 @@ interface ShopPageData {
   totalProducts: number
 }
 
-const PAGE_SIZE = 12 // change this to control pagination (e.g., 8 or 16)
-
-const generateMockData = (page: number, query = '', sortBy = 'featured'): ShopPageData => {
-  // clone array to avoid mutating original
-  let allProducts = [...MOCK_PRODUCTS] as Product[]
-
-  // simple search (name or shortDescription)
-  if (query && query.trim().length > 0) {
-    const q = query.trim().toLowerCase()
-    allProducts = allProducts.filter(
-      (p) =>
-        String(p.name).toLowerCase().includes(q) ||
-        String(p.shortDescription ?? '')
-          .toLowerCase()
-          .includes(q),
-    )
-  }
-
-  // simple sort examples (expand as needed)
-  if (sortBy === 'price-asc') {
-    allProducts.sort((a: any, b: any) => Number(a.price ?? 0) - Number(b.price ?? 0))
-  } else if (sortBy === 'price-desc') {
-    allProducts.sort((a: any, b: any) => Number(b.price ?? 0) - Number(a.price ?? 0))
-  } // 'featured' keeps original order
-
-  const totalProducts = allProducts.length
-  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE))
-  const safePage = Math.min(Math.max(1, page), totalPages)
-  const start = (safePage - 1) * PAGE_SIZE
-  const end = start + PAGE_SIZE
-  const products = allProducts.slice(start, end)
-
-  return {
-    products: products as Product[],
-    totalPages,
-    currentPage: safePage,
-    totalProducts,
-  }
-}
+const PAGE_SIZE = 12
 
 export default function ShopPage() {
+  const searchParams = useSearchParams()
+  const queryFromUrl = searchParams.get('q') || ''
+
   const [data, setData] = useState<ShopPageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(queryFromUrl)
   const [sortBy, setSortBy] = useState('featured')
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Update search query when URL changes
+  useEffect(() => {
+    setSearchQuery(queryFromUrl)
+  }, [queryFromUrl])
 
   useEffect(() => {
     fetchProducts()
@@ -68,17 +37,58 @@ export default function ShopPage() {
 
   const fetchProducts = async () => {
     setLoading(true)
-    // simulate an async fetch (replace this with real API call later)
-    setTimeout(() => {
-      setData(generateMockData(currentPage, searchQuery, sortBy))
+
+    try {
+      // Build query parameters
+      const params = new URLSearchParams()
+
+      if (searchQuery && searchQuery.trim()) {
+        params.append('q', searchQuery.trim())
+      }
+      if (sortBy) {
+        params.append('sort', sortBy)
+      }
+      params.append('page', currentPage.toString())
+      params.append('limit', PAGE_SIZE.toString())
+
+      const response = await fetch(`/api/search?${params.toString()}`)
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setData({
+          products: result.products,
+          totalPages: result.pagination.totalPages,
+          currentPage: result.pagination.page,
+          totalProducts: result.pagination.totalDocs,
+        })
+      } else {
+        console.error('Search failed:', result.error)
+        // Set empty data on error
+        setData({
+          products: [],
+          totalPages: 0,
+          currentPage: 1,
+          totalProducts: 0,
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      // Set empty data on error
+      setData({
+        products: [],
+        totalPages: 0,
+        currentPage: 1,
+        totalProducts: 0,
+      })
+    } finally {
       setLoading(false)
-    }, 300)
+    }
   }
 
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <span className="loading loading-spinner loading-lg text-error"></span>
+        <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     )
   }
@@ -90,30 +100,40 @@ export default function ShopPage() {
         <div className="flex-1">
           {loading ? (
             <div className="flex justify-center py-20">
-              <span className="loading loading-spinner loading-lg text-error"></span>
+              <span className="loading loading-spinner loading-lg text-primary"></span>
             </div>
           ) : (
             <>
               {/* Results Count */}
               <div className="flex items-center justify-between mb-6">
                 <p className="text-base-content/70">
-                  Showing {data?.products.length} of {data?.totalProducts} products
+                  Showing {data?.products.length || 0} of {data?.totalProducts || 0} products
                 </p>
               </div>
 
               {/* Products */}
-              <div
-                className={`grid gap-6 auto-rows-fr items-stretch ${
-                  viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1'
-                }`}
-              >
-                {data?.products.map((product) => (
-                  // wrap each card so the grid item is a block with full height/width
-                  <div key={product.id} className="w-full h-full">
-                    <ProductCard product={product} />
-                  </div>
-                ))}
-              </div>
+              {data && data.products.length > 0 ? (
+                <div
+                  className={`grid gap-6 auto-rows-fr items-stretch ${
+                    viewMode === 'grid'
+                      ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+                      : 'grid-cols-1'
+                  }`}
+                >
+                  {data.products.map((product) => (
+                    <div key={product.id} className="w-full h-full">
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20">
+                  <p className="text-xl text-base-content/70">No products found</p>
+                  <p className="text-sm text-base-content/50 mt-2">
+                    Try adjusting your search or filters
+                  </p>
+                </div>
+              )}
 
               {/* Pagination */}
               {data && data.totalPages > 1 && (

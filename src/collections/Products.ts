@@ -146,10 +146,11 @@ export const Products: CollectionConfig = {
       ],
     },
     {
-      name: 'image',
+      name: 'images',
       type: 'upload',
       relationTo: 'media',
       required: true,
+      hasMany: true,
     },
     {
       name: 'categories',

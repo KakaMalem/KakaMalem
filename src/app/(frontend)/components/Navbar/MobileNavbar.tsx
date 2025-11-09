@@ -2,6 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { ACCOUNT_MENU_ITEMS } from './constants'
 import Logo from '../Logo'
+import SearchBar from './SearchBar'
 import type { CategoryItem } from '.'
 
 interface MobileNavbarProps {
@@ -67,28 +68,9 @@ export default function MobileNavbar({ categories }: MobileNavbarProps) {
             </Link>
           </div>
 
-          {/* Mobile Search */}
+          {/* Search Bar */}
           <div className="mt-3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="input w-full pl-4 pr-10 bg-base-200 border-0 focus:ring-2 focus:ring-primary/20 hover:bg-base-300/50 transition-all duration-200"
-              />
-              <svg
-                className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-base-content/40"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
+            <SearchBar />
           </div>
         </div>
       </div>

@@ -279,7 +279,7 @@ export interface Product {
   sku?: string | null;
   quantity: number;
   lowStockThreshold?: number | null;
-  image: string | Media;
+  images: (string | Media)[];
   categories?: (string | Category)[] | null;
   status: 'draft' | 'published' | 'out_of_stock' | 'discontinued';
   featured?: boolean | null;
@@ -543,7 +543,7 @@ export interface ProductsSelect<T extends boolean = true> {
   sku?: T;
   quantity?: T;
   lowStockThreshold?: T;
-  image?: T;
+  images?: T;
   categories?: T;
   status?: T;
   featured?: T;

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ACCOUNT_MENU_ITEMS } from './constants'
 import Logo from '../Logo'
 import type { CategoryItem } from '.'
+import SearchBar from './SearchBar'
 
 interface DesktopNavbarProps {
   categories: CategoryItem[]
@@ -19,28 +20,7 @@ export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
             <Logo variant="desktop" />
 
             {/* Search */}
-            <div className="flex-1 max-w-xl mx-8">
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  className="input w-full pl-4 pr-10 bg-base-200 border-0 focus:ring-2 focus:ring-primary/20 hover:bg-base-300/50 transition-all duration-200"
-                />
-                <svg
-                  className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-base-content/40"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  ></path>
-                </svg>
-              </div>
-            </div>
+            <SearchBar />
 
             {/* Actions */}
             <div className="flex items-center space-x-3">

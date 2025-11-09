@@ -1,7 +1,7 @@
 // components/ProductCard.tsx
 import React from 'react'
 import Link from 'next/link'
-import { ShoppingCart, Heart } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { Product } from '@/payload-types'
 
 interface ProductCardProps {
@@ -11,10 +11,40 @@ interface ProductCardProps {
 
 const placeholderImage = '/images/placeholder.jpg'
 
+// Helper to extract URL from various Media formats
 const getMediaUrl = (media?: string | { url?: string } | any): string => {
   if (!media) return placeholderImage
   if (typeof media === 'string') return media
-  return media.url ?? media.data?.url ?? placeholderImage
+  // Handle Payload Media object with url field
+  if (typeof media === 'object' && media.url) return media.url
+  return media.data?.url ?? placeholderImage
+}
+
+// Helper to get the first image from product
+const getProductImage = (product: Product): { url: string; alt: string } => {
+  // Try 'image' field first (your API structure)
+  const imageField = (product as any).image
+  if (Array.isArray(imageField) && imageField.length > 0) {
+    const firstImage = imageField[0]
+    return {
+      url: getMediaUrl(firstImage),
+      alt: firstImage.alt || product.name || 'Product image',
+    }
+  }
+
+  // Fallback to 'images' field (old structure)
+  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+    const firstImage = product.images[0]
+    return {
+      url: getMediaUrl((firstImage as any).image || firstImage),
+      alt: (firstImage as any).alt || product.name || 'Product image',
+    }
+  }
+
+  return {
+    url: placeholderImage,
+    alt: product.name || 'Product image',
+  }
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'normal' }) => {
@@ -24,7 +54,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
   const hasDiscount = typeof salePrice === 'number' && salePrice < price && price > 0
   const discount = hasDiscount ? Math.round(((price - (salePrice as number)) / price) * 100) : 0
 
-  const imgUrl = getMediaUrl(product.images?.[0]?.image)
+  const productImage = getProductImage(product)
   const avgRating = typeof product.averageRating === 'number' ? product.averageRating : 0
   const reviewCount = typeof product.reviewCount === 'number' ? product.reviewCount : 0
 
@@ -37,8 +67,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
       <Link href={`/shop/${slug}`} className="block">
         <figure className="relative overflow-hidden aspect-square">
           <img
-            src={imgUrl}
-            alt={product.images?.[0]?.alt ?? product.name ?? 'Product'}
+            src={productImage.url}
+            alt={productImage.alt}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           {hasDiscount && (
@@ -50,7 +80,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
       <div className="card-body p-4">
         {/* clickable title */}
         <h3 className="card-title text-base group-hover:text-primary transition-colors line-clamp-2">
-          <Link href={`/product/${slug}`} className="inline-block">
+          <Link href={`/shop/${slug}`} className="inline-block">
             {product.name}
           </Link>
         </h3>
