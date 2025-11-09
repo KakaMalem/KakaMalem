@@ -91,18 +91,18 @@ export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
               .map((category) => (
                 <Link
                   key={category.value}
-                  href={`/category/${category.slug}`}
+                  href={`/shop?${category.slug}`}
                   className="text-sm text-base-content/80 hover:text-primary transition-colors whitespace-nowrap"
                 >
                   {category.label}
                 </Link>
               ))}
-            <Link
+            {/* <Link
               href="/deals"
               className="text-sm text-warning hover:text-warning-focus transition-colors whitespace-nowrap font-medium"
             >
               🔥 Hot Deals
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
