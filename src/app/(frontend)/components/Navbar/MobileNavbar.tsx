@@ -1,15 +1,21 @@
 import React from 'react'
 import Link from 'next/link'
-import { ACCOUNT_MENU_ITEMS } from './constants'
+import { getAccountMenuItems } from './constants'
 import Logo from '../Logo'
 import SearchBar from './SearchBar'
 import type { CategoryItem } from '.'
+import type { User } from '@/payload-types'
 
 interface MobileNavbarProps {
   categories: CategoryItem[]
+  user: User | null
 }
 
-export default function MobileNavbar({ categories }: MobileNavbarProps) {
+export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
+  // Generate menu items based on auth status
+  const friendlyName = user?.firstName || user?.email
+  const accountMenuItems = getAccountMenuItems(!!user, friendlyName)
+
   return (
     <div className="lg:hidden">
       {/* Main Mobile Navbar */}
@@ -30,16 +36,18 @@ export default function MobileNavbar({ categories }: MobileNavbarProps) {
               </div>
               <ul
                 tabIndex={0}
-                className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 rounded-lg w-48"
+                className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 rounded-lg w-52"
               >
-                {ACCOUNT_MENU_ITEMS.map((item, index) =>
+                {accountMenuItems.map((item, index) =>
                   item.isDivider ? (
                     <div key={index} className="divider my-0"></div>
                   ) : item.href ? (
                     <li key={index}>
                       <Link
                         href={item.href}
-                        className={`text-sm py-2 hover:bg-base-200 rounded-md ${item.isBold ? 'font-medium' : ''}`}
+                        className={`text-sm py-2 hover:bg-base-200 rounded-md ${
+                          item.isBold ? 'font-medium' : ''
+                        }`}
                       >
                         {item.label}
                       </Link>
@@ -49,10 +57,8 @@ export default function MobileNavbar({ categories }: MobileNavbarProps) {
               </ul>
             </div>
 
-            {/* Logo */}
+            {/* Logo & Cart */}
             <Logo variant="mobile" />
-
-            {/* Cart */}
             <Link href="/cart" className="btn btn-ghost btn-sm relative" title="Cart">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -96,12 +102,6 @@ export default function MobileNavbar({ categories }: MobileNavbarProps) {
                   {category.label}
                 </Link>
               ))}
-            {/* <Link
-              href="/deals"
-              className="text-sm text-warning hover:text-warning-focus transition-colors whitespace-nowrap font-medium"
-            >
-              🔥 Hot Deals
-            </Link> */}
           </div>
         </div>
       </div>

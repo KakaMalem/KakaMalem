@@ -3,7 +3,8 @@ import MobileNavbar from './MobileNavbar'
 import DesktopNavbar from './DesktopNavbar'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import type { Category } from '@/payload-types'
+import type { Category, User } from '@/payload-types'
+import { cookies } from 'next/headers'
 
 export interface CategoryItem {
   value: string
@@ -14,8 +15,37 @@ export interface CategoryItem {
 
 async function Navbar() {
   const payload = await getPayload({ config })
+  let user: User | null = null
 
-  // Fetch categories directly from Payload
+  // 1. Fetch the authenticated user
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('payload-token')?.value
+
+    if (token) {
+      // Build the absolute URL for the API request
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      const host = process.env.NEXT_PUBLIC_SERVER_URL || 'localhost:3000'
+      const apiUrl = `${protocol}://${host}/api/users/me`
+
+      const meUserReq = await fetch(apiUrl, {
+        headers: {
+          Authorization: `JWT ${token}`,
+        },
+        cache: 'no-store', // Don't cache this request
+      })
+
+      if (meUserReq.ok) {
+        const data = await meUserReq.json()
+        user = data.user || null
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error fetching user:', error)
+    // User remains null
+  }
+
+  // 2. Fetch categories
   const categoriesData = await payload.find({
     collection: 'categories',
     where: {
@@ -42,26 +72,21 @@ async function Navbar() {
       role="navigation"
       aria-label="Main navigation"
     >
-      {/* Background (decorative) — placed behind interactive content */}
+      {/* Decorative elements */}
       <div
         className="absolute inset-0 bg-gradient-to-r from-primary/8 to-accent/8 z-0 pointer-events-none"
         aria-hidden
       />
-
-      {/* Elegant Border Accent (decorative) */}
       <div
         className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent z-10 pointer-events-none"
         aria-hidden
       />
 
-      {/* Mobile Navbar Component — interactive content above decorations */}
+      {/* Pass user prop to children */}
       <div className="relative z-20">
-        <MobileNavbar categories={categories} />
-      </div>
+        <MobileNavbar categories={categories} user={user} />
 
-      {/* Desktop Navbar Component — interactive content above decorations */}
-      <div className="relative z-20">
-        <DesktopNavbar categories={categories} />
+        <DesktopNavbar categories={categories} user={user} />
       </div>
     </nav>
   )

@@ -1,25 +1,30 @@
 import React from 'react'
 import Link from 'next/link'
-import { ACCOUNT_MENU_ITEMS } from './constants'
+import { getAccountMenuItems } from './constants'
 import Logo from '../Logo'
 import type { CategoryItem } from '.'
 import SearchBar from './SearchBar'
+import type { User } from '@/payload-types'
 
 interface DesktopNavbarProps {
   categories: CategoryItem[]
+  user: User | null
 }
 
-export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
+export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) {
+  // Generate menu items based on auth status
+  const friendlyName = user?.firstName || user?.email
+  const accountMenuItems = getAccountMenuItems(!!user, friendlyName)
+
   return (
     <div className="hidden lg:block">
-      {/* Simplified Desktop Navbar */}
+      {/* Top bar */}
       <div className="bg-base-100 border-b border-base-200">
         <div className="max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-8">
-            {/* Logo */}
+            {/* Logo & SearchBar */}
             <Logo variant="desktop" />
 
-            {/* Search */}
             <SearchBar />
 
             {/* Actions */}
@@ -38,16 +43,18 @@ export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
                 </div>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 rounded-lg w-40"
+                  className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 rounded-lg w-52"
                 >
-                  {ACCOUNT_MENU_ITEMS.map((item, index) =>
+                  {accountMenuItems.map((item, index) =>
                     item.isDivider ? (
                       <div key={index} className="divider my-0"></div>
                     ) : item.href ? (
                       <li key={index}>
                         <Link
                           href={item.href}
-                          className={`text-sm py-2 hover:bg-base-200 rounded-md ${item.isBold ? 'font-medium' : ''}`}
+                          className={`text-sm py-2 hover:bg-base-200 rounded-md ${
+                            item.isBold ? 'font-medium' : ''
+                          }`}
                         >
                           {item.label}
                         </Link>
@@ -76,7 +83,7 @@ export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
         </div>
       </div>
 
-      {/* Categories Bar - Sticky */}
+      {/* Categories Bar */}
       <div className="sticky top-0 z-40 bg-base-200/80 backdrop-blur-sm border-b border-base-300">
         <div className="max-w-7xl mx-auto px-6 py-2">
           <div className="flex items-center space-x-8 overflow-x-auto scrollbar-hide">
@@ -97,12 +104,6 @@ export default function DesktopNavbar({ categories }: DesktopNavbarProps) {
                   {category.label}
                 </Link>
               ))}
-            {/* <Link
-              href="/deals"
-              className="text-sm text-warning hover:text-warning-focus transition-colors whitespace-nowrap font-medium"
-            >
-              🔥 Hot Deals
-            </Link> */}
           </div>
         </div>
       </div>

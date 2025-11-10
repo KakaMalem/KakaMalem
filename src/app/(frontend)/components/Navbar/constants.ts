@@ -11,21 +11,36 @@ export interface AccountMenuItem {
   isDivider?: boolean
 }
 
-export const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
-  { href: '/auth/login', label: 'Sign in', isSignIn: true },
-  { href: '/', label: 'Home' },
-  { href: '/deals', label: "Today's Deals" },
-  { href: '/account/orders', label: 'Your Orders' },
-  { href: '/account', label: 'Your Account' },
-  { href: '/account/wishlist', label: 'Your Wishlist' },
-  { href: '/customer-service', label: 'Customer Service' },
-]
+/**
+ * Generates account menu items based on auth status
+ * @param isLoggedIn - Whether the user is logged in
+ * @param userName - Optional user name/email to display
+ */
+export const getAccountMenuItems = (isLoggedIn: boolean, userName?: string): AccountMenuItem[] => {
+  if (isLoggedIn) {
+    // --- LOGGED IN MENU ---
+    return [
+      {
+        href: '/account',
+        label: `Hello, ${userName || 'User'}`,
+        isBold: true,
+      },
+      { isDivider: true },
+      { href: '/account', label: 'Your Account' },
+      { href: '/account/orders', label: 'Your Orders' },
+      { href: '/account/wishlist', label: 'Your Wishlists' },
+      { isDivider: true },
+      { href: '/auth/logout', label: 'Sign out' },
+    ]
+  }
 
-export const ACCOUNT_MENU_ITEMS: AccountMenuItem[] = [
-  { href: '/auth/login', label: 'Sign in', isBold: true },
-  { href: '/auth/register', label: 'New customer? Start here.' },
-  { isDivider: true },
-  { href: '/account/orders', label: 'Your Orders' },
-  { href: '/account', label: 'Your Account' },
-  { href: '/account/wishlist', label: 'Your Wishlists' },
-]
+  // --- LOGGED OUT MENU ---
+  return [
+    { href: '/auth/login', label: 'Sign in', isBold: true },
+    { href: '/auth/register', label: 'New customer? Start here.' },
+    { isDivider: true },
+    { href: '/auth/login', label: 'Your Orders' },
+    { href: '/auth/login', label: 'Your Account' },
+    { href: '/auth/login', label: 'Your Wishlists' },
+  ]
+}
