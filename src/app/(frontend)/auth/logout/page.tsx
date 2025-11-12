@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useCart } from '@/providers'
 
 export default function LogoutPage() {
   const router = useRouter()
+  const { refreshCart } = useCart()
   const [status, setStatus] = useState<'logging-out' | 'success' | 'error'>('logging-out')
   const [countdown, setCountdown] = useState(3)
 
@@ -18,6 +20,15 @@ export default function LogoutPage() {
         })
 
         if (response.ok) {
+          // Clear any session storage flags
+          sessionStorage.removeItem('justLoggedIn')
+
+          // Refresh cart to get new empty guest cart
+          await refreshCart()
+
+          // Dispatch event to notify other components
+          window.dispatchEvent(new Event('userLoggedOut'))
+
           setStatus('success')
         } else {
           setStatus('error')
@@ -29,7 +40,7 @@ export default function LogoutPage() {
     }
 
     performLogout()
-  }, [])
+  }, [refreshCart])
 
   // Separate useEffect for countdown and redirect
   useEffect(() => {

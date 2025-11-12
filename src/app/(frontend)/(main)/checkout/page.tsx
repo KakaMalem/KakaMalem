@@ -181,8 +181,7 @@ export default function CheckoutPage() {
     ? cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
     : 0
   const shipping = subtotal > 50 ? 0 : 10
-  const tax = subtotal * 0.1
-  const total = subtotal + shipping + tax
+  const total = subtotal + shipping
 
   if (loading) {
     return (
@@ -607,11 +606,6 @@ export default function CheckoutPage() {
                         )}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-70">Tax</span>
-                      <span className="font-medium">${tax.toFixed(2)}</span>
-                    </div>
-
                     <div className="divider my-2"></div>
 
                     <div className="flex justify-between text-xl font-bold">

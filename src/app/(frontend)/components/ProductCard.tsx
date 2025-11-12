@@ -1,8 +1,10 @@
-// components/ProductCard.tsx
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Check } from 'lucide-react'
 import { Product } from '@/payload-types'
+import { useCart } from '@/providers'
 
 interface ProductCardProps {
   product: Product
@@ -11,18 +13,14 @@ interface ProductCardProps {
 
 const placeholderImage = '/images/placeholder.jpg'
 
-// Helper to extract URL from various Media formats
 const getMediaUrl = (media?: string | { url?: string } | any): string => {
   if (!media) return placeholderImage
   if (typeof media === 'string') return media
-  // Handle Payload Media object with url field
   if (typeof media === 'object' && media.url) return media.url
   return media.data?.url ?? placeholderImage
 }
 
-// Helper to get the first image from product
 const getProductImage = (product: Product): { url: string; alt: string } => {
-  // Try 'image' field first (your API structure)
   const imageField = (product as any).image
   if (Array.isArray(imageField) && imageField.length > 0) {
     const firstImage = imageField[0]
@@ -32,7 +30,6 @@ const getProductImage = (product: Product): { url: string; alt: string } => {
     }
   }
 
-  // Fallback to 'images' field (old structure)
   if (product.images && Array.isArray(product.images) && product.images.length > 0) {
     const firstImage = product.images[0]
     return {
@@ -48,6 +45,11 @@ const getProductImage = (product: Product): { url: string; alt: string } => {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'normal' }) => {
+  const { addItem } = useCart()
+  const [isAdding, setIsAdding] = useState(false)
+  const [justAdded, setJustAdded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const price: number = typeof product.price === 'number' ? product.price : 0
   const salePrice: number | undefined =
     typeof product.salePrice === 'number' ? product.salePrice : undefined
@@ -57,13 +59,39 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
   const productImage = getProductImage(product)
   const avgRating = typeof product.averageRating === 'number' ? product.averageRating : 0
   const reviewCount = typeof product.reviewCount === 'number' ? product.reviewCount : 0
-
-  // Ensure slug exists — if not, fallback to id
   const slug = product.slug ?? product.id
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (isAdding || justAdded || product.status === 'out_of_stock') return
+
+    setIsAdding(true)
+    setError(null)
+
+    try {
+      // Use cart context - it handles both authenticated and guest users
+      await addItem(product.id, 1)
+
+      // Success - show checkmark
+      setJustAdded(true)
+
+      // Reset after 2 seconds
+      setTimeout(() => {
+        setJustAdded(false)
+      }, 2000)
+    } catch (error: any) {
+      console.error('Error adding to cart:', error)
+      setError(error.message || 'Failed to add to cart')
+      setTimeout(() => setError(null), 3000)
+    } finally {
+      setIsAdding(false)
+    }
+  }
 
   return (
     <article className="card bg-base-100 shadow-lg hover:shadow-2xl transition-all duration-300 group">
-      {/* clickable image -> product page */}
       <Link href={`/shop/${slug}`} className="block">
         <figure className="relative overflow-hidden aspect-square">
           <img
@@ -74,11 +102,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           {hasDiscount && (
             <div className="badge badge-primary absolute top-3 left-3 font-bold">-{discount}%</div>
           )}
+          {product.status === 'out_of_stock' && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span className="badge badge-error badge-lg">Out of Stock</span>
+            </div>
+          )}
         </figure>
       </Link>
 
       <div className="card-body p-4">
-        {/* clickable title */}
         <h3 className="card-title text-base group-hover:text-primary transition-colors line-clamp-2">
           <Link href={`/shop/${slug}`} className="inline-block">
             {product.name}
@@ -109,19 +141,49 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           <div>
             {hasDiscount ? (
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-primary">${salePrice}</span>
-                <span className="text-sm opacity-60 line-through">${price}</span>
+                <span className="text-xl font-bold text-primary">
+                  {product.currency} {salePrice}
+                </span>
+                <span className="text-sm opacity-60 line-through">
+                  {product.currency} {price}
+                </span>
               </div>
             ) : (
-              <span className="text-xl font-bold">${price}</span>
+              <span className="text-xl font-bold">
+                {product.currency} {price}
+              </span>
             )}
           </div>
 
-          {/* keep Add to cart button (does not navigate away) */}
-          <button className="btn btn-primary btn-sm" aria-label="Add to cart">
-            <ShoppingCart className="w-4 h-4" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={handleAddToCart}
+              disabled={isAdding || justAdded || product.status === 'out_of_stock'}
+              className={`btn btn-sm ${
+                justAdded ? 'btn-success' : 'btn-primary'
+              } transition-all duration-300`}
+              aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
+              title={justAdded ? 'Added to cart' : 'Add to cart'}
+            >
+              {isAdding ? (
+                <span className="loading loading-spinner loading-sm"></span>
+              ) : justAdded ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <ShoppingCart className="w-4 h-4" />
+              )}
+            </button>
+            {error && (
+              <div className="absolute bottom-full mb-2 right-0 bg-error text-error-content text-xs px-2 py-1 rounded whitespace-nowrap z-10 shadow-lg">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
+
+        {product.trackQuantity && product.quantity <= 5 && product.quantity > 0 && (
+          <div className="text-xs text-warning mt-2">Only {product.quantity} left in stock!</div>
+        )}
       </div>
     </article>
   )

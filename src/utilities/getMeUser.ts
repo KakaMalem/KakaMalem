@@ -34,7 +34,7 @@ export const getMeUser = async (args?: {
   if (nullUserRedirect && (!meUserReq.ok || !user)) {
     redirect(nullUserRedirect)
   }
-  console.log(user)
+
   // Token will exist here because if it doesn't the user will be redirected
   return {
     token: token!,

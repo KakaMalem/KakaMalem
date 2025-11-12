@@ -15,6 +15,12 @@ import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
 import { registerUser } from './endpoints/registerUser'
 import { getProducts } from './endpoints/getProducts'
+import { addToCart } from './endpoints/cart/addToCart'
+import { getCart } from './endpoints/cart/getCart'
+import { updateCart } from './endpoints/cart/updateCart'
+import { removeFromCart } from './endpoints/cart/removeFromCart'
+import { clearCart } from './endpoints/cart/clearCart'
+import { mergeCart } from './endpoints/cart/mergeCart'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -27,7 +33,16 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Products, Orders, Reviews],
-  endpoints: [registerUser, getProducts],
+  endpoints: [
+    registerUser,
+    getProducts,
+    addToCart,
+    getCart,
+    updateCart,
+    removeFromCart,
+    clearCart,
+    mergeCart,
+  ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

@@ -89,14 +89,6 @@ export const Orders: CollectionConfig = {
           },
         },
         {
-          name: 'tax',
-          type: 'number',
-          defaultValue: 0,
-          admin: {
-            width: '25%',
-          },
-        },
-        {
           name: 'shipping',
           type: 'number',
           defaultValue: 0,

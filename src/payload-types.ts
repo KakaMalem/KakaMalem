@@ -213,7 +213,6 @@ export interface Order {
     id?: string | null;
   }[];
   subtotal: number;
-  tax?: number | null;
   shipping?: number | null;
   total: number;
   shippingAddress: {
@@ -570,7 +569,6 @@ export interface OrdersSelect<T extends boolean = true> {
         id?: T;
       };
   subtotal?: T;
-  tax?: T;
   shipping?: T;
   total?: T;
   shippingAddress?:

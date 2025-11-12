@@ -33,6 +33,12 @@ export default function LoginPage() {
         throw new Error(data.message || 'Login failed')
       }
 
+      // Set flag to trigger cart merge
+      sessionStorage.setItem('justLoggedIn', 'true')
+
+      // Dispatch custom event for cart merge
+      window.dispatchEvent(new Event('userLoggedIn'))
+
       // Redirect to dashboard or home
       window.location.href = '/'
     } catch (err: any) {

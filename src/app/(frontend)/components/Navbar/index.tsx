@@ -4,7 +4,7 @@ import DesktopNavbar from './DesktopNavbar'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { Category, User } from '@/payload-types'
-import { cookies } from 'next/headers'
+import { getMeUser } from '@/utilities/getMeUser'
 
 export interface CategoryItem {
   value: string
@@ -19,30 +19,10 @@ async function Navbar() {
 
   // 1. Fetch the authenticated user
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('payload-token')?.value
-
-    if (token) {
-      // Build the absolute URL for the API request
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-      const host = process.env.NEXT_PUBLIC_SERVER_URL || 'localhost:3000'
-      const apiUrl = `${protocol}://${host}/api/users/me`
-
-      const meUserReq = await fetch(apiUrl, {
-        headers: {
-          Authorization: `JWT ${token}`,
-        },
-        cache: 'no-store', // Don't cache this request
-      })
-
-      if (meUserReq.ok) {
-        const data = await meUserReq.json()
-        user = data.user || null
-      }
-    }
+    const authResult = await getMeUser()
+    user = authResult?.user
   } catch (error) {
     console.error('❌ Error fetching user:', error)
-    // User remains null
   }
 
   // 2. Fetch categories
@@ -82,10 +62,9 @@ async function Navbar() {
         aria-hidden
       />
 
-      {/* Pass user prop to children */}
+      {/* Cart count is handled client-side via CartProvider */}
       <div className="relative z-20">
         <MobileNavbar categories={categories} user={user} />
-
         <DesktopNavbar categories={categories} user={user} />
       </div>
     </nav>

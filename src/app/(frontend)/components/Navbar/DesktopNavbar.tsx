@@ -5,6 +5,7 @@ import Logo from '../Logo'
 import type { CategoryItem } from '.'
 import SearchBar from './SearchBar'
 import type { User } from '@/payload-types'
+import CartButton from './CartButton'
 
 interface DesktopNavbarProps {
   categories: CategoryItem[]
@@ -65,19 +66,7 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
               </div>
 
               {/* Cart */}
-              <Link href="/cart" className="btn btn-ghost btn-sm relative" title="Cart">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 18a2 2 0 11-4 0 2 2 0 014 0zM9 18a2 2 0 11-4 0 2 2 0 014 0z"
-                  ></path>
-                </svg>
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-content text-xs font-medium">
-                  0
-                </span>
-              </Link>
+              <CartButton />
             </div>
           </div>
         </div>
