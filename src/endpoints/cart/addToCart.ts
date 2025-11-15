@@ -98,8 +98,8 @@ export const addToCart: Endpoint = {
         // Update existing item
         newQuantity = items[existingItemIndex].quantity + quantity
 
-        // Stock validation
-        if (product.trackQuantity) {
+        // Stock validation (only if not allowing back orders)
+        if (product.trackQuantity && !product.allowBackorders) {
           if (newQuantity > product.quantity) {
             return Response.json(
               {
@@ -117,7 +117,7 @@ export const addToCart: Endpoint = {
         )
       } else {
         // Add new item
-        if (product.trackQuantity && quantity > product.quantity) {
+        if (product.trackQuantity && !product.allowBackorders && quantity > product.quantity) {
           return Response.json(
             {
               success: false,

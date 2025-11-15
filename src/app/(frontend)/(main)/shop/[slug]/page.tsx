@@ -2,24 +2,65 @@ import React from 'react'
 import { notFound } from 'next/navigation'
 import ProductDetailsClient from './page.client'
 import { Product } from '@/payload-types'
-import { MOCK_PRODUCTS } from '@/lib/mockProducts'
+import { getServerSideURL } from '@/utilities/getURL'
 
 interface Params {
   slug: string
 }
 
 export async function generateStaticParams(): Promise<Params[]> {
-  // Build static pages for every product in the mock list.
-  // If you use a real API, replace this with a fetch for all slugs.
-  return MOCK_PRODUCTS.map((p) => ({ slug: (p.slug as string) ?? p.id }))
+  try {
+    const baseUrl = getServerSideURL()
+    const url = new URL('/api/products', baseUrl)
+    url.searchParams.set('limit', '1000') // Get all products for static generation
+    url.searchParams.set('depth', '0') // Shallow fetch for slugs only
+
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      next: { revalidate: 3600 }, // Revalidate every hour
+    })
+
+    if (!res.ok) {
+      console.error('Failed to fetch products for static params')
+      return []
+    }
+
+    const body = await res.json()
+    const products = body.docs || body.products || []
+
+    return products.filter((p: any) => p.slug).map((p: any) => ({ slug: p.slug }))
+  } catch (error) {
+    console.error('Error generating static params:', error)
+    return []
+  }
 }
 
 async function getProductBySlug(slug: string): Promise<Product | null> {
-  // For real data, replace this with your server fetch to Payload or DB.
-  const product = MOCK_PRODUCTS.find(
-    (p) => String(p.slug) === String(slug) || String(p.id) === String(slug),
-  )
-  return (product as Product) ?? null
+  try {
+    const baseUrl = getServerSideURL()
+    const url = new URL('/api/products', baseUrl)
+    url.searchParams.set('where[slug][equals]', slug)
+    url.searchParams.set('depth', '2') // Populate relationships like images and categories
+    url.searchParams.set('limit', '1')
+
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      next: { revalidate: 60 }, // Revalidate every minute
+    })
+
+    if (!res.ok) {
+      console.error(`Failed to fetch product with slug: ${slug}`)
+      return null
+    }
+
+    const body = await res.json()
+    const products = body.docs || body.products || []
+
+    return products.length > 0 ? products[0] : null
+  } catch (error) {
+    console.error('Error fetching product:', error)
+    return null
+  }
 }
 
 export default async function ProductPage({ params }: { params: Params }) {

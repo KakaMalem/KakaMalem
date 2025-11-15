@@ -178,13 +178,33 @@ export default function CartPageClient() {
                             </span>
                           )}
                         </div>
-                        {item.product.trackQuantity && item.product.quantity <= 5 && (
-                          <div className="text-sm text-warning mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            Only {item.product.quantity} left in stock
-                          </div>
-                        )}
-                        {item.isInStock === false && (
+                        {item.product.trackQuantity &&
+                          !item.product.allowBackorders &&
+                          item.product.quantity <= 5 &&
+                          item.product.quantity > 0 && (
+                            <div className="text-sm text-warning mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Only {item.product.quantity} left in stock
+                            </div>
+                          )}
+                        {item.product.trackQuantity &&
+                          item.product.allowBackorders &&
+                          item.product.quantity <= 5 &&
+                          item.product.quantity > 0 && (
+                            <div className="text-sm text-info mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Only {item.product.quantity} in stock - back orders available
+                            </div>
+                          )}
+                        {item.product.trackQuantity &&
+                          item.product.quantity === 0 &&
+                          item.product.allowBackorders && (
+                            <div className="text-sm text-info mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Out of stock - back order
+                            </div>
+                          )}
+                        {item.isInStock === false && !item.product.allowBackorders && (
                           <div className="text-sm text-error mt-1 flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" />
                             Out of stock
@@ -229,8 +249,11 @@ export default function CartPageClient() {
                             }
                             className="btn btn-xs sm:btn-sm join-item border-none"
                             disabled={
+                              item.quantity >= 99 ||
                               !!(
-                                item.product.trackQuantity && item.quantity >= item.product.quantity
+                                item.product.trackQuantity &&
+                                !item.product.allowBackorders &&
+                                item.quantity >= item.product.quantity
                               )
                             }
                             aria-label="Increase quantity"
