@@ -1,5 +1,6 @@
 import React from 'react'
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import ProductDetailsClient from './page.client'
 import { Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -69,11 +70,16 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   if (!product) return notFound()
 
+  // Check if user is authenticated
+  const cookieStore = await cookies()
+  const token = cookieStore.get('payload-token')?.value
+  const isAuthenticated = !!token
+
   return (
     <div className="min-h-screen bg-base-100 py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* ProductDetailsClient expects serializable product props */}
-        <ProductDetailsClient product={product as Product} />
+        <ProductDetailsClient product={product as Product} isAuthenticated={isAuthenticated} />
       </div>
     </div>
   )

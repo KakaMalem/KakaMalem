@@ -91,7 +91,7 @@ export default function LoginPage() {
               <label className="label">
                 <span className="label-text font-medium">Email Address</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input w-full input-bordered flex items-center gap-2">
                 <Mail className="w-4 h-4 opacity-70 text-secondary" />
                 <input
                   type="email"
@@ -109,7 +109,7 @@ export default function LoginPage() {
               <label className="label">
                 <span className="label-text font-medium">Password</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input w-full input-bordered flex items-center gap-2">
                 <Lock className="w-4 h-4 opacity-70 text-secondary" />
                 <input
                   type={showPassword ? 'text' : 'password'}

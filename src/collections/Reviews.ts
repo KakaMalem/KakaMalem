@@ -8,15 +8,8 @@ export const Reviews: CollectionConfig = {
     group: 'E-commerce',
   },
   access: {
-    // Anyone can read approved reviews
-    read: ({ req: { user } }) => {
-      if (user?.roles?.includes('admin')) {
-        return true
-      }
-      return {
-        status: { equals: 'approved' },
-      }
-    },
+    // Anyone can read all reviews
+    read: () => true,
     // Only authenticated users can create reviews
     create: ({ req: { user } }) => !!user,
     // Users can update their own reviews, admins can update any
@@ -35,16 +28,18 @@ export const Reviews: CollectionConfig = {
     afterChange: [
       async ({ doc, req, operation }) => {
         // After creating or updating a review, recalculate product stats
-        if (doc.product && doc.status === 'approved') {
+        if (doc.product) {
           try {
             const { payload } = req
 
-            // Fetch all approved reviews for this product
+            // Extract product ID (handle both string and populated object)
+            const productId = typeof doc.product === 'string' ? doc.product : doc.product.id
+
+            // Fetch only approved reviews for this product
             const reviews = await payload.find({
               collection: 'reviews',
               where: {
-                product: { equals: doc.product },
-                status: { equals: 'approved' },
+                and: [{ product: { equals: productId } }, { status: { equals: 'approved' } }],
               },
               limit: 1000,
             })
@@ -61,10 +56,20 @@ export const Reviews: CollectionConfig = {
               // Update product with new stats
               await payload.update({
                 collection: 'products',
-                id: doc.product,
+                id: productId,
                 data: {
                   averageRating: Math.round(averageRating * 10) / 10,
                   reviewCount: reviewDocs.length,
+                },
+              })
+            } else {
+              // No approved reviews, reset stats
+              await payload.update({
+                collection: 'products',
+                id: productId,
+                data: {
+                  averageRating: 0,
+                  reviewCount: 0,
                 },
               })
             }
@@ -81,11 +86,14 @@ export const Reviews: CollectionConfig = {
           try {
             const { payload } = req
 
+            // Extract product ID (handle both string and populated object)
+            const productId = typeof doc.product === 'string' ? doc.product : doc.product.id
+
+            // Fetch only approved reviews for this product
             const reviews = await payload.find({
               collection: 'reviews',
               where: {
-                product: { equals: doc.product },
-                status: { equals: 'approved' },
+                and: [{ product: { equals: productId } }, { status: { equals: 'approved' } }],
               },
               limit: 1000,
             })
@@ -101,17 +109,17 @@ export const Reviews: CollectionConfig = {
 
               await payload.update({
                 collection: 'products',
-                id: doc.product,
+                id: productId,
                 data: {
                   averageRating: Math.round(averageRating * 10) / 10,
                   reviewCount: reviewDocs.length,
                 },
               })
             } else {
-              // No reviews left, reset stats
+              // No approved reviews left, reset stats
               await payload.update({
                 collection: 'products',
-                id: doc.product,
+                id: productId,
                 data: {
                   averageRating: 0,
                   reviewCount: 0,
@@ -182,7 +190,7 @@ export const Reviews: CollectionConfig = {
       name: 'status',
       type: 'select',
       required: true,
-      defaultValue: 'pending',
+      defaultValue: 'approved',
       options: [
         {
           label: 'Pending',

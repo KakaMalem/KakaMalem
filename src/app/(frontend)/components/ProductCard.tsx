@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ShoppingCart, Check } from 'lucide-react'
 import { Product } from '@/payload-types'
 import { useCart } from '@/providers'
+import { StarRating } from './StarRating'
 
 interface ProductCardProps {
   product: Product
@@ -164,16 +165,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
 
         {avgRating > 0 && (
           <div className="flex items-center gap-2">
-            <div className="rating rating-sm" aria-hidden>
-              {[...Array(5)].map((_, i) => (
-                <input
-                  key={i}
-                  type="radio"
-                  className={`mask mask-star-2 ${i < Math.floor(avgRating) ? 'bg-accent' : 'bg-base-300'}`}
-                  disabled
-                />
-              ))}
-            </div>
+            <StarRating rating={avgRating} />
             <span className="text-xs opacity-60">({reviewCount})</span>
           </div>
         )}

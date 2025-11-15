@@ -4,12 +4,14 @@ import React, { useState } from 'react'
 import { Product } from '@/payload-types'
 import { Star, Plus, Minus, AlertCircle, Check, X } from 'lucide-react'
 import { useCart } from '@/providers/cart'
+import { ReviewsSection } from '@/app/(frontend)/components/ReviewsSection'
 
 type Props = {
   product: Product
+  isAuthenticated: boolean
 }
 
-export default function ProductDetailsClient({ product }: Props) {
+export default function ProductDetailsClient({ product, isAuthenticated }: Props) {
   const { addItem, loading: cartLoading } = useCart()
 
   // Handle images - they can be Media objects or string IDs
@@ -169,238 +171,246 @@ export default function ProductDetailsClient({ product }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      {/* Left: Images (lg: span 7) */}
-      <div className="lg:col-span-7">
-        <div className="bg-base-200 rounded-md p-4 transition-all duration-300 hover:shadow-2xl">
-          {/* Main image */}
-          <div className="w-full aspect-[4/3] rounded-md overflow-hidden flex items-center justify-center">
-            {images[selected] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={images[selected]}
-                alt={
-                  typeof product.images?.[selected] === 'object' && product.images?.[selected]?.alt
-                    ? product.images[selected].alt
-                    : product.name
-                }
-                className="object-contain w-full h-full hover:scale-105 transition-transform duration-500"
-              />
-            ) : (
-              <div className="text-center text-sm text-base-content/50">No image available</div>
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left: Images (lg: span 7) */}
+        <div className="lg:col-span-7">
+          <div className="bg-base-200 rounded-md p-4 transition-all duration-300 hover:shadow-2xl">
+            {/* Main image */}
+            <div className="w-full aspect-[4/3] rounded-md overflow-hidden flex items-center justify-center">
+              {images[selected] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={images[selected]}
+                  alt={
+                    typeof product.images?.[selected] === 'object' &&
+                    product.images?.[selected]?.alt
+                      ? product.images[selected].alt
+                      : product.name
+                  }
+                  className="object-contain w-full h-full hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="text-center text-sm text-base-content/50">No image available</div>
+              )}
+            </div>
+
+            {/* Thumbnails */}
+            {images.length > 1 && (
+              <div className="mt-4 flex gap-2 overflow-x-auto">
+                {images.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <button
+                    key={String(i)}
+                    onClick={() => setSelected(i)}
+                    className={`shrink-0 w-20 h-20 rounded-md overflow-hidden border transition-all duration-300 hover:scale-105 ${
+                      selected === i ? 'border-primary' : 'border-base-200'
+                    }`}
+                  >
+                    <img
+                      src={src}
+                      alt={`${product.name} ${i}`}
+                      className="object-cover w-full h-full hover:scale-110 transition-transform duration-500"
+                    />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Thumbnails */}
-          {images.length > 1 && (
-            <div className="mt-4 flex gap-2 overflow-x-auto">
-              {images.map((src, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <button
-                  key={String(i)}
-                  onClick={() => setSelected(i)}
-                  className={`shrink-0 w-20 h-20 rounded-md overflow-hidden border transition-all duration-300 hover:scale-105 ${
-                    selected === i ? 'border-primary' : 'border-base-200'
-                  }`}
-                >
-                  <img
-                    src={src}
-                    alt={`${product.name} ${i}`}
-                    className="object-cover w-full h-full hover:scale-110 transition-transform duration-500"
-                  />
-                </button>
-              ))}
+          {/* Reviews / description */}
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 text-yellow-500">
+                <Star size={16} />
+                <span className="font-medium">{product.averageRating ?? '—'}</span>
+              </div>
+              <div className="text-sm text-base-content/70">{product.reviewCount ?? 0} reviews</div>
             </div>
-          )}
+
+            <div className="prose max-w-none">
+              <h3>Overview</h3>
+              <p>{product.shortDescription ?? 'No description provided.'}</p>
+            </div>
+
+            <div className="prose max-w-none">
+              <h3>Details</h3>
+              <ul>
+                <li>Status: {product.status ?? 'N/A'}</li>
+                <li>SKU: {product.id}</li>
+                <li>Currency: {product.currency ?? 'USD'}</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
-        {/* Reviews / description */}
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-yellow-500">
-              <Star size={16} />
-              <span className="font-medium">{product.averageRating ?? '—'}</span>
+        {/* Right: Details + actions (lg: span 5) */}
+        <aside className="lg:col-span-5">
+          <div className="space-y-4 sticky top-24">
+            <div>
+              <h1 className="text-2xl font-semibold">{product.name}</h1>
+              <p className="text-sm text-base-content/70 mt-1">{product.shortDescription}</p>
             </div>
-            <div className="text-sm text-base-content/70">{product.reviewCount ?? 0} reviews</div>
-          </div>
 
-          <div className="prose max-w-none">
-            <h3>Overview</h3>
-            <p>{product.shortDescription ?? 'No description provided.'}</p>
-          </div>
-
-          <div className="prose max-w-none">
-            <h3>Details</h3>
-            <ul>
-              <li>Status: {product.status ?? 'N/A'}</li>
-              <li>SKU: {product.id}</li>
-              <li>Currency: {product.currency ?? 'USD'}</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Right: Details + actions (lg: span 5) */}
-      <aside className="lg:col-span-5">
-        <div className="space-y-4 sticky top-24">
-          <div>
-            <h1 className="text-2xl font-semibold">{product.name}</h1>
-            <p className="text-sm text-base-content/70 mt-1">{product.shortDescription}</p>
-          </div>
-
-          <div className="flex items-baseline gap-4">
-            {product.salePrice ? (
-              <>
+            <div className="flex items-baseline gap-4">
+              {product.salePrice ? (
+                <>
+                  <div className="text-2xl font-bold">
+                    {product.currency} {product.salePrice}
+                  </div>
+                  <div className="text-sm line-through text-base-content/50">
+                    {product.currency} {product.price}
+                  </div>
+                  <div className="text-sm text-success font-medium">
+                    Save {product.currency} {Number(product.price) - Number(product.salePrice)}
+                  </div>
+                </>
+              ) : (
                 <div className="text-2xl font-bold">
-                  {product.currency} {product.salePrice}
-                </div>
-                <div className="text-sm line-through text-base-content/50">
                   {product.currency} {product.price}
                 </div>
-                <div className="text-sm text-success font-medium">
-                  Save {product.currency} {Number(product.price) - Number(product.salePrice)}
-                </div>
-              </>
-            ) : (
-              <div className="text-2xl font-bold">
-                {product.currency} {product.price}
+              )}
+            </div>
+
+            {/* Stock warnings */}
+            {isLowStock && (
+              <div className="text-sm text-warning flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                Only {product.quantity} left in stock
               </div>
             )}
-          </div>
-
-          {/* Stock warnings */}
-          {isLowStock && (
-            <div className="text-sm text-warning flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              Only {product.quantity} left in stock
-            </div>
-          )}
-          {isOutOfStock && (
-            <div className="text-sm text-error flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              Out of stock
-            </div>
-          )}
-          {product.trackQuantity && product.quantity === 0 && product.allowBackorders && (
-            <div className="text-sm text-info flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              Currently out of stock - available for back order
-            </div>
-          )}
-          {product.trackQuantity &&
-            product.allowBackorders &&
-            product.quantity &&
-            product.quantity > 0 &&
-            product.quantity <= 5 && (
+            {isOutOfStock && (
+              <div className="text-sm text-error flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                Out of stock
+              </div>
+            )}
+            {product.trackQuantity && product.quantity === 0 && product.allowBackorders && (
               <div className="text-sm text-info flex items-center gap-1">
                 <AlertCircle className="w-4 h-4" />
-                Only {product.quantity} in stock - back orders available
+                Currently out of stock - available for back order
+              </div>
+            )}
+            {product.trackQuantity &&
+              product.allowBackorders &&
+              product.quantity &&
+              product.quantity > 0 &&
+              product.quantity <= 5 && (
+                <div className="text-sm text-info flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  Only {product.quantity} in stock - back orders available
+                </div>
+              )}
+
+            {/* Quantity selector and action buttons */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="join border border-base-300 rounded-lg">
+                <button
+                  onClick={decrease}
+                  className="btn btn-sm join-item border-none"
+                  disabled={qty <= 1 || isOutOfStock}
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <div className="join-item flex items-center justify-center min-w-[50px] px-3 font-semibold text-base">
+                  {qty}
+                </div>
+                <button
+                  onClick={increase}
+                  className="btn btn-sm join-item border-none"
+                  disabled={qty >= maxQuantity || isOutOfStock}
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              <button
+                onClick={addToCart}
+                className={`btn ${
+                  justAdded ? 'btn-success' : 'btn-primary'
+                } px-6 transition-all duration-300`}
+                disabled={cartLoading || justAdded || isOutOfStock}
+                aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
+              >
+                {cartLoading ? (
+                  <span className="loading loading-spinner loading-sm"></span>
+                ) : justAdded ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>Added!</span>
+                  </>
+                ) : isOutOfStock ? (
+                  'Out of Stock'
+                ) : (
+                  'Add to cart'
+                )}
+              </button>
+
+              <button
+                onClick={buyNow}
+                className="btn btn-outline px-4 transition-all duration-300"
+                disabled={cartLoading || isOutOfStock}
+              >
+                Buy now
+              </button>
+            </div>
+
+            {/* Error message alert */}
+            {error && (
+              <div className="alert alert-error shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-start gap-3 w-full">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Error</h3>
+                    <p className="text-sm mt-1">{error}</p>
+                  </div>
+                  <button
+                    onClick={() => setError(null)}
+                    className="btn btn-sm btn-ghost btn-circle"
+                    aria-label="Close error message"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
 
-          {/* Quantity selector and action buttons */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="join border border-base-300 rounded-lg">
-              <button
-                onClick={decrease}
-                className="btn btn-sm join-item border-none"
-                disabled={qty <= 1 || isOutOfStock}
-                aria-label="Decrease quantity"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-              <div className="join-item flex items-center justify-center min-w-[50px] px-3 font-semibold text-base">
-                {qty}
-              </div>
-              <button
-                onClick={increase}
-                className="btn btn-sm join-item border-none"
-                disabled={qty >= maxQuantity || isOutOfStock}
-                aria-label="Increase quantity"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+            {/* Shipping / returns note */}
+            <div className="text-sm text-base-content/70">
+              <p>Ships within 1–3 business days. Returns accepted within 14 days.</p>
             </div>
 
-            <button
-              onClick={addToCart}
-              className={`btn ${
-                justAdded ? 'btn-success' : 'btn-primary'
-              } px-6 transition-all duration-300`}
-              disabled={cartLoading || justAdded || isOutOfStock}
-              aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
-            >
-              {cartLoading ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : justAdded ? (
-                <>
-                  <Check className="w-5 h-5" />
-                  <span>Added!</span>
-                </>
-              ) : isOutOfStock ? (
-                'Out of Stock'
-              ) : (
-                'Add to cart'
-              )}
-            </button>
-
-            <button
-              onClick={buyNow}
-              className="btn btn-outline px-4 transition-all duration-300"
-              disabled={cartLoading || isOutOfStock}
-            >
-              Buy now
-            </button>
-          </div>
-
-          {/* Error message alert */}
-          {error && (
-            <div className="alert alert-error shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-start gap-3 w-full">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold">Error</h3>
-                  <p className="text-sm mt-1">{error}</p>
-                </div>
-                <button
-                  onClick={() => setError(null)}
-                  className="btn btn-sm btn-ghost btn-circle"
-                  aria-label="Close error message"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            {/* Customer reviews summary */}
+            <div className="mt-4">
+              <h4 className="font-medium">Customer reviews</h4>
+              <div className="mt-2 text-sm text-base-content/70">
+                <p>
+                  <strong>{product.averageRating ?? '—'}</strong> average rating •{' '}
+                  {product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'}
+                </p>
               </div>
             </div>
-          )}
 
-          {/* Shipping / returns note */}
-          <div className="text-sm text-base-content/70">
-            <p>Ships within 1–3 business days. Returns accepted within 14 days.</p>
+            {/* Expandable/full description */}
+            <details className="mt-4">
+              <summary className="cursor-pointer font-medium">Full description</summary>
+              <div className="mt-2 text-sm text-base-content/80">
+                <p>{product.shortDescription}</p>
+                <p className="mt-2">
+                  Add more long-form details here — specs, dimensions, warranty, etc.
+                </p>
+              </div>
+            </details>
           </div>
+        </aside>
+      </div>
 
-          {/* Customer reviews summary */}
-          <div className="mt-4">
-            <h4 className="font-medium">Customer reviews</h4>
-            <div className="mt-2 text-sm text-base-content/70">
-              <p>
-                <strong>{product.averageRating ?? '—'}</strong> average rating •{' '}
-                {product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'}
-              </p>
-            </div>
-          </div>
-
-          {/* Expandable/full description */}
-          <details className="mt-4">
-            <summary className="cursor-pointer font-medium">Full description</summary>
-            <div className="mt-2 text-sm text-base-content/80">
-              <p>{product.shortDescription}</p>
-              <p className="mt-2">
-                Add more long-form details here — specs, dimensions, warranty, etc.
-              </p>
-            </div>
-          </details>
-        </div>
-      </aside>
-    </div>
+      {/* Reviews Section */}
+      <div className="mt-12">
+        <ReviewsSection productId={product.id} isAuthenticated={isAuthenticated} />
+      </div>
+    </>
   )
 }

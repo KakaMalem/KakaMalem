@@ -182,7 +182,7 @@ export default function RegisterPage() {
               <label className="label">
                 <span className="label-text font-medium">Email Address</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 w-full">
                 <Mail className="w-4 h-4 opacity-70 text-secondary" />
                 <input
                   type="email"
@@ -202,7 +202,7 @@ export default function RegisterPage() {
                 <span className="label-text font-medium">Phone Number</span>
                 <span className="label-text-alt opacity-70">Optional</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 w-full">
                 <Phone className="w-4 h-4 opacity-70 text-secondary" />
                 <input
                   type="tel"
@@ -220,7 +220,7 @@ export default function RegisterPage() {
               <label className="label">
                 <span className="label-text font-medium">Password</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 w-full">
                 <Lock className="w-4 h-4 opacity-70 text-secondary" />
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -250,7 +250,7 @@ export default function RegisterPage() {
               <label className="label">
                 <span className="label-text font-medium">Confirm Password</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 w-full">
                 <Lock className="w-4 h-4 opacity-70 text-secondary" />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}

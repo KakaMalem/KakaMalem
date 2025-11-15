@@ -21,6 +21,8 @@ import { updateCart } from './endpoints/cart/updateCart'
 import { removeFromCart } from './endpoints/cart/removeFromCart'
 import { clearCart } from './endpoints/cart/clearCart'
 import { mergeCart } from './endpoints/cart/mergeCart'
+import { createReview } from './endpoints/reviews/createReview'
+import { getProductReviews } from './endpoints/reviews/getProductReviews'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -42,6 +44,8 @@ export default buildConfig({
     removeFromCart,
     clearCart,
     mergeCart,
+    createReview,
+    getProductReviews,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
