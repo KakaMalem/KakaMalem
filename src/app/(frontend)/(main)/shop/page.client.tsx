@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
+import { useInView } from 'react-intersection-observer'
 import { ProductCard } from '../../components/ProductCard'
 import type { Product } from '@/payload-types'
 
@@ -19,14 +20,16 @@ interface Props {
 const PAGE_SIZE = 12
 
 export default function ShopClient({ initialData, initialPage = 1 }: Props) {
-  const [data, setData] = useState<ShopPageData>(initialData)
-  const [loading, setLoading] = useState(false)
+  const [products, setProducts] = useState<Product[]>(initialData.products)
   const [currentPage, setCurrentPage] = useState(initialPage)
+  const [hasMore, setHasMore] = useState(initialData.currentPage < initialData.totalPages)
+  const [loading, setLoading] = useState(false)
+  const [totalProducts] = useState(initialData.totalProducts)
 
-  useEffect(() => {
-    fetchProducts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage])
+  const { ref, inView } = useInView({
+    threshold: 0,
+    triggerOnce: false,
+  })
 
   const normalizeBody = (body: any): ShopPageData => {
     if (!body) return { products: [], totalPages: 0, currentPage: 1, totalProducts: 0 }
@@ -52,98 +55,79 @@ export default function ShopClient({ initialData, initialPage = 1 }: Props) {
     return { products: [], totalPages: 0, currentPage: 1, totalProducts: 0 }
   }
 
-  const fetchProducts = async () => {
+  const loadMoreProducts = useCallback(async () => {
+    if (loading || !hasMore) return
+
     setLoading(true)
     try {
+      const nextPage = currentPage + 1
       const params = new URLSearchParams()
-      params.append('page', String(currentPage))
+      params.append('page', String(nextPage))
       params.append('limit', String(PAGE_SIZE))
 
       const response = await fetch(`/api/products?${params.toString()}`)
       const body = await response.json().catch(() => null)
 
       const normalized = normalizeBody(body)
-      setData(normalized)
+
+      if (normalized.products.length > 0) {
+        setProducts((prev) => [...prev, ...normalized.products])
+        setCurrentPage(nextPage)
+        setHasMore(nextPage < normalized.totalPages)
+      } else {
+        setHasMore(false)
+      }
     } catch (err) {
       console.error('Error fetching products:', err)
-      setData({ products: [], totalPages: 0, currentPage: 1, totalProducts: 0 })
+      setHasMore(false)
     } finally {
       setLoading(false)
     }
-  }
+  }, [loading, hasMore, currentPage])
 
-  if (loading && !data) {
+  // Trigger load more when the sentinel element comes into view
+  useEffect(() => {
+    if (inView && hasMore && !loading) {
+      loadMoreProducts()
+    }
+  }, [inView, hasMore, loading, loadMoreProducts])
+
+  if (products.length === 0 && !loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="text-center py-20">
+          <p className="text-xl text-base-content/70">No products found</p>
+          <p className="text-sm text-base-content/50 mt-2">Check back soon for new items</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {loading ? (
-        <div className="flex justify-center py-20">
+      {/* Products Grid */}
+      <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {products.map((product) => (
+          <div key={(product as any).id ?? (product as any)._id} className="w-full h-full">
+            <ProductCard product={product} />
+          </div>
+        ))}
+      </div>
+
+      {/* Infinite Scroll Sentinel */}
+      {hasMore && (
+        <div ref={ref} className="flex justify-center py-8">
           <span className="loading loading-spinner loading-lg text-primary"></span>
         </div>
-      ) : (
-        <>
-          {/* Results Count */}
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-base-content/70">
-              Showing {data?.products.length || 0} of {data?.totalProducts || 0} products
-            </p>
-          </div>
+      )}
 
-          {/* Products */}
-          {data && data.products.length > 0 ? (
-            <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {data.products.map((product) => (
-                <div key={(product as any).id ?? (product as any)._id} className="w-full h-full">
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20">
-              <p className="text-xl text-base-content/70">No products found</p>
-              <p className="text-sm text-base-content/50 mt-2">Try adjusting your filters</p>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {data && data.totalPages > 1 && (
-            <div className="flex justify-center mt-12">
-              <div className="join">
-                <button
-                  className="join-item btn"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                >
-                  «
-                </button>
-
-                {Array.from({ length: data.totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    className={`join-item btn ${currentPage === page ? 'btn-primary' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                ))}
-
-                <button
-                  className="join-item btn"
-                  disabled={currentPage === data.totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(data.totalPages, p + 1))}
-                >
-                  »
-                </button>
-              </div>
-            </div>
-          )}
-        </>
+      {/* End of Results Message */}
+      {!hasMore && products.length > 0 && (
+        <div className="text-center py-8">
+          <p className="text-sm text-base-content/60">
+            You've reached the end. Showing all {totalProducts} products.
+          </p>
+        </div>
       )}
     </div>
   )

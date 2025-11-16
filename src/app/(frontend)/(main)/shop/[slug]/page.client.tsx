@@ -218,28 +218,32 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
             )}
           </div>
 
-          {/* Reviews / description */}
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-yellow-500">
-                <Star size={16} />
-                <span className="font-medium">{product.averageRating ?? '—'}</span>
+          {/* Product Details */}
+          <div className="mt-6">
+            <div className="prose max-w-none">
+              <h3 className="text-xl font-bold mb-4">Product Details</h3>
+              <div className="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="font-medium">SKU:</span>
+                  <span className="text-base-content/70">{product.id}</span>
+                </div>
+                <div className="divider my-1"></div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Status:</span>
+                  <span className="badge badge-sm">{product.status ?? 'N/A'}</span>
+                </div>
+                {product.trackQuantity && (
+                  <>
+                    <div className="divider my-1"></div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Stock:</span>
+                      <span className="text-base-content/70">
+                        {product.quantity ? `${product.quantity} available` : 'Out of stock'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="text-sm text-base-content/70">{product.reviewCount ?? 0} reviews</div>
-            </div>
-
-            <div className="prose max-w-none">
-              <h3>Overview</h3>
-              <p>{product.shortDescription ?? 'No description provided.'}</p>
-            </div>
-
-            <div className="prose max-w-none">
-              <h3>Details</h3>
-              <ul>
-                <li>Status: {product.status ?? 'N/A'}</li>
-                <li>SKU: {product.id}</li>
-                <li>Currency: {product.currency ?? 'USD'}</li>
-              </ul>
             </div>
           </div>
         </div>
@@ -248,8 +252,32 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
         <aside className="lg:col-span-5">
           <div className="space-y-4 sticky top-24">
             <div>
-              <h1 className="text-2xl font-semibold">{product.name}</h1>
-              <p className="text-sm text-base-content/70 mt-1">{product.shortDescription}</p>
+              <h1 className="text-3xl font-bold">{product.name}</h1>
+              {/* Rating summary */}
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex items-center gap-1 text-orange-400">
+                  <Star size={18} fill="currentColor" />
+                  <span className="font-semibold text-base-content">
+                    {product.averageRating ? product.averageRating.toFixed(1) : 'No ratings'}
+                  </span>
+                </div>
+                {product.reviewCount > 0 && (
+                  <>
+                    <span className="text-base-content/40">•</span>
+                    <a
+                      href="#reviews"
+                      className="text-sm text-base-content/70 hover:text-primary transition-colors"
+                    >
+                      {product.reviewCount} {product.reviewCount === 1 ? 'review' : 'reviews'}
+                    </a>
+                  </>
+                )}
+              </div>
+              {product.shortDescription && (
+                <p className="text-base-content/70 mt-3 leading-relaxed">
+                  {product.shortDescription}
+                </p>
+              )}
             </div>
 
             <div className="flex items-baseline gap-4">
@@ -377,38 +405,56 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
               </div>
             )}
 
-            {/* Shipping / returns note */}
-            <div className="text-sm text-base-content/70">
-              <p>Ships within 1–3 business days. Returns accepted within 14 days.</p>
-            </div>
-
-            {/* Customer reviews summary */}
-            <div className="mt-4">
-              <h4 className="font-medium">Customer reviews</h4>
-              <div className="mt-2 text-sm text-base-content/70">
-                <p>
-                  <strong>{product.averageRating ?? '—'}</strong> average rating •{' '}
-                  {product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'}
-                </p>
+            {/* Shipping info */}
+            <div className="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex items-start gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-primary flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                  />
+                </svg>
+                <div>
+                  <p className="font-medium">Fast Shipping</p>
+                  <p className="text-base-content/70">Ships within 1–3 business days</p>
+                </div>
+              </div>
+              <div className="divider my-1"></div>
+              <div className="flex items-start gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-primary flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"
+                  />
+                </svg>
+                <div>
+                  <p className="font-medium">Easy Returns</p>
+                  <p className="text-base-content/70">Returns accepted within 14 days</p>
+                </div>
               </div>
             </div>
-
-            {/* Expandable/full description */}
-            <details className="mt-4">
-              <summary className="cursor-pointer font-medium">Full description</summary>
-              <div className="mt-2 text-sm text-base-content/80">
-                <p>{product.shortDescription}</p>
-                <p className="mt-2">
-                  Add more long-form details here — specs, dimensions, warranty, etc.
-                </p>
-              </div>
-            </details>
           </div>
         </aside>
       </div>
 
       {/* Reviews Section */}
-      <div className="mt-12">
+      <div id="reviews" className="mt-16 scroll-mt-24">
         <ReviewsSection productId={product.id} isAuthenticated={isAuthenticated} />
       </div>
     </>

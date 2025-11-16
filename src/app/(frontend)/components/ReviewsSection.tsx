@@ -76,7 +76,17 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Section Header */}
+      <div>
+        <h2 className="text-3xl font-bold mb-2">Ratings & Reviews</h2>
+        {stats.totalReviews > 0 && stats.verifiedPurchases > 0 && (
+          <p className="text-sm text-base-content/70">
+            {stats.verifiedPurchases} of {stats.totalReviews} reviews are from verified purchasers
+          </p>
+        )}
+      </div>
+
       <div className="divider"></div>
 
       <div className="grid lg:grid-cols-3 gap-8">
