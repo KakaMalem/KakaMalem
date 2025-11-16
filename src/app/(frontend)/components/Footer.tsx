@@ -180,7 +180,7 @@ export const Footer: React.FC = () => {
             </a>
             <div className="flex items-center gap-2 text-xs bg-base-100 px-3 py-1 rounded-full border border-base-300">
               <span className="font-semibold text-primary">Free</span>
-              <span className="opacity-60">Shipping over $50</span>
+              <span className="opacity-60">Shipping over AF1000</span>
             </div>
           </div>
         </div>
