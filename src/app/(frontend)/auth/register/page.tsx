@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, User, Phone } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
 
 export default function RegisterPage() {
@@ -72,24 +74,50 @@ export default function RegisterPage() {
         throw new Error(data.error || data.details || 'Registration failed')
       }
 
-      console.log('Registration response:', data)
+      // Registration successful, now login automatically
+      toast.success('Account created successfully! Logging you in...')
 
-      // With HTTP-only cookies, the token is automatically set by the server
-      // We don't need to manually store it in localStorage
+      try {
+        // Call login endpoint
+        const loginResponse = await fetch('/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        })
 
-      if (data.success) {
-        // Store user data only (not the token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+        const loginData = await loginResponse.json()
 
-        // Redirect to home (cookie will be automatically sent with requests)
-        window.location.href = '/'
-      } else {
-        // Registration succeeded but login might have failed
-        window.location.href = '/auth/login?registered=true'
+        if (loginResponse.ok && loginData.user) {
+          toast.success('Logged in successfully! Redirecting...')
+
+          // Small delay to show the toast before redirecting
+          setTimeout(() => {
+            window.location.href = '/'
+          }, 1000)
+        } else {
+          // Login failed, redirect to login page
+          toast.success('Account created! Please log in.')
+          setTimeout(() => {
+            window.location.href = '/auth/login'
+          }, 1500)
+        }
+      } catch (loginError) {
+        console.error('Auto-login failed:', loginError)
+        // Login failed, redirect to login page
+        toast.success('Account created! Please log in.')
+        setTimeout(() => {
+          window.location.href = '/auth/login'
+        }, 1500)
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration')
-    } finally {
+      toast.error(err.message || 'Registration failed')
       setLoading(false)
     }
   }
@@ -101,6 +129,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex">
+      <Toaster position="top-right" />
       {/* Left Side - Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-base-100 overflow-y-auto">
         <div className="w-full max-w-md py-8">

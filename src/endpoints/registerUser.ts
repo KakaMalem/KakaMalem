@@ -59,64 +59,25 @@ export const registerUser: Endpoint = {
       }
 
       // Create user
-      let user
-      try {
-        user = await payload.create({
-          collection: 'users',
-          data: {
-            email: email.toLowerCase().trim(),
-            password,
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            phone: phone?.trim() || undefined,
-            roles: ['customer'],
-          },
-        })
+      const user = await payload.create({
+        collection: 'users',
+        data: {
+          email: email.toLowerCase().trim(),
+          password,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: phone?.trim() || undefined,
+          roles: ['customer'],
+        },
+      })
 
-        console.log('User created successfully:', user.id)
-      } catch (userError) {
-        console.error('User creation error:', userError)
-        return Response.json({ error: 'Failed to create user account' }, { status: 500 })
-      }
+      console.log('User created successfully:', user.id)
 
-      // Auto-login after registration
-      let token = null
-      let loginSuccess = false
-
-      try {
-        console.log('Attempting auto-login for:', user.email)
-
-        const loginResult = await payload.login({
-          collection: 'users',
-          data: {
-            email: user.email as string,
-            password, // Use the raw password from the request
-          },
-          req,
-        })
-
-        token = loginResult.token
-        loginSuccess = true
-
-        console.log('Auto-login successful, token generated:', !!token)
-      } catch (loginError: any) {
-        console.error('Auto-login after registration failed:', loginError)
-        console.error('Login error details:', {
-          message: loginError.message,
-          status: loginError.status,
-          data: loginError.data,
-        })
-        // Continue without token - user can login manually
-      }
-
-      // Return response with success flag
+      // Return success - frontend will handle login
       return Response.json(
         {
           success: true,
-          message: loginSuccess
-            ? 'Registration successful. You are now logged in.'
-            : 'Registration successful. Please log in.',
-          token, // Will be null if login failed
+          message: 'Registration successful',
           user: {
             id: user.id,
             email: user.email,
@@ -125,7 +86,6 @@ export const registerUser: Endpoint = {
             phone: user.phone,
             roles: user.roles,
           },
-          autoLoginFailed: !loginSuccess, // Flag to help debug
         },
         { status: 201 },
       )
