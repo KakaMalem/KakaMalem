@@ -5,16 +5,14 @@ interface CategoryCardProps {
   category: Category
 }
 
-const getImageUrl = (image?: string | { url?: string } | null): string => {
-  const placeholder = '/images/placeholder.jpg' // <- change to your placeholder path
-  if (!image) return placeholder
-  if (typeof image === 'string') return image
-  // For Payload Media objects or your mock { url: '...' }
-  return image.url ?? placeholder
-}
-
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
-  const imageSrc = getImageUrl(category.image as any)
+  const categoryImage = category.categoryImage || category.image
+  const imageSrc =
+    typeof categoryImage === 'string'
+      ? categoryImage
+      : typeof categoryImage === 'object' && categoryImage?.url
+        ? categoryImage.url
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E'
 
   return (
     <a
