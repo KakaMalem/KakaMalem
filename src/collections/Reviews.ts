@@ -229,6 +229,56 @@ export const Reviews: CollectionConfig = {
       },
     },
     {
+      name: 'helpfulVotes',
+      type: 'array',
+      admin: {
+        position: 'sidebar',
+        description: 'Users who voted this review as helpful',
+        readOnly: true,
+      },
+      fields: [
+        {
+          name: 'user',
+          type: 'relationship',
+          relationTo: 'users',
+        },
+        {
+          name: 'votedAt',
+          type: 'date',
+          admin: {
+            date: {
+              pickerAppearance: 'dayAndTime',
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: 'notHelpfulVotes',
+      type: 'array',
+      admin: {
+        position: 'sidebar',
+        description: 'Users who voted this review as not helpful',
+        readOnly: true,
+      },
+      fields: [
+        {
+          name: 'user',
+          type: 'relationship',
+          relationTo: 'users',
+        },
+        {
+          name: 'votedAt',
+          type: 'date',
+          admin: {
+            date: {
+              pickerAppearance: 'dayAndTime',
+            },
+          },
+        },
+      ],
+    },
+    {
       name: 'images',
       type: 'upload',
       relationTo: 'media',

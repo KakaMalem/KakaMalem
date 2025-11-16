@@ -1,26 +1,13 @@
 'use client'
 
-import React from 'react'
-import { CheckCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { CheckCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { StarRating } from './StarRating'
+import type { Review as PayloadReview } from '@/payload-types'
 
-interface ReviewUser {
-  id: string
-  name?: string
-  email?: string
-}
-
-interface Review {
-  id: string
-  rating: number
-  title: string
-  comment: string
-  createdAt: string
-  user: ReviewUser | string
-  verifiedPurchase?: boolean
-  helpful?: number
-  images?: any
-  status?: string
+interface Review extends Omit<PayloadReview, 'user'> {
+  user: { id: string; name?: string; email?: string } | string
+  userVote?: 'helpful' | 'not-helpful' | null
 }
 
 interface ReviewStats {
@@ -41,9 +28,18 @@ interface ReviewDisplayProps {
   onLoadMore?: () => void
   hasMore?: boolean
   isLoading?: boolean
+  isAuthenticated?: boolean
 }
 
-const RatingDistribution = ({ stats }: { stats: ReviewStats }) => {
+const RatingDistribution = ({
+  stats,
+  selectedRating,
+  onRatingClick,
+}: {
+  stats: ReviewStats
+  selectedRating: number | null
+  onRatingClick: (rating: number | null) => void
+}) => {
   const { ratingDistribution, totalReviews } = stats
 
   return (
@@ -51,9 +47,17 @@ const RatingDistribution = ({ stats }: { stats: ReviewStats }) => {
       {[5, 4, 3, 2, 1].map((stars) => {
         const count = ratingDistribution[stars as keyof typeof ratingDistribution] || 0
         const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0
+        const isSelected = selectedRating === stars
 
         return (
-          <div key={stars} className="flex items-center gap-2">
+          <button
+            key={stars}
+            onClick={() => onRatingClick(isSelected ? null : stars)}
+            className={`flex items-center gap-2 w-full hover:bg-base-200 rounded px-2 py-1 transition-colors ${
+              isSelected ? 'bg-base-200 ring-2 ring-primary' : ''
+            }`}
+            disabled={count === 0}
+          >
             <span className="text-sm w-8">{stars} ★</span>
             <div className="flex-1 bg-base-300 rounded-full h-2 overflow-hidden">
               <div
@@ -62,14 +66,14 @@ const RatingDistribution = ({ stats }: { stats: ReviewStats }) => {
               />
             </div>
             <span className="text-sm w-12 text-right opacity-70">{count}</span>
-          </div>
+          </button>
         )
       })}
     </div>
   )
 }
 
-const ReviewCard = ({ review }: { review: Review }) => {
+const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticated?: boolean }) => {
   const user = typeof review.user === 'object' ? review.user : null
   const userName = user?.name || user?.email?.split('@')[0] || 'Anonymous'
   const reviewDate = new Date(review.createdAt).toLocaleDateString('en-US', {
@@ -77,6 +81,45 @@ const ReviewCard = ({ review }: { review: Review }) => {
     month: 'long',
     day: 'numeric',
   })
+
+  const [helpfulCount, setHelpfulCount] = useState(review.helpful || 0)
+  const [isVoting, setIsVoting] = useState(false)
+  const [userVote, setUserVote] = useState<'helpful' | 'not-helpful' | null>(
+    review.userVote || null,
+  )
+
+  const handleVote = async (helpful: boolean) => {
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      const currentPath = window.location.pathname
+      window.location.href = `/auth/login?redirect=${encodeURIComponent(currentPath)}`
+      return
+    }
+
+    if (isVoting) return
+
+    setIsVoting(true)
+    try {
+      const response = await fetch('/api/mark-review-helpful', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewId: review.id,
+          helpful,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to vote')
+
+      const data = await response.json()
+      setHelpfulCount(data.data.helpful)
+      setUserVote(data.data.userVote)
+    } catch (error) {
+      console.error('Error voting:', error)
+    } finally {
+      setIsVoting(false)
+    }
+  }
 
   return (
     <div className="card bg-base-100 border border-base-300 p-6">
@@ -106,11 +149,33 @@ const ReviewCard = ({ review }: { review: Review }) => {
       <h4 className="font-bold text-lg mb-2">{review.title}</h4>
       <p className="text-base-content/80 whitespace-pre-wrap">{review.comment}</p>
 
-      {review.helpful && review.helpful > 0 && (
-        <div className="mt-4 text-sm opacity-60">
-          {review.helpful} {review.helpful === 1 ? 'person' : 'people'} found this helpful
+      <div className="mt-4 flex items-center gap-4">
+        <p className="text-sm opacity-60">Was this review helpful?</p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleVote(true)}
+            disabled={isVoting}
+            className={`btn btn-sm btn-ghost gap-1 ${userVote === 'helpful' ? 'btn-active text-success' : ''}`}
+            aria-label="Mark as helpful"
+          >
+            <ThumbsUp className="w-4 h-4" />
+            {userVote === 'helpful' && <span className="text-xs">({helpfulCount})</span>}
+          </button>
+          <button
+            onClick={() => handleVote(false)}
+            disabled={isVoting}
+            className={`btn btn-sm btn-ghost gap-1 ${userVote === 'not-helpful' ? 'btn-active text-error' : ''}`}
+            aria-label="Mark as not helpful"
+          >
+            <ThumbsDown className="w-4 h-4" />
+          </button>
         </div>
-      )}
+        {helpfulCount > 0 && userVote !== 'helpful' && (
+          <span className="text-sm opacity-60">
+            {helpfulCount} {helpfulCount === 1 ? 'person' : 'people'} found this helpful
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -121,7 +186,10 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
   onLoadMore,
   hasMore,
   isLoading,
+  isAuthenticated,
 }) => {
+  const [selectedRating, setSelectedRating] = useState<number | null>(null)
+
   if (stats.totalReviews === 0) {
     return (
       <div className="text-center py-12">
@@ -130,6 +198,11 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
       </div>
     )
   }
+
+  // Filter reviews by selected rating
+  const filteredReviews = selectedRating
+    ? reviews.filter((review) => review.rating === selectedRating)
+    : reviews
 
   return (
     <div className="space-y-8">
@@ -146,7 +219,11 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
         </div>
 
         <div>
-          <RatingDistribution stats={stats} />
+          <RatingDistribution
+            stats={stats}
+            selectedRating={selectedRating}
+            onRatingClick={setSelectedRating}
+          />
         </div>
       </div>
 
@@ -154,10 +231,27 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
 
       {/* Reviews List */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold">Customer Reviews</h3>
-        {reviews.map((review) => (
-          <ReviewCard key={review.id} review={review} />
-        ))}
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold">Customer Reviews</h3>
+          {selectedRating && (
+            <button
+              onClick={() => setSelectedRating(null)}
+              className="btn btn-sm btn-ghost gap-2"
+            >
+              <span>Showing {selectedRating} ★ reviews</span>
+              <span className="text-lg">×</span>
+            </button>
+          )}
+        </div>
+        {filteredReviews.length > 0 ? (
+          filteredReviews.map((review) => (
+            <ReviewCard key={review.id} review={review} isAuthenticated={isAuthenticated} />
+          ))
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-base opacity-60">No {selectedRating} star reviews yet</p>
+          </div>
+        )}
       </div>
 
       {/* Load More Button */}

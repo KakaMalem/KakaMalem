@@ -352,6 +352,26 @@ export interface Review {
    * Number of users who found this helpful
    */
   helpful?: number | null;
+  /**
+   * Users who voted this review as helpful
+   */
+  helpfulVotes?:
+    | {
+        user?: (string | null) | User;
+        votedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Users who voted this review as not helpful
+   */
+  notHelpfulVotes?:
+    | {
+        user?: (string | null) | User;
+        votedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   images?: (string | null) | Media;
   adminResponse?: {
     response?: string | null;
@@ -605,6 +625,20 @@ export interface ReviewsSelect<T extends boolean = true> {
   status?: T;
   verifiedPurchase?: T;
   helpful?: T;
+  helpfulVotes?:
+    | T
+    | {
+        user?: T;
+        votedAt?: T;
+        id?: T;
+      };
+  notHelpfulVotes?:
+    | T
+    | {
+        user?: T;
+        votedAt?: T;
+        id?: T;
+      };
   images?: T;
   adminResponse?:
     | T

@@ -14,6 +14,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
   const [stats, setStats] = useState<any>({
     averageRating: 0,
     totalReviews: 0,
+    verifiedPurchases: 0,
     ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   })
   const [pagination, setPagination] = useState<any>(null)
@@ -27,7 +28,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
 
     try {
       const response = await fetch(
-        `/api/product-reviews?productId=${productId}&page=${page}&limit=10&sortBy=createdAt&sortOrder=desc`,
+        `/api/product-reviews?productId=${productId}&page=${page}&limit=10`,
         {
           credentials: 'include',
         },
@@ -118,6 +119,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
               onLoadMore={handleLoadMore}
               hasMore={pagination?.hasNextPage}
               isLoading={isLoading}
+              isAuthenticated={isAuthenticated}
             />
           )}
         </div>
