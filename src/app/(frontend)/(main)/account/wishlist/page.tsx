@@ -1,23 +1,37 @@
-'use client'
-
 import React from 'react'
-import Link from 'next/link'
-import { Heart } from 'lucide-react'
+import { getMeUser } from '@/utilities/getMeUser'
+import WishlistClient from './page.client'
+import { Product } from '@/payload-types'
+import { getServerSideURL } from '@/utilities/getURL'
 
-export default function WishlistPage() {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">My Wishlist</h2>
+export default async function WishlistPage() {
+  const { user } = await getMeUser({
+    nullUserRedirect: '/auth/login?redirect=/account/wishlist',
+  })
 
-      <div className="card bg-base-200">
-        <div className="card-body text-center py-12">
-          <Heart className="w-16 h-16 mx-auto opacity-50 mb-4 text-primary" />
-          <p className="text-lg opacity-70">Your wishlist is empty</p>
-          <Link href="/shop" className="btn btn-primary mt-4">
-            Start Shopping
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
+  // Fetch wishlist products
+  let wishlistProducts: Product[] = []
+  try {
+    if (user.wishlist && Array.isArray(user.wishlist) && user.wishlist.length > 0) {
+      const wishlistIds = user.wishlist
+        .map((item) => (typeof item === 'string' ? item : item.id))
+        .filter(Boolean)
+
+      if (wishlistIds.length > 0) {
+        const productsRes = await fetch(
+          `${getServerSideURL()}/api/products?where[id][in]=${wishlistIds.join(',')}&depth=1`,
+          { cache: 'no-store' },
+        )
+
+        if (productsRes.ok) {
+          const productsData = await productsRes.json()
+          wishlistProducts = productsData.docs || []
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching wishlist products:', error)
+  }
+
+  return <WishlistClient products={wishlistProducts} />
 }

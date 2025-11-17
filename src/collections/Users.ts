@@ -6,7 +6,9 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
     defaultColumns: ['firstName', 'lastName', 'email', 'roles'],
   },
-  auth: true,
+  auth: {
+    // tokenExpiration: 60 * 60 * 24 * 7, // 7 days
+  },
   fields: [
     {
       name: 'roles',
@@ -150,6 +152,15 @@ export const Users: CollectionConfig = {
       type: 'json',
       admin: {
         hidden: true,
+      },
+    },
+    {
+      name: 'wishlist',
+      type: 'relationship',
+      relationTo: 'products',
+      hasMany: true,
+      admin: {
+        description: 'Products added to wishlist',
       },
     },
     {

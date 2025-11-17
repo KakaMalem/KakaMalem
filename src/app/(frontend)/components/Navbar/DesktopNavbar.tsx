@@ -1,5 +1,8 @@
+'use client'
+
 import React from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { getAccountMenuItems } from './constants'
 import Logo from '../Logo'
 import type { CategoryItem } from '.'
@@ -13,9 +16,11 @@ interface DesktopNavbarProps {
 }
 
 export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) {
+  const pathname = usePathname()
+
   // Generate menu items based on auth status
   const friendlyName = user?.firstName || user?.email
-  const accountMenuItems = getAccountMenuItems(!!user, friendlyName)
+  const accountMenuItems = getAccountMenuItems(!!user, friendlyName, pathname || undefined)
 
   return (
     <div className="hidden lg:block">

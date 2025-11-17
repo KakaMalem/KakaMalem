@@ -4,7 +4,7 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'price', 'stock', 'status', 'updatedAt'],
+    defaultColumns: ['name', 'price', 'quantity', 'status', 'stockStatus', 'updatedAt'],
     group: 'E-commerce',
     preview: (doc) => `${process.env.PAYLOAD_PUBLIC_SITE_URL}/products/${doc.slug}`,
   },
@@ -173,8 +173,36 @@ export const Products: CollectionConfig = {
           value: 'published',
         },
         {
+          label: 'Archived',
+          value: 'archived',
+        },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'Publication status of the product',
+      },
+    },
+    {
+      name: 'stockStatus',
+      type: 'select',
+      required: true,
+      defaultValue: 'in_stock',
+      options: [
+        {
+          label: 'In Stock',
+          value: 'in_stock',
+        },
+        {
           label: 'Out of Stock',
           value: 'out_of_stock',
+        },
+        {
+          label: 'Low Stock',
+          value: 'low_stock',
+        },
+        {
+          label: 'On Backorder',
+          value: 'on_backorder',
         },
         {
           label: 'Discontinued',
@@ -183,6 +211,7 @@ export const Products: CollectionConfig = {
       ],
       admin: {
         position: 'sidebar',
+        description: 'Inventory/stock status of the product',
       },
     },
     {

@@ -3,9 +3,12 @@
 import React, { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import Logo from '../../components/Logo'
+import { getRedirectUrl, safeRedirect } from '@/utilities/redirect'
 
 export default function LoginPage() {
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,8 +42,10 @@ export default function LoginPage() {
       // Dispatch custom event for cart merge
       window.dispatchEvent(new Event('userLoggedIn'))
 
-      // Redirect to dashboard or home
-      window.location.href = '/'
+      // Get redirect URL from query params and safely redirect
+      const redirectUrl = getRedirectUrl(searchParams)
+      const safeUrl = safeRedirect(redirectUrl, '/')
+      window.location.href = safeUrl
     } catch (err: any) {
       setError(err.message || 'An error occurred during login')
     } finally {

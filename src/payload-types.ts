@@ -174,6 +174,10 @@ export interface User {
     | number
     | boolean
     | null;
+  /**
+   * Products added to wishlist
+   */
+  wishlist?: (string | Product)[] | null;
   orders?: {
     docs?: (string | Order)[];
     hasNextPage?: boolean;
@@ -196,46 +200,6 @@ export interface User {
       }[]
     | null;
   password?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "orders".
- */
-export interface Order {
-  id: string;
-  orderNumber: string;
-  customer: string | User;
-  items: {
-    product: string | Product;
-    quantity: number;
-    price: number;
-    total: number;
-    id?: string | null;
-  }[];
-  subtotal: number;
-  shipping?: number | null;
-  total: number;
-  shippingAddress: {
-    firstName: string;
-    lastName: string;
-    address1: string;
-    address2?: string | null;
-    city: string;
-    postalCode: string;
-    country: string;
-    phone?: string | null;
-  };
-  trackingNumber?: string | null;
-  /**
-   * Internal notes
-   */
-  notes?: string | null;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  paymentMethod?: ('cod' | 'bank_transfer' | 'credit_card') | null;
-  currency: 'AF' | 'USD';
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -280,7 +244,14 @@ export interface Product {
   lowStockThreshold?: number | null;
   images: (string | Media)[];
   categories?: (string | Category)[] | null;
-  status: 'draft' | 'published' | 'out_of_stock' | 'discontinued';
+  /**
+   * Publication status of the product
+   */
+  status: 'draft' | 'published' | 'archived';
+  /**
+   * Inventory/stock status of the product
+   */
+  stockStatus: 'in_stock' | 'out_of_stock' | 'low_stock' | 'on_backorder' | 'discontinued';
   featured?: boolean | null;
   trackQuantity?: boolean | null;
   allowBackorders?: boolean | null;
@@ -326,6 +297,46 @@ export interface Category {
   status: 'active' | 'inactive' | 'hidden';
   featured?: boolean | null;
   showInMenu?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: string;
+  orderNumber: string;
+  customer: string | User;
+  items: {
+    product: string | Product;
+    quantity: number;
+    price: number;
+    total: number;
+    id?: string | null;
+  }[];
+  subtotal: number;
+  shipping?: number | null;
+  total: number;
+  shippingAddress: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string | null;
+    city: string;
+    postalCode: string;
+    country: string;
+    phone?: string | null;
+  };
+  trackingNumber?: string | null;
+  /**
+   * Internal notes
+   */
+  notes?: string | null;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentMethod?: ('cod' | 'bank_transfer' | 'credit_card') | null;
+  currency: 'AF' | 'USD';
   updatedAt: string;
   createdAt: string;
 }
@@ -491,6 +502,7 @@ export interface UsersSelect<T extends boolean = true> {
         newsletter?: T;
       };
   cart?: T;
+  wishlist?: T;
   orders?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -565,6 +577,7 @@ export interface ProductsSelect<T extends boolean = true> {
   images?: T;
   categories?: T;
   status?: T;
+  stockStatus?: T;
   featured?: T;
   trackQuantity?: T;
   allowBackorders?: T;

@@ -24,6 +24,8 @@ import { mergeCart } from './endpoints/cart/mergeCart'
 import { createReview } from './endpoints/reviews/createReview'
 import { getProductReviews } from './endpoints/reviews/getProductReviews'
 import { markHelpful } from './endpoints/reviews/markHelpful'
+import { addToWishlist } from './endpoints/wishlist/addToWishlist'
+import { removeFromWishlist } from './endpoints/wishlist/removeFromWishlist'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -48,6 +50,8 @@ export default buildConfig({
     createReview,
     getProductReviews,
     markHelpful,
+    addToWishlist,
+    removeFromWishlist,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

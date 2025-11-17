@@ -106,7 +106,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
     e.preventDefault()
     e.stopPropagation()
 
-    if (isAdding || justAdded || product.status === 'out_of_stock') return
+    const isOutOfStock = product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued'
+    if (isAdding || justAdded || isOutOfStock) return
 
     setIsAdding(true)
     setError(null)
@@ -144,9 +145,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           {hasDiscount && (
             <div className="badge badge-primary absolute top-3 left-3 font-bold">-{discount}%</div>
           )}
-          {product.status === 'out_of_stock' && (
+          {(product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued') && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="badge badge-error badge-lg">Out of Stock</span>
+              <span className="badge badge-error badge-lg">
+                {product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
+              </span>
             </div>
           )}
         </figure>
@@ -191,7 +194,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           <div className="relative">
             <button
               onClick={handleAddToCart}
-              disabled={isAdding || justAdded || product.status === 'out_of_stock'}
+              disabled={isAdding || justAdded || product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued'}
               className={`btn btn-sm ${
                 justAdded ? 'btn-success' : 'btn-primary'
               } transition-all duration-300`}

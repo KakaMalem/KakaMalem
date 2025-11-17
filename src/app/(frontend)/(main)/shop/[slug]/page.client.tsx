@@ -2,17 +2,24 @@
 
 import React, { useState } from 'react'
 import { Product } from '@/payload-types'
-import { Star, Plus, Minus, AlertCircle, Check, X } from 'lucide-react'
+import { Star, Plus, Minus, AlertCircle, Check, X, Heart } from 'lucide-react'
 import { useCart } from '@/providers/cart'
+import { useWishlist } from '@/providers/wishlist'
 import { ReviewsSection } from '@/app/(frontend)/components/ReviewsSection'
+import toast from 'react-hot-toast'
 
 type Props = {
   product: Product
   isAuthenticated: boolean
+  descriptionHtml: string
 }
 
-export default function ProductDetailsClient({ product, isAuthenticated }: Props) {
+export default function ProductDetailsClient({ product, isAuthenticated, descriptionHtml }: Props) {
   const { addItem, loading: cartLoading } = useCart()
+  const { isInWishlist, toggleWishlist, loadingItems } = useWishlist()
+
+  const inWishlist = isInWishlist(product.id)
+  const isWishlistLoading = loadingItems.has(product.id)
 
   // Handle images - they can be Media objects or string IDs
   const images = (product.images ?? [])
@@ -170,6 +177,21 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
     }
   }
 
+  const handleWishlistToggle = async () => {
+    try {
+      await toggleWishlist(product.id)
+      toast.success(inWishlist ? 'Removed from wishlist' : 'Added to wishlist')
+    } catch (error: any) {
+      console.error('Error toggling wishlist:', error)
+      if (error.message?.includes('Unauthorized')) {
+        toast.error('Please login to add to wishlist')
+        window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`
+      } else {
+        toast.error(error.message || 'Failed to update wishlist')
+      }
+    }
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -218,31 +240,82 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
             )}
           </div>
 
-          {/* Product Details */}
+          {/* Product Description */}
+          {descriptionHtml && (
+            <div className="mt-6">
+              <div className="prose prose-lg max-w-none">
+                <h3 className="text-xl font-bold mb-4">Description</h3>
+                <div
+                  className="text-base-content/80 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Product Specifications */}
           <div className="mt-6">
             <div className="prose max-w-none">
-              <h3 className="text-xl font-bold mb-4">Product Details</h3>
-              <div className="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-medium">SKU:</span>
-                  <span className="text-base-content/70">{product.id}</span>
-                </div>
-                <div className="divider my-1"></div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Status:</span>
-                  <span className="badge badge-sm">{product.status ?? 'N/A'}</span>
-                </div>
-                {product.trackQuantity && (
-                  <>
-                    <div className="divider my-1"></div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Stock:</span>
-                      <span className="text-base-content/70">
-                        {product.quantity ? `${product.quantity} available` : 'Out of stock'}
-                      </span>
-                    </div>
-                  </>
-                )}
+              <h3 className="text-xl font-bold mb-4">Specifications</h3>
+              <div className="bg-base-200 rounded-lg overflow-hidden">
+                <table className="table table-zebra w-full">
+                  <tbody>
+                    {product.sku && (
+                      <tr>
+                        <td className="font-medium">SKU</td>
+                        <td>{product.sku}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="font-medium">Availability</td>
+                      <td>
+                        <span
+                          className={`badge badge-sm ${
+                            product.stockStatus === 'in_stock'
+                              ? 'badge-success'
+                              : product.stockStatus === 'low_stock'
+                                ? 'badge-warning'
+                                : product.stockStatus === 'on_backorder'
+                                  ? 'badge-info'
+                                  : 'badge-error'
+                          }`}
+                        >
+                          {product.stockStatus === 'in_stock'
+                            ? 'In Stock'
+                            : product.stockStatus === 'out_of_stock'
+                              ? 'Out of Stock'
+                              : product.stockStatus === 'low_stock'
+                                ? 'Low Stock'
+                                : product.stockStatus === 'on_backorder'
+                                  ? 'On Backorder'
+                                  : product.stockStatus === 'discontinued'
+                                    ? 'Discontinued'
+                                    : 'N/A'}
+                        </span>
+                      </td>
+                    </tr>
+                    {product.trackQuantity && product.quantity > 0 && (
+                      <tr>
+                        <td className="font-medium">Stock Quantity</td>
+                        <td>{product.quantity} units available</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="font-medium">Shipping</td>
+                      <td>
+                        {product.requiresShipping
+                          ? 'Physical product - shipping required'
+                          : 'Digital product - no shipping'}
+                      </td>
+                    </tr>
+                    {product.allowBackorders && (
+                      <tr>
+                        <td className="font-medium">Backorders</td>
+                        <td>Accepted - order now, ship when available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -331,57 +404,81 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
               )}
 
             {/* Quantity selector and action buttons */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="join border border-base-300 rounded-lg">
-                <button
-                  onClick={decrease}
-                  className="btn btn-sm join-item border-none"
-                  disabled={qty <= 1 || isOutOfStock}
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <div className="join-item flex items-center justify-center min-w-[50px] px-3 font-semibold text-base">
-                  {qty}
+            <div className="space-y-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="join border border-base-300 rounded-lg">
+                  <button
+                    onClick={decrease}
+                    className="btn btn-sm join-item border-none"
+                    disabled={qty <= 1 || isOutOfStock}
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <div className="join-item flex items-center justify-center min-w-[50px] px-3 font-semibold text-base">
+                    {qty}
+                  </div>
+                  <button
+                    onClick={increase}
+                    className="btn btn-sm join-item border-none"
+                    disabled={qty >= maxQuantity || isOutOfStock}
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
+
                 <button
-                  onClick={increase}
-                  className="btn btn-sm join-item border-none"
-                  disabled={qty >= maxQuantity || isOutOfStock}
-                  aria-label="Increase quantity"
+                  onClick={addToCart}
+                  className={`btn ${
+                    justAdded ? 'btn-success' : 'btn-primary'
+                  } px-6 transition-all duration-300`}
+                  disabled={cartLoading || justAdded || isOutOfStock}
+                  aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
                 >
-                  <Plus className="w-4 h-4" />
+                  {cartLoading ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : justAdded ? (
+                    <>
+                      <Check className="w-5 h-5" />
+                      <span>Added!</span>
+                    </>
+                  ) : isOutOfStock ? (
+                    'Out of Stock'
+                  ) : (
+                    'Add to cart'
+                  )}
+                </button>
+
+                <button
+                  onClick={buyNow}
+                  className="btn btn-outline px-4 transition-all duration-300"
+                  disabled={cartLoading || isOutOfStock}
+                >
+                  Buy now
                 </button>
               </div>
 
+              {/* Wishlist button */}
               <button
-                onClick={addToCart}
-                className={`btn ${
-                  justAdded ? 'btn-success' : 'btn-primary'
-                } px-6 transition-all duration-300`}
-                disabled={cartLoading || justAdded || isOutOfStock}
-                aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
+                onClick={handleWishlistToggle}
+                disabled={isWishlistLoading}
+                className={`btn btn-outline w-full ${
+                  inWishlist ? 'btn-error' : ''
+                } transition-all duration-300`}
+                aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
               >
-                {cartLoading ? (
+                {isWishlistLoading ? (
                   <span className="loading loading-spinner loading-sm"></span>
-                ) : justAdded ? (
-                  <>
-                    <Check className="w-5 h-5" />
-                    <span>Added!</span>
-                  </>
-                ) : isOutOfStock ? (
-                  'Out of Stock'
                 ) : (
-                  'Add to cart'
+                  <>
+                    <Heart
+                      className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`}
+                      strokeWidth={inWishlist ? 0 : 2}
+                    />
+                    <span>{inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}</span>
+                  </>
                 )}
-              </button>
-
-              <button
-                onClick={buyNow}
-                className="btn btn-outline px-4 transition-all duration-300"
-                disabled={cartLoading || isOutOfStock}
-              >
-                Buy now
               </button>
             </div>
 
@@ -405,33 +502,62 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
               </div>
             )}
 
-            {/* Shipping info */}
-            <div className="bg-base-200 rounded-lg p-4 space-y-2 text-sm">
-              <div className="flex items-start gap-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-primary flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                  />
-                </svg>
-                <div>
-                  <p className="font-medium">Fast Shipping</p>
-                  <p className="text-base-content/70">Ships within 1–3 business days</p>
+            {/* Key Information */}
+            <div className="bg-base-200/50 rounded-lg p-4 space-y-3 text-sm border border-base-300">
+              {product.requiresShipping && (
+                <div className="flex items-start gap-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-primary flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-base-content">Shipping Available</p>
+                    <p className="text-base-content/70">Fast delivery to your location</p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {product.allowBackorders && (
+                <>
+                  <div className="divider my-1"></div>
+                  <div className="flex items-start gap-3">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-info flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
+                    <div>
+                      <p className="font-medium text-base-content">Backorders Accepted</p>
+                      <p className="text-base-content/70">Order now, ship when available</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="divider my-1"></div>
               <div className="flex items-start gap-3">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-primary flex-shrink-0"
+                  className="h-5 w-5 text-success flex-shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -440,12 +566,12 @@ export default function ProductDetailsClient({ product, isAuthenticated }: Props
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
                 <div>
-                  <p className="font-medium">Easy Returns</p>
-                  <p className="text-base-content/70">Returns accepted within 14 days</p>
+                  <p className="font-medium text-base-content">Secure Checkout</p>
+                  <p className="text-base-content/70">Safe and encrypted payment</p>
                 </div>
               </div>
             </div>

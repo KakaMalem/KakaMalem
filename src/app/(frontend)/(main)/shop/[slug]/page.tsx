@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import ProductDetailsClient from './page.client'
 import { Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
+import { serializeRichText } from '@/utilities/serializeRichText'
 
 interface Params {
   slug: string
@@ -75,11 +76,18 @@ export default async function ProductPage({ params }: { params: Params }) {
   const token = cookieStore.get('payload-token')?.value
   const isAuthenticated = !!token
 
+  // Serialize rich text description to HTML
+  const descriptionHtml = product.description ? serializeRichText(product.description) : ''
+
   return (
     <div className="min-h-screen bg-base-100 py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* ProductDetailsClient expects serializable product props */}
-        <ProductDetailsClient product={product as Product} isAuthenticated={isAuthenticated} />
+        <ProductDetailsClient
+          product={product as Product}
+          isAuthenticated={isAuthenticated}
+          descriptionHtml={descriptionHtml}
+        />
       </div>
     </div>
   )

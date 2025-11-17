@@ -3,11 +3,18 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User, Package, Heart, MapPin, Settings, LogOut, Menu, X } from 'lucide-react'
+import { User, Package, Heart, MapPin, Settings, LogOut, Menu, X, Shield } from 'lucide-react'
+import type { User as PayloadUser } from '@/payload-types'
 
-export default function AccountSidebar() {
+interface AccountSidebarProps {
+  user: PayloadUser
+}
+
+export default function AccountSidebar({ user }: AccountSidebarProps) {
   const pathname = usePathname() || '/account'
   const [isOpen, setIsOpen] = useState(false)
+
+  const isAdmin = user.roles?.includes('admin')
 
   const isActive = (path: string) => {
     // Exact match for /account to avoid matching sub-routes
@@ -107,6 +114,17 @@ export default function AccountSidebar() {
               </Link>
             </li>
             <div className="divider my-2"></div>
+            {isAdmin && (
+              <>
+                <li>
+                  <Link href="/admin" className="gap-3 py-3 text-success">
+                    <Shield className="w-5 h-5 flex-shrink-0" />
+                    <span>Admin Panel</span>
+                  </Link>
+                </li>
+                <div className="divider my-2"></div>
+              </>
+            )}
             <li className="text-error">
               <Link href="/auth/logout" className="gap-3 py-3">
                 <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -167,6 +185,17 @@ export default function AccountSidebar() {
               </Link>
             </li>
             <div className="divider my-2"></div>
+            {isAdmin && (
+              <>
+                <li>
+                  <Link href="/admin" className="gap-3 py-2 text-success">
+                    <Shield className="w-5 h-5 flex-shrink-0" />
+                    <span>Admin Panel</span>
+                  </Link>
+                </li>
+                <div className="divider my-2"></div>
+              </>
+            )}
             <li className="text-error">
               <Link href="/auth/logout" className="gap-3 py-2">
                 <LogOut className="w-5 h-5 flex-shrink-0" />
