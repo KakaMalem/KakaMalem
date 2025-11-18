@@ -34,6 +34,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (response.success && response.data) {
       setCart(response.data)
+      setError(null) // Clear any previous errors on successful fetch
     } else {
       setError(response.error || 'Failed to load cart')
       setCart({ items: [] })
@@ -47,14 +48,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
    */
   const addItem = useCallback(
     async (productId: string, quantity: number = 1, variantId?: string) => {
-      setError(null)
-
       const response = await cartApi.addToCart(productId, quantity, variantId)
 
       if (response.success) {
         await refreshCart()
       } else {
-        setError(response.error || 'Failed to add item')
+        // Don't set global error state for add failures - just throw
+        // This prevents error messages from persisting when navigating to cart page
         throw new Error(response.error || 'Failed to add item')
       }
     },

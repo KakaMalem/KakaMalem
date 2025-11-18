@@ -17,8 +17,12 @@ type Props = {
 
 export default function ProductDetailsClient({ product, isAuthenticated, descriptionHtml }: Props) {
   const router = useRouter()
-  const { addItem, loading: cartLoading } = useCart()
+  const { addItem, loading: cartLoading, cart } = useCart()
   const { isInWishlist, toggleWishlist, loadingItems } = useWishlist()
+
+  // Check if product is already in cart
+  const cartItem = cart?.items?.find(item => item.productId === product.id)
+  const quantityInCart = cartItem?.quantity || 0
 
   const inWishlist = isInWishlist(product.id)
   const isWishlistLoading = loadingItems.has(product.id)
@@ -137,10 +141,17 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
       playSuccessSound()
       toast.success(`${qty} ${qty === 1 ? 'item' : 'items'} added to cart!`)
 
+      // Reset quantity to 1 after successful add
+      setQty(1)
+
       // Reset after 2 seconds
       setTimeout(() => setJustAdded(false), 2000)
     } catch (e: any) {
       handleError(e, 'add item to cart')
+      // Reset quantity to available amount if stock error
+      if (e?.message?.includes('available in stock')) {
+        setQty(1)
+      }
     }
   }
 
@@ -163,6 +174,10 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
     } catch (e: any) {
       handleError(e, 'process your purchase')
       setBuyNowLoading(false)
+      // Reset quantity to available amount if stock error
+      if (e?.message?.includes('available in stock')) {
+        setQty(1)
+      }
     }
   }
 
@@ -391,6 +406,19 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                   Only {product.quantity} in stock - back orders available
                 </div>
               )}
+
+            {/* Cart status */}
+            {quantityInCart > 0 && (
+              <div className="alert alert-info py-2">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm">
+                  You already have {quantityInCart} {quantityInCart === 1 ? 'item' : 'items'} in your cart
+                  {product.trackQuantity && !product.allowBackorders && (
+                    <> ({Math.max(0, product.quantity - quantityInCart)} more available)</>
+                  )}
+                </span>
+              </div>
+            )}
 
             {/* Quantity selector and action buttons */}
             <div className="space-y-3">

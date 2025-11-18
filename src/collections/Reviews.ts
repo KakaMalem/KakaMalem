@@ -216,6 +216,56 @@ export const Reviews: CollectionConfig = {
       admin: {
         position: 'sidebar',
         description: 'User purchased this product',
+        readOnly: true,
+      },
+      hooks: {
+        beforeChange: [
+          async ({ req, value, siblingData }) => {
+            // Only auto-verify on creation or if not already set
+            if (value !== undefined && value !== false) {
+              return value
+            }
+
+            const userId = siblingData.user || req.user?.id
+            const productId = siblingData.product
+
+            if (!userId || !productId) {
+              return false
+            }
+
+            try {
+              // Check if user has purchased this product
+              const orders = await req.payload.find({
+                collection: 'orders',
+                where: {
+                  and: [
+                    {
+                      customer: {
+                        equals: userId,
+                      },
+                    },
+                    {
+                      'items.product': {
+                        equals: productId,
+                      },
+                    },
+                    {
+                      status: {
+                        in: ['processing', 'shipped', 'delivered'],
+                      },
+                    },
+                  ],
+                },
+                limit: 1,
+              })
+
+              return orders.docs.length > 0
+            } catch (error) {
+              console.error('Error checking verified purchase:', error)
+              return false
+            }
+          },
+        ],
       },
     },
     {

@@ -342,18 +342,6 @@ export default function CartPageClient() {
                   </div>
                 </div>
               </div>
-
-              <div className="card bg-base-200 shadow-md hidden sm:block">
-                <div className="card-body p-4 sm:p-6">
-                  <h3 className="font-semibold text-sm sm:text-base mb-3">We Accept</h3>
-                  <div className="flex gap-2 flex-wrap">
-                    <div className="badge badge-md sm:badge-lg badge-outline">Visa</div>
-                    <div className="badge badge-md sm:badge-lg badge-outline">Mastercard</div>
-                    <div className="badge badge-md sm:badge-lg badge-outline">PayPal</div>
-                    <div className="badge badge-md sm:badge-lg badge-outline">Cash</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

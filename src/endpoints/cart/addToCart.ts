@@ -96,16 +96,20 @@ export const addToCart: Endpoint = {
 
       if (existingItemIndex !== -1) {
         // Update existing item
-        newQuantity = items[existingItemIndex].quantity + quantity
+        const currentInCart = items[existingItemIndex].quantity
+        newQuantity = currentInCart + quantity
 
         // Stock validation (only if not allowing back orders)
         if (product.trackQuantity && !product.allowBackorders) {
           if (newQuantity > product.quantity) {
+            const availableToAdd = Math.max(0, product.quantity - currentInCart)
             return Response.json(
               {
                 success: false,
-                error: `Only ${product.quantity} items available in stock`,
+                error: `Cannot add ${quantity} more. You already have ${currentInCart} in your cart. Only ${product.quantity} available in stock (you can add ${availableToAdd} more)`,
                 availableQuantity: product.quantity,
+                currentInCart: currentInCart,
+                availableToAdd: availableToAdd,
               },
               { status: 400 },
             )

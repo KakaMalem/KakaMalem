@@ -150,7 +150,6 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
 
       setOrderPlaced(true)
       await clearCart()
-      toast.success('Order placed successfully!')
 
       // Redirect to order confirmation page
       router.push(`/order-confirmation/${data.order.id}`)
@@ -428,36 +427,47 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                       value: 'cod',
                       label: 'Cash on Delivery',
                       desc: 'Pay when you receive your order',
+                      available: true,
                     },
                     {
                       value: 'bank_transfer',
                       label: 'Bank Transfer',
                       desc: 'Transfer payment to our bank account',
+                      available: false,
                     },
                     {
                       value: 'credit_card',
                       label: 'Credit Card',
                       desc: 'Pay securely with your credit card',
+                      available: false,
                     },
                   ].map((method) => (
                     <div
                       key={method.value}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        paymentMethod === method.value
-                          ? 'border-primary bg-primary/5'
-                          : 'border-base-300 hover:border-base-content/20'
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        method.available
+                          ? paymentMethod === method.value
+                            ? 'border-primary bg-primary/5 cursor-pointer'
+                            : 'border-base-300 hover:border-base-content/20 cursor-pointer'
+                          : 'border-base-300 opacity-60 cursor-not-allowed'
                       }`}
-                      onClick={() => setPaymentMethod(method.value as any)}
+                      onClick={() => method.available && setPaymentMethod(method.value as any)}
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
                           className="radio radio-primary"
                           checked={paymentMethod === method.value}
-                          onChange={() => setPaymentMethod(method.value as any)}
+                          onChange={() => method.available && setPaymentMethod(method.value as any)}
+                          disabled={!method.available}
                         />
-                        <div>
-                          <div className="font-semibold">{method.label}</div>
+                        <div className="flex-1">
+                          <div className="font-semibold flex items-center gap-2">
+                            {method.label}
+                            {!method.available && (
+                              <span className="badge badge-warning badge-sm">Coming Soon</span>
+                            )}
+                          </div>
                           <div className="text-sm opacity-70">{method.desc}</div>
                         </div>
                       </div>
