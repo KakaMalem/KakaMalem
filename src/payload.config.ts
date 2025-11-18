@@ -13,6 +13,8 @@ import { Categories } from './collections/Categories'
 import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
+import { Terms } from './globals/Terms'
+import { PrivacyPolicy } from './globals/PrivacyPolicy'
 import { registerUser } from './endpoints/registerUser'
 import { loginUser } from './endpoints/loginUser'
 import { getProducts } from './endpoints/getProducts'
@@ -39,6 +41,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Products, Orders, Reviews],
+  globals: [Terms, PrivacyPolicy],
   endpoints: [
     registerUser,
     loginUser,
