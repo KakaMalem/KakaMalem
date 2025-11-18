@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@matsun/reactiscapslockactive':
+        specifier: ^1.1.0
+        version: 1.1.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@payloadcms/db-mongodb':
         specifier: 3.56.0
         version: 3.56.0(@aws-sdk/credential-providers@3.893.0)(payload@3.56.0(graphql@16.11.0)(typescript@5.7.3))
@@ -1234,6 +1237,12 @@ packages:
     resolution: {integrity: sha512-3DSP7QpmTGYU9bN/yljP0PIao4tNIQtsR4ycauWNSawxs/GQCZtSmAPcLRnCm6qpqsDDjUtKjO/1Ej8FRp0m0w==}
     peerDependencies:
       yjs: '>=13.5.22'
+
+  '@matsun/reactiscapslockactive@1.1.0':
+    resolution: {integrity: sha512-0b6B6gX05idm5pbvA0bmnj8aBDy7thjaW/yI1dgERtfg1cpwMOKHQb7vUzk1SMFm3YcvYTv/Ky4XlAqDvmYR1A==}
+    peerDependencies:
+      react: '*'
+      react-dom: '*'
 
   '@monaco-editor/loader@1.5.0':
     resolution: {integrity: sha512-hKoGSM+7aAc7eRTRjpqAZucPmoNOC4UUbknb/VNoTkEIkCPhqV8LfbsgM1webRM7S/z21eHEx9Fkwx8Z/C/+Xw==}
@@ -5985,6 +5994,11 @@ snapshots:
       '@lexical/selection': 0.35.0
       lexical: 0.35.0
       yjs: 13.6.27
+
+  '@matsun/reactiscapslockactive@1.1.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
 
   '@monaco-editor/loader@1.5.0':
     dependencies:

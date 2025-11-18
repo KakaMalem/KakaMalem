@@ -14,6 +14,7 @@ import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
 import { registerUser } from './endpoints/registerUser'
+import { loginUser } from './endpoints/loginUser'
 import { getProducts } from './endpoints/getProducts'
 import { addToCart } from './endpoints/cart/addToCart'
 import { getCart } from './endpoints/cart/getCart'
@@ -40,6 +41,7 @@ export default buildConfig({
   collections: [Users, Media, Categories, Products, Orders, Reviews],
   endpoints: [
     registerUser,
+    loginUser,
     getProducts,
     addToCart,
     getCart,

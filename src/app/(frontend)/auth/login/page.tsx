@@ -6,12 +6,14 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Logo from '../../components/Logo'
 import { getRedirectUrl, safeRedirect } from '@/utilities/redirect'
+import ReactIsCapsLockActive from '@matsun/reactiscapslockactive'
 
 export default function LoginPage() {
   const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -21,13 +23,17 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Replace with your actual Payload login API call
-      const response = await fetch('/api/users/login', {
+      // Use custom login endpoint that supports "remember me"
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          stayLoggedIn: rememberMe,
+        }),
       })
 
       const data = await response.json()
@@ -114,30 +120,62 @@ export default function LoginPage() {
               <label className="label">
                 <span className="label-text font-medium">Password</span>
               </label>
-              <label className="input w-full input-bordered flex items-center gap-2">
-                <Lock className="w-4 h-4 opacity-70 text-secondary" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="grow"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="btn btn-ghost btn-xs btn-circle"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </label>
+              <ReactIsCapsLockActive>
+                {(active) => (
+                  <>
+                    <label className="input w-full input-bordered flex items-center gap-2">
+                      <Lock className="w-4 h-4 opacity-70 text-secondary" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        className="grow"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="btn btn-ghost btn-xs btn-circle"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </label>
+                    {active && (
+                      <label className="label">
+                        <span className="label-text-alt text-warning flex items-center gap-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          Caps Lock is on
+                        </span>
+                      </label>
+                    )}
+                  </>
+                )}
+              </ReactIsCapsLockActive>
             </div>
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
               <label className="label cursor-pointer gap-2">
-                <input type="checkbox" className="checkbox checkbox-sm checkbox-primary" />
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm checkbox-primary"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 <span className="label-text">Remember me</span>
               </label>
               <Link href="/forgot-password" className="link link-primary text-sm">

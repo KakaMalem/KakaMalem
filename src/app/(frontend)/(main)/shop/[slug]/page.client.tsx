@@ -334,7 +334,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                     {product.averageRating ? product.averageRating.toFixed(1) : 'No ratings'}
                   </span>
                 </div>
-                {product.reviewCount > 0 && (
+                {product.reviewCount && product.reviewCount > 0 && (
                   <>
                     <span className="text-base-content/40">•</span>
                     <a

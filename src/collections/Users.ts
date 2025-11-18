@@ -7,7 +7,11 @@ export const Users: CollectionConfig = {
     defaultColumns: ['firstName', 'lastName', 'email', 'roles'],
   },
   auth: {
-    // tokenExpiration: 60 * 60 * 24 * 7, // 7 days
+    tokenExpiration: 60 * 60 * 24 * 7, // 7 days (when "remember me" is checked)
+    cookies: {
+      sameSite: 'Lax',
+      secure: process.env.NODE_ENV === 'production',
+    },
   },
   fields: [
     {

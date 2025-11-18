@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, ShoppingBag, User, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
+import ReactIsCapsLockActive from '@matsun/reactiscapslockactive'
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -78,8 +79,8 @@ export default function RegisterPage() {
       toast.success('Account created successfully! Logging you in...')
 
       try {
-        // Call login endpoint
-        const loginResponse = await fetch('/api/users/login', {
+        // Call custom login endpoint
+        const loginResponse = await fetch('/api/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -88,6 +89,7 @@ export default function RegisterPage() {
           body: JSON.stringify({
             email: formData.email,
             password: formData.password,
+            stayLoggedIn: false, // Default session for auto-login
           }),
         })
 
@@ -249,29 +251,54 @@ export default function RegisterPage() {
               <label className="label">
                 <span className="label-text font-medium">Password</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2 w-full">
-                <Lock className="w-4 h-4 opacity-70 text-secondary" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  className="grow"
-                  placeholder="Minimum 8 characters"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="btn btn-ghost btn-xs btn-circle"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </label>
-              <label className="label">
-                <span className="label-text-alt opacity-70">Must be at least 8 characters</span>
-              </label>
+              <ReactIsCapsLockActive>
+                {(active) => (
+                  <>
+                    <label className="input input-bordered flex items-center gap-2 w-full">
+                      <Lock className="w-4 h-4 opacity-70 text-secondary" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        className="grow"
+                        placeholder="Minimum 8 characters"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="btn btn-ghost btn-xs btn-circle"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </label>
+                    <label className="label">
+                      <span className="label-text-alt opacity-70">Must be at least 8 characters</span>
+                      {active && (
+                        <span className="label-text-alt text-warning flex items-center gap-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          Caps Lock is on
+                        </span>
+                      )}
+                    </label>
+                  </>
+                )}
+              </ReactIsCapsLockActive>
             </div>
 
             {/* Confirm Password */}
@@ -279,29 +306,56 @@ export default function RegisterPage() {
               <label className="label">
                 <span className="label-text font-medium">Confirm Password</span>
               </label>
-              <label className="input input-bordered flex items-center gap-2 w-full">
-                <Lock className="w-4 h-4 opacity-70 text-secondary" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  className="grow"
-                  placeholder="Re-enter password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="btn btn-ghost btn-xs btn-circle"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </label>
+              <ReactIsCapsLockActive>
+                {(active) => (
+                  <>
+                    <label className="input input-bordered flex items-center gap-2 w-full">
+                      <Lock className="w-4 h-4 opacity-70 text-secondary" />
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        className="grow"
+                        placeholder="Re-enter password"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="btn btn-ghost btn-xs btn-circle"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </label>
+                    {active && (
+                      <label className="label">
+                        <span className="label-text-alt text-warning flex items-center gap-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          Caps Lock is on
+                        </span>
+                      </label>
+                    )}
+                  </>
+                )}
+              </ReactIsCapsLockActive>
             </div>
 
             {/* Terms & Conditions */}
