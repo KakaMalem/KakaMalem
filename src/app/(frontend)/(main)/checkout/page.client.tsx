@@ -28,6 +28,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   const { cart: cartData, loading: cartLoading, clearCart } = useCart()
   const router = useRouter()
   const [processing, setProcessing] = useState(false)
+  const [orderPlaced, setOrderPlaced] = useState(false)
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bank_transfer' | 'credit_card'>('cod')
   const [guestForm, setGuestForm] = useState<GuestFormData>({
@@ -54,12 +55,12 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     }
   }, [userAddresses, selectedAddressIndex])
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (but not when order is being placed)
   useEffect(() => {
-    if (!cartLoading && (!cart || cart.length === 0)) {
+    if (!cartLoading && (!cart || cart.length === 0) && !orderPlaced) {
       router.push('/cart')
     }
-  }, [cart, cartLoading, router])
+  }, [cart, cartLoading, router, orderPlaced])
 
   const subtotal = cart.reduce((sum, item) => {
     if (!item.product) return sum
@@ -147,15 +148,12 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
         throw new Error(data.error || 'Failed to create order')
       }
 
+      setOrderPlaced(true)
       await clearCart()
       toast.success('Order placed successfully!')
 
-      // Redirect based on user type
-      if (user) {
-        router.push(`/account/orders/${data.order.id}`)
-      } else {
-        router.push(`/shop`) // Guest users go to shop page
-      }
+      // Redirect to order confirmation page
+      router.push(`/order-confirmation/${data.order.id}`)
     } catch (error: any) {
       console.error('Checkout error:', error)
       toast.error(error.message || 'Failed to place order')
