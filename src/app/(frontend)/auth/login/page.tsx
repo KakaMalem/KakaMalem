@@ -121,7 +121,7 @@ export default function LoginPage() {
                 <span className="label-text font-medium">Password</span>
               </label>
               <ReactIsCapsLockActive>
-                {(active) => (
+                {(active: boolean) => (
                   <>
                     <label className="input w-full input-bordered flex items-center gap-2">
                       <Lock className="w-4 h-4 opacity-70 text-secondary" />
@@ -138,7 +138,11 @@ export default function LoginPage() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="btn btn-ghost btn-xs btn-circle"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </label>
                     {active && (

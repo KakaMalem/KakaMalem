@@ -20,7 +20,13 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
 
   // Generate menu items based on auth status
   const friendlyName = user?.firstName || user?.email
-  const accountMenuItems = getAccountMenuItems(!!user, friendlyName, pathname || undefined)
+  const userRoles = user?.roles as string[] | undefined
+  const accountMenuItems = getAccountMenuItems(
+    !!user,
+    friendlyName,
+    pathname || undefined,
+    userRoles,
+  )
 
   return (
     <div className="lg:hidden">

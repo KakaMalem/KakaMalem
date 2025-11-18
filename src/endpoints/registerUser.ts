@@ -73,6 +73,42 @@ export const registerUser: Endpoint = {
 
       console.log('User created successfully:', user.id)
 
+      // Migrate guest orders to the new user account
+      try {
+        const guestOrders = await payload.find({
+          collection: 'orders',
+          where: {
+            guestEmail: {
+              equals: email.toLowerCase().trim(),
+            },
+          },
+          limit: 100, // Adjust if needed
+        })
+
+        if (guestOrders.docs.length > 0) {
+          console.log(`Found ${guestOrders.docs.length} guest orders to migrate for ${email}`)
+
+          // Update each guest order to link to the new user
+          await Promise.all(
+            guestOrders.docs.map((order) =>
+              payload.update({
+                collection: 'orders',
+                id: order.id,
+                data: {
+                  customer: user.id,
+                  guestEmail: undefined, // Clear guest email since it's now linked to user
+                },
+              }),
+            ),
+          )
+
+          console.log(`Successfully migrated ${guestOrders.docs.length} orders to user ${user.id}`)
+        }
+      } catch (migrationError) {
+        // Log error but don't fail registration
+        console.error('Error migrating guest orders:', migrationError)
+      }
+
       // Return success - frontend will handle login
       return Response.json(
         {

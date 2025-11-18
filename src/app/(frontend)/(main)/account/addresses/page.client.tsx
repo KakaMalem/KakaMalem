@@ -13,15 +13,18 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
 import type { User } from '@/payload-types'
 
 interface AddressesClientProps {
   user: User
+  redirectUrl?: string
 }
 
 type Address = NonNullable<User['addresses']>[number]
 
-export default function AddressesClient({ user: initialUser }: AddressesClientProps) {
+export default function AddressesClient({ user: initialUser, redirectUrl }: AddressesClientProps) {
+  const router = useRouter()
   const [user, setUser] = useState(initialUser)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -123,6 +126,13 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
       setUser(updatedData.doc || updatedData)
       toast.success(editingId ? 'Address updated successfully!' : 'Address added successfully!')
       resetForm()
+
+      // Redirect back if redirectUrl is provided
+      if (redirectUrl) {
+        setTimeout(() => {
+          router.push(redirectUrl)
+        }, 500)
+      }
     } catch (err: any) {
       console.error('Error saving address:', err)
       toast.error('Failed to save address. Please try again.')

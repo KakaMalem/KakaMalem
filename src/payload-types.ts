@@ -313,7 +313,14 @@ export interface Category {
 export interface Order {
   id: string;
   orderNumber: string;
-  customer: string | User;
+  /**
+   * Leave empty for guest orders
+   */
+  customer?: (string | null) | User;
+  /**
+   * Email for guest checkout orders
+   */
+  guestEmail?: string | null;
   items: {
     product: string | Product;
     quantity: number;
@@ -598,6 +605,7 @@ export interface ProductsSelect<T extends boolean = true> {
 export interface OrdersSelect<T extends boolean = true> {
   orderNumber?: T;
   customer?: T;
+  guestEmail?: T;
   items?:
     | T
     | {

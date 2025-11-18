@@ -276,12 +276,12 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
                 return (
                   <Link
                     key={order.id}
-                    href={`/account/orders`}
+                    href={`/account/orders/${order.id}`}
                     className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-base-100 rounded-lg hover:shadow-md transition-shadow gap-3 sm:gap-0"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-base md:text-lg truncate">
-                        Order #{order.id.slice(-8)}
+                        Order #{order.orderNumber || order.id.slice(-8)}
                       </div>
                       <div className="text-sm text-base-content/70">{orderDate}</div>
                       <div className="text-xs text-base-content/50 mt-1">
@@ -291,7 +291,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
 
                     <div className="text-left sm:text-right w-full sm:w-auto">
                       <div className="font-bold text-base md:text-lg mb-1">
-                        USD {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
+                        {order.currency || 'USD'} {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
                       </div>
                       <span
                         className={`badge badge-sm ${getStatusBadge(order.status || 'pending')}`}

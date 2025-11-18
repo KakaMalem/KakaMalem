@@ -6,6 +6,7 @@ import { Star, Plus, Minus, AlertCircle, Check, X, Heart } from 'lucide-react'
 import { useCart } from '@/providers/cart'
 import { useWishlist } from '@/providers/wishlist'
 import { ReviewsSection } from '@/app/(frontend)/components/ReviewsSection'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
 }
 
 export default function ProductDetailsClient({ product, isAuthenticated, descriptionHtml }: Props) {
+  const router = useRouter()
   const { addItem, loading: cartLoading } = useCart()
   const { isInWishlist, toggleWishlist, loadingItems } = useWishlist()
 
@@ -33,12 +35,13 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
   const [selected, setSelected] = useState(0)
   const [qty, setQty] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
+  const [buyNowLoading, setBuyNowLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Stock availability helpers
   const isOutOfStock = !!(
     product.trackQuantity &&
-    product.quantity === 0 &&
+    (product.quantity === 0 || product.quantity === null || product.quantity === undefined) &&
     !product.allowBackorders
   )
   const isLowStock = !!(
@@ -55,6 +58,31 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
 
   const increase = () => setQty((q) => Math.min(maxQuantity, q + 1))
   const decrease = () => setQty((q) => Math.max(1, q - 1))
+
+  // Helper function for error handling
+  const handleError = (e: any, context: string) => {
+    console.error(`Error in ${context}:`, e)
+
+    let errorMessage = `Unable to ${context}. Please try again.`
+
+    if (e?.message) {
+      if (e.message.includes('stock') || e.message.includes('available')) {
+        errorMessage = e.message
+      } else if (e.message.includes('network') || e.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (e.message.includes('auth') || e.message.includes('login')) {
+        errorMessage = 'Please log in to continue.'
+      } else {
+        errorMessage = e.message
+      }
+    }
+
+    setError(errorMessage)
+    toast.error(errorMessage)
+
+    // Clear error after 5 seconds
+    setTimeout(() => setError(null), 5000)
+  }
 
   // Play success sound - a pleasant two-tone beep
   const playSuccessSound = () => {
@@ -97,83 +125,44 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
   }
 
   const addToCart = async () => {
-    if (justAdded || cartLoading) return
+    if (justAdded || cartLoading || buyNowLoading) return
 
-    // Clear any previous errors
     setError(null)
 
     try {
       await addItem(product.id, qty)
 
-      // Success - show checkmark and play sound
+      // Success feedback
       setJustAdded(true)
       playSuccessSound()
+      toast.success(`${qty} ${qty === 1 ? 'item' : 'items'} added to cart!`)
 
       // Reset after 2 seconds
-      setTimeout(() => {
-        setJustAdded(false)
-      }, 2000)
+      setTimeout(() => setJustAdded(false), 2000)
     } catch (e: any) {
-      console.error('Error adding to cart:', e)
-
-      // Set user-friendly error message
-      let errorMessage = 'Unable to add item to cart. Please try again.'
-
-      if (e?.message) {
-        // Check for specific error types
-        if (e.message.includes('stock') || e.message.includes('available')) {
-          errorMessage = e.message
-        } else if (e.message.includes('network') || e.message.includes('fetch')) {
-          errorMessage = 'Network error. Please check your connection and try again.'
-        } else if (e.message.includes('auth') || e.message.includes('login')) {
-          errorMessage = 'Please log in to add items to your cart.'
-        } else {
-          errorMessage = e.message
-        }
-      }
-
-      setError(errorMessage)
-
-      // Clear error after 5 seconds
-      setTimeout(() => {
-        setError(null)
-      }, 5000)
+      handleError(e, 'add item to cart')
     }
   }
 
   const buyNow = async () => {
-    // Clear any previous errors
+    if (cartLoading || buyNowLoading) return
+
     setError(null)
+    setBuyNowLoading(true)
 
     try {
       await addItem(product.id, qty)
-      // Navigate to cart after successfully adding
-      window.location.href = '/cart'
-    } catch (e: any) {
-      console.error('Error in Buy Now:', e)
 
-      // Set user-friendly error message
-      let errorMessage = 'Unable to process your request. Please try again.'
+      // Brief success feedback before redirect
+      toast.success('Redirecting to checkout...')
 
-      if (e?.message) {
-        // Check for specific error types
-        if (e.message.includes('stock') || e.message.includes('available')) {
-          errorMessage = e.message
-        } else if (e.message.includes('network') || e.message.includes('fetch')) {
-          errorMessage = 'Network error. Please check your connection and try again.'
-        } else if (e.message.includes('auth') || e.message.includes('login')) {
-          errorMessage = 'Please log in to continue with your purchase.'
-        } else {
-          errorMessage = e.message
-        }
-      }
-
-      setError(errorMessage)
-
-      // Clear error after 5 seconds
+      // Small delay to ensure cart state is updated
       setTimeout(() => {
-        setError(null)
-      }, 5000)
+        router.push('/checkout')
+      }, 300)
+    } catch (e: any) {
+      handleError(e, 'process your purchase')
+      setBuyNowLoading(false)
     }
   }
 
@@ -410,7 +399,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                   <button
                     onClick={decrease}
                     className="btn btn-sm join-item border-none"
-                    disabled={qty <= 1 || isOutOfStock}
+                    disabled={qty <= 1 || isOutOfStock || buyNowLoading || cartLoading}
                     aria-label="Decrease quantity"
                   >
                     <Minus className="w-4 h-4" />
@@ -421,7 +410,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                   <button
                     onClick={increase}
                     className="btn btn-sm join-item border-none"
-                    disabled={qty >= maxQuantity || isOutOfStock}
+                    disabled={qty >= maxQuantity || isOutOfStock || buyNowLoading || cartLoading}
                     aria-label="Increase quantity"
                   >
                     <Plus className="w-4 h-4" />
@@ -433,7 +422,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                   className={`btn ${
                     justAdded ? 'btn-success' : 'btn-primary'
                   } px-6 transition-all duration-300`}
-                  disabled={cartLoading || justAdded || isOutOfStock}
+                  disabled={cartLoading || buyNowLoading || justAdded || isOutOfStock}
                   aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
                 >
                   {cartLoading ? (
@@ -453,9 +442,16 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                 <button
                   onClick={buyNow}
                   className="btn btn-outline px-4 transition-all duration-300"
-                  disabled={cartLoading || isOutOfStock}
+                  disabled={cartLoading || buyNowLoading || isOutOfStock}
                 >
-                  Buy now
+                  {buyNowLoading ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    'Buy now'
+                  )}
                 </button>
               </div>
 

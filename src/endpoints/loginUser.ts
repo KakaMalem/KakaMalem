@@ -35,6 +35,44 @@ export const loginUser: Endpoint = {
         req,
       })
 
+      // Migrate any guest orders with matching email to this user account
+      try {
+        const guestOrders = await payload.find({
+          collection: 'orders',
+          where: {
+            guestEmail: {
+              equals: email.toLowerCase().trim(),
+            },
+          },
+          limit: 100,
+        })
+
+        if (guestOrders.docs.length > 0) {
+          console.log(`Found ${guestOrders.docs.length} guest orders to link for ${email} on login`)
+
+          // Update each guest order to link to the user
+          await Promise.all(
+            guestOrders.docs.map((order) =>
+              payload.update({
+                collection: 'orders',
+                id: order.id,
+                data: {
+                  customer: result.user.id,
+                  guestEmail: undefined, // Clear guest email
+                },
+              }),
+            ),
+          )
+
+          console.log(
+            `Successfully linked ${guestOrders.docs.length} guest orders to user ${result.user.id}`,
+          )
+        }
+      } catch (migrationError) {
+        // Log error but don't fail login
+        console.error('Error migrating guest orders on login:', migrationError)
+      }
+
       // Calculate cookie expiration based on "remember me"
       const cookieExpiration = stayLoggedIn
         ? 60 * 60 * 24 * 7 // 7 days if "remember me" is checked

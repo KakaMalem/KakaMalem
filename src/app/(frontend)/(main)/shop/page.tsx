@@ -50,11 +50,12 @@ function normalizeApiBody(body: any): ShopPageData {
   }
 }
 
-export default async function Page({ searchParams }: { searchParams?: SearchParams }) {
-  const q = (searchParams?.q as string) ?? ''
-  const page = parseInt((searchParams?.page as string) ?? '1', 10) || 1
-  const limit = parseInt((searchParams?.limit as string) ?? String(PAGE_SIZE), 10) || PAGE_SIZE
-  const sort = (searchParams?.sort as string) ?? 'featured'
+export default async function Page({ searchParams }: { searchParams?: Promise<SearchParams> | SearchParams }) {
+  const params = await Promise.resolve(searchParams || {})
+  const q = (params?.q as string) ?? ''
+  const page = parseInt((params?.page as string) ?? '1', 10) || 1
+  const limit = parseInt((params?.limit as string) ?? String(PAGE_SIZE), 10) || PAGE_SIZE
+  const sort = (params?.sort as string) ?? 'featured'
 
   const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   const url = new URL('/api/products', base)

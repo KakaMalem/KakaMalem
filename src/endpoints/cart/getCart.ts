@@ -40,8 +40,8 @@ export const getCart: Endpoint = {
               isInStock = item.quantity <= product.quantity
               availableQuantity = product.quantity
 
-              // Adjust quantity if it exceeds available stock
-              if (item.quantity > product.quantity) {
+              // Adjust quantity if it exceeds available stock (only if backorders not allowed)
+              if (!product.allowBackorders && item.quantity > product.quantity) {
                 item.quantity = product.quantity
               }
             }

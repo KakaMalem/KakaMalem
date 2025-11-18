@@ -7,6 +7,37 @@ export const Orders: CollectionConfig = {
     defaultColumns: ['orderNumber', 'customer', 'total', 'status', 'createdAt'],
     group: 'E-commerce',
   },
+  access: {
+    read: ({ req: { user } }) => {
+      // Admins can read all orders
+      if (user?.roles?.includes('admin')) {
+        return true
+      }
+
+      // Customers can only read their own orders
+      if (user) {
+        return {
+          customer: {
+            equals: user.id,
+          },
+        }
+      }
+
+      return false
+    },
+    create: () => {
+      // Allow both authenticated and guest users to create orders (handled by endpoint)
+      return true
+    },
+    update: ({ req: { user } }) => {
+      // Only admins can update orders
+      return user?.roles?.includes('admin') ?? false
+    },
+    delete: ({ req: { user } }) => {
+      // Only admins can delete orders
+      return user?.roles?.includes('admin') ?? false
+    },
+  },
   hooks: {
     beforeChange: [
       ({ data }) => {
@@ -28,7 +59,18 @@ export const Orders: CollectionConfig = {
       name: 'customer',
       type: 'relationship',
       relationTo: 'users',
-      required: true,
+      required: false,
+      admin: {
+        description: 'Leave empty for guest orders',
+      },
+    },
+    {
+      name: 'guestEmail',
+      type: 'email',
+      admin: {
+        description: 'Email for guest checkout orders',
+        condition: (data) => !data.customer,
+      },
     },
     {
       name: 'items',
