@@ -5,13 +5,15 @@ interface CreateOrderRequest {
     label?: string
     firstName: string
     lastName: string
-    address1: string
-    address2?: string
-    city: string
     state?: string
-    postalCode: string
     country: string
     phone?: string
+    nearbyLandmark?: string
+    detailedDirections?: string
+    coordinates?: {
+      latitude: number | null
+      longitude: number | null
+    }
     isDefault?: boolean
   }
   paymentMethod: 'cod' | 'bank_transfer' | 'credit_card'
@@ -149,12 +151,12 @@ export const createOrder: Endpoint = {
         shippingAddress: {
           firstName: shippingAddress.firstName,
           lastName: shippingAddress.lastName,
-          address1: shippingAddress.address1,
-          address2: shippingAddress.address2 || '',
-          city: shippingAddress.city,
-          postalCode: shippingAddress.postalCode,
+          state: shippingAddress.state || '',
           country: shippingAddress.country,
           phone: shippingAddress.phone || '',
+          nearbyLandmark: shippingAddress.nearbyLandmark || '',
+          detailedDirections: shippingAddress.detailedDirections || '',
+          coordinates: shippingAddress.coordinates || { latitude: null, longitude: null },
         },
         paymentMethod,
         paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
@@ -188,13 +190,12 @@ export const createOrder: Endpoint = {
                 label: shippingAddress.label,
                 firstName: shippingAddress.firstName,
                 lastName: shippingAddress.lastName,
-                address1: shippingAddress.address1,
-                address2: shippingAddress.address2,
-                city: shippingAddress.city,
                 state: shippingAddress.state,
-                postalCode: shippingAddress.postalCode,
                 country: shippingAddress.country,
                 phone: shippingAddress.phone,
+                nearbyLandmark: shippingAddress.nearbyLandmark,
+                detailedDirections: shippingAddress.detailedDirections,
+                coordinates: shippingAddress.coordinates,
                 isDefault: shippingAddress.isDefault || false,
               },
             ],

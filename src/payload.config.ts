@@ -31,6 +31,7 @@ import { addToWishlist } from './endpoints/wishlist/addToWishlist'
 import { removeFromWishlist } from './endpoints/wishlist/removeFromWishlist'
 import { createOrder } from './endpoints/orders/createOrder'
 import { getUserOrders } from './endpoints/orders/getUserOrders'
+import { getOrderConfirmation } from './endpoints/orders/getOrderConfirmation'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -61,6 +62,7 @@ export default buildConfig({
     removeFromWishlist,
     createOrder,
     getUserOrders,
+    getOrderConfirmation,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

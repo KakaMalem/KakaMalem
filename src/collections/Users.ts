@@ -65,27 +65,11 @@ export const Users: CollectionConfig = {
           required: true,
         },
         {
-          name: 'address1',
-          type: 'text',
-          required: true,
-        },
-        {
-          name: 'address2',
-          type: 'text',
-        },
-        {
-          name: 'city',
-          type: 'text',
-          required: true,
-        },
-        {
           name: 'state',
           type: 'text',
-        },
-        {
-          name: 'postalCode',
-          type: 'text',
-          required: true,
+          admin: {
+            description: 'Province or region',
+          },
         },
         {
           name: 'country',
@@ -100,6 +84,20 @@ export const Users: CollectionConfig = {
           name: 'isDefault',
           type: 'checkbox',
           defaultValue: false,
+        },
+        {
+          name: 'nearbyLandmark',
+          type: 'text',
+          admin: {
+            description: 'Well-known nearby landmark (mosque, shop, building, etc.)',
+          },
+        },
+        {
+          name: 'detailedDirections',
+          type: 'textarea',
+          admin: {
+            description: 'Step-by-step directions to help delivery find your location',
+          },
         },
         {
           name: 'coordinates',
@@ -122,6 +120,9 @@ export const Users: CollectionConfig = {
               },
             },
           ],
+          admin: {
+            description: 'GPS location - Pin your exact location on the map',
+          },
         },
       ],
     },

@@ -50,7 +50,6 @@ export const getProductReviews: Endpoint = {
       })
 
       const allReviews = reviewsResult.docs
-      console.log(`[Reviews] Processing ${allReviews.length} reviews for smart sorting`)
 
       // ENHANCED SMART SORTING ALGORITHM
       const now = Date.now()
@@ -165,20 +164,6 @@ export const getProductReviews: Endpoint = {
         // Tertiary: Newer reviews win remaining ties
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })
-
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Smart Sort Results] Top 5 reviews:')
-        scoredReviews.slice(0, 5).forEach((r, i) => {
-          const age = Math.floor((now - new Date(r.createdAt).getTime()) / (1000 * 60 * 60 * 24))
-          console.log(
-            `  ${i + 1}. Score: ${r._score.toFixed(2)}, Verified: ${r.verifiedPurchase ? 'YES' : 'NO'}, Votes: ${r.helpfulVotes?.length || 0}, Age: ${age}d, Rating: ${r.rating}★`,
-          )
-          if (r._scoreBreakdown && Object.keys(r._scoreBreakdown).length > 0) {
-            console.log(`     Breakdown:`, r._scoreBreakdown)
-          }
-        })
-      }
 
       // Pagination
       const startIndex = (page - 1) * limit

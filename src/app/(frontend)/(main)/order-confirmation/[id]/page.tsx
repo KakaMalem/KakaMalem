@@ -16,8 +16,8 @@ export default async function OrderConfirmationPage({ params }: OrderConfirmatio
     const cookieStore = await cookies()
     const token = cookieStore.get('payload-token')
 
-    // Fetch the order with populated product data
-    const response = await fetch(`${baseURL}/api/orders/${id}?depth=2`, {
+    // Fetch the order using the confirmation endpoint (works for both guests and authenticated users)
+    const response = await fetch(`${baseURL}/api/order-confirmation/${id}`, {
       headers: {
         Cookie: token ? `payload-token=${token.value}` : '',
       },
@@ -32,7 +32,6 @@ export default async function OrderConfirmationPage({ params }: OrderConfirmatio
 
     return <OrderConfirmationClient order={order} />
   } catch (error) {
-    console.error('Error fetching order:', error)
     redirect('/shop')
   }
 }

@@ -146,14 +146,24 @@ export interface User {
         label: string;
         firstName: string;
         lastName: string;
-        address1: string;
-        address2?: string | null;
-        city: string;
+        /**
+         * Province or region
+         */
         state?: string | null;
-        postalCode: string;
         country: string;
         phone?: string | null;
         isDefault?: boolean | null;
+        /**
+         * Well-known nearby landmark (mosque, shop, building, etc.)
+         */
+        nearbyLandmark?: string | null;
+        /**
+         * Step-by-step directions to help delivery find your location
+         */
+        detailedDirections?: string | null;
+        /**
+         * GPS location - Pin your exact location on the map
+         */
         coordinates?: {
           /**
            * Latitude coordinate
@@ -334,12 +344,15 @@ export interface Order {
   shippingAddress: {
     firstName: string;
     lastName: string;
-    address1: string;
-    address2?: string | null;
-    city: string;
-    postalCode: string;
+    state?: string | null;
     country: string;
     phone?: string | null;
+    nearbyLandmark?: string | null;
+    detailedDirections?: string | null;
+    coordinates?: {
+      latitude?: number | null;
+      longitude?: number | null;
+    };
   };
   trackingNumber?: string | null;
   /**
@@ -492,14 +505,12 @@ export interface UsersSelect<T extends boolean = true> {
         label?: T;
         firstName?: T;
         lastName?: T;
-        address1?: T;
-        address2?: T;
-        city?: T;
         state?: T;
-        postalCode?: T;
         country?: T;
         phone?: T;
         isDefault?: T;
+        nearbyLandmark?: T;
+        detailedDirections?: T;
         coordinates?:
           | T
           | {
@@ -623,12 +634,17 @@ export interface OrdersSelect<T extends boolean = true> {
     | {
         firstName?: T;
         lastName?: T;
-        address1?: T;
-        address2?: T;
-        city?: T;
-        postalCode?: T;
+        state?: T;
         country?: T;
         phone?: T;
+        nearbyLandmark?: T;
+        detailedDirections?: T;
+        coordinates?:
+          | T
+          | {
+              latitude?: T;
+              longitude?: T;
+            };
       };
   trackingNumber?: T;
   notes?: T;

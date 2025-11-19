@@ -174,27 +174,17 @@ export const Orders: CollectionConfig = {
           ],
         },
         {
-          name: 'address1',
-          type: 'text',
-          required: true,
-        },
-        {
-          name: 'address2',
-          type: 'text',
-        },
-        {
           type: 'row',
           fields: [
             {
-              name: 'city',
+              name: 'state',
               type: 'text',
-              required: true,
               admin: {
                 width: '50%',
               },
             },
             {
-              name: 'postalCode',
+              name: 'country',
               type: 'text',
               required: true,
               admin: {
@@ -204,22 +194,28 @@ export const Orders: CollectionConfig = {
           ],
         },
         {
-          type: 'row',
+          name: 'phone',
+          type: 'text',
+        },
+        {
+          name: 'nearbyLandmark',
+          type: 'text',
+        },
+        {
+          name: 'detailedDirections',
+          type: 'textarea',
+        },
+        {
+          name: 'coordinates',
+          type: 'group',
           fields: [
             {
-              name: 'country',
-              type: 'text',
-              required: true,
-              admin: {
-                width: '50%',
-              },
+              name: 'latitude',
+              type: 'number',
             },
             {
-              name: 'phone',
-              type: 'text',
-              admin: {
-                width: '50%',
-              },
+              name: 'longitude',
+              type: 'number',
             },
           ],
         },

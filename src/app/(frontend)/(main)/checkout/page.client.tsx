@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ArrowLeft, MapPin, CreditCard, Check, Plus, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
+import { LocationPicker } from '@/app/(frontend)/components/LocationPicker'
 
 interface CheckoutClientProps {
   user: User | null
@@ -16,12 +17,15 @@ interface GuestFormData {
   email: string
   firstName: string
   lastName: string
-  address1: string
-  address2: string
-  city: string
-  postalCode: string
+  state: string
   country: string
   phone: string
+  nearbyLandmark: string
+  detailedDirections: string
+  coordinates: {
+    latitude: number | null
+    longitude: number | null
+  }
 }
 
 export default function CheckoutClient({ user }: CheckoutClientProps) {
@@ -35,12 +39,15 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     email: '',
     firstName: '',
     lastName: '',
-    address1: '',
-    address2: '',
-    city: '',
-    postalCode: '',
+    state: '',
     country: '',
     phone: '',
+    nearbyLandmark: '',
+    detailedDirections: '',
+    coordinates: {
+      latitude: null,
+      longitude: null,
+    },
   })
 
   const userAddresses = user?.addresses || []
@@ -58,9 +65,28 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   // Redirect if cart is empty (but not when order is being placed)
   useEffect(() => {
     if (!cartLoading && (!cart || cart.length === 0) && !orderPlaced) {
+      toast.error('Your cart is empty. Add items to checkout.')
       router.push('/cart')
     }
   }, [cart, cartLoading, router, orderPlaced])
+
+  // Show loading while checking cart
+  if (cartLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    )
+  }
+
+  // If cart is empty and not in process of placing order, don't render checkout
+  if ((!cart || cart.length === 0) && !orderPlaced) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    )
+  }
 
   const subtotal = cart.reduce((sum, item) => {
     if (!item.product) return sum
@@ -85,15 +111,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
 
     // For guest users, validate form
     if (!user) {
-      if (
-        !guestForm.email ||
-        !guestForm.firstName ||
-        !guestForm.lastName ||
-        !guestForm.address1 ||
-        !guestForm.city ||
-        !guestForm.postalCode ||
-        !guestForm.country
-      ) {
+      if (!guestForm.email || !guestForm.firstName || !guestForm.lastName || !guestForm.country) {
         toast.error('Please fill in all required fields')
         return
       }
@@ -114,12 +132,12 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
         shippingAddress = {
           firstName: guestForm.firstName,
           lastName: guestForm.lastName,
-          address1: guestForm.address1,
-          address2: guestForm.address2,
-          city: guestForm.city,
-          postalCode: guestForm.postalCode,
+          state: guestForm.state,
           country: guestForm.country,
           phone: guestForm.phone,
+          nearbyLandmark: guestForm.nearbyLandmark,
+          detailedDirections: guestForm.detailedDirections,
+          coordinates: guestForm.coordinates,
         }
       }
 
@@ -159,14 +177,6 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     } finally {
       setProcessing(false)
     }
-  }
-
-  if (cartLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-      </div>
-    )
   }
 
   return (
@@ -224,17 +234,26 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                                 <div className="text-sm mt-1">
                                   {address.firstName} {address.lastName}
                                 </div>
-                                <div className="text-sm opacity-70">
-                                  {address.address1}
-                                  {address.address2 && `, ${address.address2}`}
-                                </div>
-                                <div className="text-sm opacity-70">
-                                  {address.city}, {address.state} {address.postalCode}
-                                </div>
+                                {address.state && (
+                                  <div className="text-sm opacity-70">{address.state}</div>
+                                )}
                                 <div className="text-sm opacity-70">{address.country}</div>
                                 {address.phone && (
                                   <div className="text-sm opacity-70">Phone: {address.phone}</div>
                                 )}
+                                {address.nearbyLandmark && (
+                                  <div className="text-sm opacity-70 flex items-center gap-1 mt-1">
+                                    <MapPin className="w-3 h-3" />
+                                    <span>{address.nearbyLandmark}</span>
+                                  </div>
+                                )}
+                                {address.coordinates?.latitude &&
+                                  address.coordinates?.longitude && (
+                                    <div className="text-xs text-success mt-1 flex items-center gap-1">
+                                      <Check className="w-3 h-3" />
+                                      GPS location set
+                                    </div>
+                                  )}
                               </div>
                             </div>
                           </div>
@@ -321,92 +340,114 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                       </div>
                     </div>
 
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Address Line 1 *</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="123 Main St"
-                        className="input input-bordered"
-                        value={guestForm.address1}
-                        onChange={(e) => setGuestForm({ ...guestForm, address1: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Address Line 2</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Apt, Suite, etc. (optional)"
-                        className="input input-bordered"
-                        value={guestForm.address2}
-                        onChange={(e) => setGuestForm({ ...guestForm, address2: e.target.value })}
-                      />
-                    </div>
-
                     <div className="grid grid-cols-2 gap-4">
                       <div className="form-control">
                         <label className="label">
-                          <span className="label-text">City *</span>
+                          <span className="label-text">Province / State</span>
                         </label>
                         <input
                           type="text"
-                          placeholder="City"
+                          placeholder="e.g., Kabul, Herat"
                           className="input input-bordered"
-                          value={guestForm.city}
-                          onChange={(e) => setGuestForm({ ...guestForm, city: e.target.value })}
-                          required
+                          value={guestForm.state}
+                          onChange={(e) => setGuestForm({ ...guestForm, state: e.target.value })}
                         />
                       </div>
 
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Postal Code *</span>
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="12345"
-                          className="input input-bordered"
-                          value={guestForm.postalCode}
-                          onChange={(e) =>
-                            setGuestForm({ ...guestForm, postalCode: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="form-control">
                         <label className="label">
                           <span className="label-text">Country *</span>
                         </label>
                         <input
                           type="text"
-                          placeholder="Country"
+                          placeholder="Afghanistan"
                           className="input input-bordered"
                           value={guestForm.country}
                           onChange={(e) => setGuestForm({ ...guestForm, country: e.target.value })}
                           required
                         />
                       </div>
+                    </div>
 
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Phone</span>
-                        </label>
-                        <input
-                          type="tel"
-                          placeholder="+1 234 567 8900"
-                          className="input input-bordered"
-                          value={guestForm.phone}
-                          onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
-                        />
-                      </div>
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Phone</span>
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="+93 XXX XXX XXX"
+                        className="input input-bordered"
+                        value={guestForm.phone}
+                        onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="divider">Delivery Location (Optional)</div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Nearby Landmark</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Near Blue Mosque, Behind City Hospital"
+                        className="input input-bordered"
+                        value={guestForm.nearbyLandmark}
+                        onChange={(e) =>
+                          setGuestForm({ ...guestForm, nearbyLandmark: e.target.value })
+                        }
+                      />
+                      <label className="label">
+                        <span className="label-text-alt">Help delivery find your location</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Detailed Directions</span>
+                      </label>
+                      <textarea
+                        placeholder="Provide detailed directions from the nearest landmark e.g., from shaheed square of shahr e naw, go towards zarghoona high school, after 20 meters you'll see institute of banking and finance of afghanistan, go to the alley infront of it, house number 306, in front of the qala e fathullah mosque"
+                        className="textarea textarea-bordered h-24"
+                        value={guestForm.detailedDirections}
+                        onChange={(e) =>
+                          setGuestForm({ ...guestForm, detailedDirections: e.target.value })
+                        }
+                      />
+                      <label className="label">
+                        <span className="label-text-alt">
+                          Include nearby buildings, turns, or reference points
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">GPS Location</span>
+                      </label>
+                      <LocationPicker
+                        onLocationSelect={(lat, lng) => {
+                          setGuestForm({
+                            ...guestForm,
+                            coordinates: { latitude: lat, longitude: lng },
+                          })
+                        }}
+                        latitude={guestForm.coordinates.latitude ?? undefined}
+                        longitude={guestForm.coordinates.longitude ?? undefined}
+                      />
+                      <label className="label">
+                        <span className="label-text-alt">
+                          Set your exact location for accurate delivery
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="alert alert-info text-sm">
+                      <MapPin className="w-4 h-4" />
+                      <span>
+                        Adding GPS location and landmarks helps ensure smooth delivery. Create an
+                        account to save this information for future orders!
+                      </span>
                     </div>
                   </div>
                 )}
@@ -478,6 +519,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
             </div>
 
             <button
+              type="button"
               className="btn btn-primary btn-block btn-lg"
               onClick={handlePlaceOrder}
               disabled={processing || (user ? selectedAddressIndex === null : false)}

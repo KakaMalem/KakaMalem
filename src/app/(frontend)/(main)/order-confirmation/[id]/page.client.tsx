@@ -82,10 +82,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {!isGuest ? (
             <>
-              <Link
-                href={`/account/orders/${order.id}`}
-                className="btn btn-primary btn-lg gap-2"
-              >
+              <Link href={`/account/orders/${order.id}`} className="btn btn-primary btn-lg gap-2">
                 <FileText className="w-5 h-5" />
                 View Order Details
                 <ArrowRight className="w-4 h-4" />
@@ -194,16 +191,56 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                   <div className="font-semibold">
                     {order.shippingAddress.firstName} {order.shippingAddress.lastName}
                   </div>
-                  <div>{order.shippingAddress.address1}</div>
-                  {order.shippingAddress.address2 && <div>{order.shippingAddress.address2}</div>}
-                  <div>
-                    {order.shippingAddress.city}, {order.shippingAddress.postalCode}
-                  </div>
+                  {order.shippingAddress.state && <div>{order.shippingAddress.state}</div>}
                   <div>{order.shippingAddress.country}</div>
                   {order.shippingAddress.phone && (
                     <div className="mt-2">
                       <span className="opacity-70">Phone:</span> {order.shippingAddress.phone}
                     </div>
+                  )}
+
+                  {/* Location Details for Delivery */}
+                  {(order.shippingAddress.nearbyLandmark ||
+                    order.shippingAddress.detailedDirections ||
+                    order.shippingAddress.coordinates) && (
+                    <>
+                      <div className="divider my-2"></div>
+                      <div className="text-xs font-semibold text-primary mb-1">
+                        Delivery Instructions:
+                      </div>
+                      {order.shippingAddress.nearbyLandmark && (
+                        <div className="flex items-start gap-2 bg-info/10 p-2 rounded">
+                          <MapPin className="w-4 h-4 mt-0.5 text-info flex-shrink-0" />
+                          <div>
+                            <div className="text-xs font-medium">Landmark:</div>
+                            <div>{order.shippingAddress.nearbyLandmark}</div>
+                          </div>
+                        </div>
+                      )}
+                      {order.shippingAddress.detailedDirections && (
+                        <div className="bg-base-100 p-2 rounded">
+                          <div className="text-xs font-medium mb-1">Directions:</div>
+                          <div className="text-xs opacity-80 whitespace-pre-line">
+                            {order.shippingAddress.detailedDirections}
+                          </div>
+                        </div>
+                      )}
+                      {order.shippingAddress.coordinates?.latitude &&
+                        order.shippingAddress.coordinates?.longitude && (
+                          <button
+                            onClick={() =>
+                              window.open(
+                                `https://www.google.com/maps?q=${order.shippingAddress.coordinates?.latitude},${order.shippingAddress.coordinates?.longitude}`,
+                                '_blank',
+                              )
+                            }
+                            className="btn btn-sm btn-primary gap-2 w-full"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            Open in Google Maps
+                          </button>
+                        )}
+                    </>
                   )}
                 </div>
               </div>
