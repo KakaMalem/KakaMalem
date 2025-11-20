@@ -5,22 +5,26 @@ import Link from 'next/link'
 import { ShoppingBag, X, ArrowRight } from 'lucide-react'
 import { useCart, formatCurrency, calculateSubtotal, type CartItem } from '@/providers'
 
-export default function MiniCart() {
+interface MiniCartProps {
+  onClose?: () => void
+}
+
+export default function MiniCart({ onClose }: MiniCartProps) {
   const { cart, loading, error, removeItem } = useCart()
   const items = cart?.items || []
   const subtotal = calculateSubtotal(items)
 
   if (loading) {
     return (
-      <div className="w-80 p-4 text-center">
-        <span className="loading loading-spinner loading-md"></span>
+      <div className="h-full flex items-center justify-center p-4">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="w-80 p-4">
+      <div className="p-4">
         <p className="text-error text-sm">{error}</p>
       </div>
     )
@@ -28,10 +32,16 @@ export default function MiniCart() {
 
   if (items.length === 0) {
     return (
-      <div className="w-80 p-6 text-center">
-        <ShoppingBag className="w-12 h-12 mx-auto opacity-30 mb-3" />
-        <p className="text-base-content/70 mb-4">Your cart is empty</p>
-        <Link href="/shop" className="btn btn-primary btn-sm">
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <ShoppingBag className="w-16 h-16 mx-auto opacity-30 mb-4" />
+        <p className="text-base-content/70 mb-4 text-lg">Your cart is empty</p>
+        <Link
+          href="/shop"
+          className="btn btn-primary"
+          onClick={() => {
+            if (onClose) onClose()
+          }}
+        >
           Start Shopping
         </Link>
       </div>
@@ -39,9 +49,9 @@ export default function MiniCart() {
   }
 
   return (
-    <div className="w-80">
+    <div className="h-full flex flex-col">
       {/* Cart Items */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-4">
         {items.map((item) => {
           if (!item.product) return null
 
@@ -53,8 +63,14 @@ export default function MiniCart() {
           const price = item.product.salePrice || item.product.price || 0
 
           return (
-            <div key={item.productId} className="flex gap-3 p-3 border-b border-base-300">
-              <Link href={`/shop/${item.product.slug}`} className="flex-shrink-0">
+            <div key={item.productId} className="flex gap-3 pb-3 mb-3 border-b border-base-300 last:border-b-0">
+              <Link
+                href={`/shop/${item.product.slug}`}
+                className="flex-shrink-0"
+                onClick={() => {
+                  if (onClose) onClose()
+                }}
+              >
                 <div className="w-16 h-16 bg-base-200 rounded overflow-hidden">
                   <img
                     src={imageUrl}
@@ -68,6 +84,9 @@ export default function MiniCart() {
                 <Link
                   href={`/shop/${item.product.slug}`}
                   className="text-sm font-medium hover:text-primary line-clamp-2"
+                  onClick={() => {
+                    if (onClose) onClose()
+                  }}
                 >
                   {item.product.name}
                 </Link>
@@ -78,6 +97,7 @@ export default function MiniCart() {
               </div>
 
               <button
+                type="button"
                 onClick={async (e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -97,19 +117,31 @@ export default function MiniCart() {
         })}
       </div>
 
-      {/* Cart Summary */}
-      <div className="p-4 bg-base-200 border-t border-base-300">
-        <div className="flex justify-between items-center mb-3">
-          <span className="font-semibold">Subtotal:</span>
-          <span className="text-lg font-bold text-primary">{formatCurrency(subtotal, 'AFN')}</span>
+      {/* Cart Summary - Fixed at bottom */}
+      <div className="p-4 bg-base-200 border-t border-base-300 mt-auto">
+        <div className="flex justify-between items-center mb-4">
+          <span className="font-semibold text-lg">Subtotal:</span>
+          <span className="text-xl font-bold text-primary">{formatCurrency(subtotal, 'AFN')}</span>
         </div>
 
-        <Link href="/cart" className="btn btn-primary btn-block btn-sm mb-2">
+        <Link
+          href="/cart"
+          className="btn btn-primary btn-block mb-2"
+          onClick={(e) => {
+            if (onClose) onClose()
+          }}
+        >
           View Cart
           <ArrowRight className="w-4 h-4" />
         </Link>
 
-        <Link href="/checkout" className="btn btn-outline btn-block btn-sm">
+        <Link
+          href="/checkout"
+          className="btn btn-outline btn-block"
+          onClick={(e) => {
+            if (onClose) onClose()
+          }}
+        >
           Checkout
         </Link>
       </div>

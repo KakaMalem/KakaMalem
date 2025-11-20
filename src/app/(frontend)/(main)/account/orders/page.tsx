@@ -3,7 +3,6 @@ import { getMeUser } from '@/utilities/getMeUser'
 import type { Order } from '@/payload-types'
 import OrdersClient from './page.client'
 import { getServerSideURL } from '@/utilities/getURL'
-import { cookies } from 'next/headers'
 
 export default async function OrdersPage() {
   const { user } = await getMeUser({
@@ -14,13 +13,9 @@ export default async function OrdersPage() {
   let orders: Order[] = []
   try {
     const baseURL = getServerSideURL()
-    const cookieStore = await cookies()
-    const token = cookieStore.get('payload-token')
 
     const response = await fetch(`${baseURL}/api/user-orders?limit=100&depth=2`, {
-      headers: {
-        Cookie: token ? `payload-token=${token.value}` : '',
-      },
+      credentials: 'include',
       cache: 'no-store',
     })
 

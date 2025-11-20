@@ -60,6 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
   const productImage = getProductImage(product)
   const avgRating = typeof product.averageRating === 'number' ? product.averageRating : 0
   const reviewCount = typeof product.reviewCount === 'number' ? product.reviewCount : 0
+  const totalSold = typeof product.totalSold === 'number' ? product.totalSold : 0
   const slug = product.slug ?? product.id
 
   // Play success sound - a pleasant two-tone beep
@@ -134,8 +135,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
   }
 
   return (
-    <article className="card bg-base-100 shadow-lg hover:shadow-2xl transition-all duration-300 group">
-      <Link href={`/shop/${slug}`} className="block">
+    <Link href={`/shop/${slug}`} className="block">
+      <article className="card bg-base-100 shadow-lg hover:shadow-2xl transition-all duration-300 group">
         <figure className="relative overflow-hidden aspect-square">
           <img
             src={productImage.url}
@@ -145,33 +146,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           {hasDiscount && (
             <div className="badge badge-primary absolute top-3 left-3 font-bold">-{discount}%</div>
           )}
-          {(product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued') && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="badge badge-error badge-lg">
-                {product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
-              </span>
-            </div>
-          )}
         </figure>
-      </Link>
 
-      <div className="card-body p-4">
-        <h3 className="card-title text-base group-hover:text-primary transition-colors line-clamp-2">
-          <Link href={`/shop/${slug}`} className="inline-block">
+        <div className="card-body p-4">
+          <h3 className="card-title text-base group-hover:text-primary transition-colors line-clamp-2">
             {product.name}
-          </Link>
-        </h3>
+          </h3>
 
-        {product.shortDescription && size === 'normal' && (
-          <p className="text-sm opacity-70 line-clamp-2">{product.shortDescription}</p>
-        )}
+          {product.shortDescription && size === 'normal' && (
+            <p className="text-sm opacity-70 line-clamp-2">{product.shortDescription}</p>
+          )}
 
-        {avgRating > 0 && (
-          <div className="flex items-center gap-2">
-            <StarRating rating={avgRating} />
-            <span className="text-xs opacity-60">({reviewCount})</span>
+          <div className="flex items-center justify-between gap-2">
+            {avgRating > 0 && (
+              <div className="flex items-center gap-2">
+                <StarRating rating={avgRating} />
+                <span className="text-xs opacity-60">({reviewCount})</span>
+              </div>
+            )}
+            {totalSold > 0 && (
+              <span className="text-xs opacity-60">{totalSold} sold</span>
+            )}
           </div>
-        )}
 
         <div className="card-actions justify-between items-center mt-2">
           <div>
@@ -192,23 +188,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           </div>
 
           <div className="relative">
-            <button
-              onClick={handleAddToCart}
-              disabled={isAdding || justAdded || product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued'}
-              className={`btn btn-sm ${
-                justAdded ? 'btn-success' : 'btn-primary'
-              } transition-all duration-300`}
-              aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
-              title={justAdded ? 'Added to cart' : 'Add to cart'}
-            >
-              {isAdding ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : justAdded ? (
-                <Check className="w-4 h-4" />
-              ) : (
-                <ShoppingCart className="w-4 h-4" />
-              )}
-            </button>
+            {product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued' ? (
+              <button
+                disabled
+                className="btn btn-sm btn-disabled"
+                title={product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
+              >
+                {product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
+              </button>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                disabled={isAdding || justAdded}
+                className={`btn btn-sm ${
+                  justAdded ? 'btn-success' : 'btn-primary'
+                } transition-all duration-300`}
+                aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
+                title={justAdded ? 'Added to cart' : 'Add to cart'}
+              >
+                {isAdding ? (
+                  <span className="loading loading-spinner loading-sm"></span>
+                ) : justAdded ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <ShoppingCart className="w-4 h-4" />
+                )}
+              </button>
+            )}
             {error && (
               <div className="absolute bottom-full mb-2 right-0 bg-error text-error-content text-xs px-2 py-1 rounded whitespace-nowrap z-10 shadow-lg">
                 {error}
@@ -217,10 +223,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
           </div>
         </div>
 
-        {product.trackQuantity && product.quantity <= 5 && product.quantity > 0 && (
-          <div className="text-xs text-warning mt-2">Only {product.quantity} left in stock!</div>
-        )}
-      </div>
-    </article>
+          {product.trackQuantity && product.quantity <= 5 && product.quantity > 0 && (
+            <div className="text-xs text-warning mt-2 flex items-center gap-1">
+              <span className="inline-block w-2 h-2 bg-warning rounded-full"></span>
+              Only {product.quantity} left in stock!
+            </div>
+          )}
+        </div>
+      </article>
+    </Link>
   )
 }

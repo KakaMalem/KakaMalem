@@ -20,6 +20,25 @@ export const Products: CollectionConfig = {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '')
         }
+
+        // Auto-update stock status based on quantity if trackQuantity is enabled
+        if (data.trackQuantity && data.stockStatus !== 'discontinued') {
+          const quantity = data.quantity ?? 0
+          const lowStockThreshold = data.lowStockThreshold ?? 5
+
+          if (quantity === 0) {
+            if (data.allowBackorders) {
+              data.stockStatus = 'on_backorder'
+            } else {
+              data.stockStatus = 'out_of_stock'
+            }
+          } else if (quantity <= lowStockThreshold) {
+            data.stockStatus = 'low_stock'
+          } else {
+            data.stockStatus = 'in_stock'
+          }
+        }
+
         return data
       },
     ],
@@ -54,6 +73,16 @@ export const Products: CollectionConfig = {
         readOnly: true,
         position: 'sidebar',
         description: 'Number of approved reviews',
+      },
+    },
+    {
+      name: 'totalSold',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: 'Total number of units sold',
       },
     },
     {

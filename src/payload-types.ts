@@ -233,6 +233,10 @@ export interface Product {
    * Number of approved reviews
    */
   reviewCount?: number | null;
+  /**
+   * Total number of units sold
+   */
+  totalSold?: number | null;
   description?: {
     root: {
       type: string;
@@ -590,6 +594,7 @@ export interface ProductsSelect<T extends boolean = true> {
   slug?: T;
   averageRating?: T;
   reviewCount?: T;
+  totalSold?: T;
   description?: T;
   shortDescription?: T;
   price?: T;

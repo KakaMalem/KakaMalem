@@ -21,7 +21,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
   const { isInWishlist, toggleWishlist, loadingItems } = useWishlist()
 
   // Check if product is already in cart
-  const cartItem = cart?.items?.find(item => item.productId === product.id)
+  const cartItem = cart?.items?.find((item) => item.productId === product.id)
   const quantityInCart = cartItem?.quantity || 0
 
   const inWishlist = isInWishlist(product.id)
@@ -57,7 +57,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
   )
   const maxQuantity =
     product.trackQuantity && product.quantity && !product.allowBackorders
-      ? Math.min(99, product.quantity)
+      ? Math.min(99, Math.max(0, product.quantity - quantityInCart))
       : 99
 
   const increase = () => setQty((q) => Math.min(maxQuantity, q + 1))
@@ -407,18 +407,6 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                 </div>
               )}
 
-            {/* Cart status */}
-            {quantityInCart > 0 && (
-              <div className="alert alert-info py-2">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">
-                  You already have {quantityInCart} {quantityInCart === 1 ? 'item' : 'items'} in your cart
-                  {product.trackQuantity && !product.allowBackorders && (
-                    <> ({Math.max(0, product.quantity - quantityInCart)} more available)</>
-                  )}
-                </span>
-              </div>
-            )}
 
             {/* Quantity selector and action buttons */}
             <div className="space-y-3">
