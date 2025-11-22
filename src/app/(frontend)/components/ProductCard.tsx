@@ -107,7 +107,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
     e.preventDefault()
     e.stopPropagation()
 
-    const isOutOfStock = product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued'
+    const isOutOfStock =
+      product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued'
     if (isAdding || justAdded || isOutOfStock) return
 
     setIsAdding(true)
@@ -136,7 +137,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
 
   return (
     <Link href={`/shop/${slug}`} className="block">
-      <article className="card bg-base-100 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+      <article className="card bg-base-100 shadow-md hover:shadow-xl transition-all duration-300 group h-full">
         <figure className="relative overflow-hidden aspect-square">
           <img
             src={productImage.url}
@@ -144,89 +145,91 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           {hasDiscount && (
-            <div className="badge badge-primary absolute top-3 left-3 font-bold">-{discount}%</div>
+            <div className="badge badge-primary absolute top-2 left-2 font-bold text-xs md:text-sm">
+              -{discount}%
+            </div>
           )}
         </figure>
 
-        <div className="card-body p-4">
-          <h3 className="card-title text-base group-hover:text-primary transition-colors line-clamp-2">
+        <div className="card-body p-3 md:p-4 flex flex-col">
+          <h3 className="card-title text-sm md:text-base group-hover:text-primary transition-colors line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
             {product.name}
           </h3>
 
-          {product.shortDescription && size === 'normal' && (
-            <p className="text-sm opacity-70 line-clamp-2">{product.shortDescription}</p>
-          )}
-
-          <div className="flex items-center justify-between gap-2">
-            {avgRating > 0 && (
-              <div className="flex items-center gap-2">
-                <StarRating rating={avgRating} />
-                <span className="text-xs opacity-60">({reviewCount})</span>
-              </div>
-            )}
+          <div className="flex items-center justify-between gap-1 md:gap-2 mt-1">
+            <div className="flex items-center gap-1 md:gap-2">
+              <StarRating rating={avgRating} size="sm" />
+              <span className="text-xs opacity-60">({reviewCount})</span>
+            </div>
             {totalSold > 0 && (
-              <span className="text-xs opacity-60">{totalSold} sold</span>
+              <span className="text-xs opacity-60 whitespace-nowrap">{totalSold} sold</span>
             )}
           </div>
 
-        <div className="card-actions justify-between items-center mt-2">
-          <div>
-            {hasDiscount ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-primary">
-                  {product.currency} {salePrice}
-                </span>
-                <span className="text-sm opacity-60 line-through">
+          <div className="card-actions flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mt-auto pt-2">
+            <div className="flex-1">
+              {hasDiscount ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                  <span className="text-lg md:text-xl font-bold text-primary whitespace-nowrap">
+                    {product.currency} {salePrice}
+                  </span>
+                  <span className="text-xs md:text-sm opacity-60 line-through">
+                    {product.currency} {price}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-lg md:text-xl font-bold whitespace-nowrap">
                   {product.currency} {price}
                 </span>
-              </div>
-            ) : (
-              <span className="text-xl font-bold">
-                {product.currency} {price}
-              </span>
-            )}
-          </div>
+              )}
+            </div>
 
-          <div className="relative">
-            {product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued' ? (
-              <button
-                disabled
-                className="btn btn-sm btn-disabled"
-                title={product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
-              >
-                {product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
-              </button>
-            ) : (
-              <button
-                onClick={handleAddToCart}
-                disabled={isAdding || justAdded}
-                className={`btn btn-sm ${
-                  justAdded ? 'btn-success' : 'btn-primary'
-                } transition-all duration-300`}
-                aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
-                title={justAdded ? 'Added to cart' : 'Add to cart'}
-              >
-                {isAdding ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : justAdded ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <ShoppingCart className="w-4 h-4" />
-                )}
-              </button>
-            )}
-            {error && (
-              <div className="absolute bottom-full mb-2 right-0 bg-error text-error-content text-xs px-2 py-1 rounded whitespace-nowrap z-10 shadow-lg">
-                {error}
-              </div>
-            )}
+            <div className="relative w-full sm:w-auto">
+              {product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued' ? (
+                <button
+                  disabled
+                  className="btn btn-sm w-full sm:w-auto btn-disabled text-xs"
+                  title={product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
+                >
+                  {product.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isAdding || justAdded}
+                  className={`btn btn-sm w-full sm:w-auto ${
+                    justAdded ? 'btn-success' : 'btn-primary'
+                  } transition-all duration-300 min-h-[2.5rem] sm:min-h-[2rem]`}
+                  aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
+                  title={justAdded ? 'Added to cart' : 'Add to cart'}
+                >
+                  {isAdding ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : justAdded ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span className="hidden sm:inline ml-1">Added</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span className="hidden sm:inline ml-1">Add to Cart</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {error && (
+                <div className="absolute bottom-full mb-2 left-0 sm:right-0 sm:left-auto bg-error text-error-content text-xs px-2 py-1 rounded whitespace-nowrap z-10 shadow-lg">
+                  {error}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
           {product.trackQuantity && product.quantity <= 5 && product.quantity > 0 && (
             <div className="text-xs text-warning mt-2 flex items-center gap-1">
               <span className="inline-block w-2 h-2 bg-warning rounded-full"></span>
-              Only {product.quantity} left in stock!
+              Only {product.quantity} left!
             </div>
           )}
         </div>

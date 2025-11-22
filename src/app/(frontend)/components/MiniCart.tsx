@@ -63,7 +63,10 @@ export default function MiniCart({ onClose }: MiniCartProps) {
           const price = item.product.salePrice || item.product.price || 0
 
           return (
-            <div key={item.productId} className="flex gap-3 pb-3 mb-3 border-b border-base-300 last:border-b-0">
+            <div
+              key={item.productId}
+              className="flex gap-3 pb-3 mb-3 border-b border-base-300 last:border-b-0"
+            >
               <Link
                 href={`/shop/${item.product.slug}`}
                 className="flex-shrink-0"
@@ -125,24 +128,24 @@ export default function MiniCart({ onClose }: MiniCartProps) {
         </div>
 
         <Link
-          href="/cart"
+          href="/checkout"
           className="btn btn-primary btn-block mb-2"
           onClick={(e) => {
             if (onClose) onClose()
           }}
         >
-          View Cart
+          Checkout
           <ArrowRight className="w-4 h-4" />
         </Link>
 
         <Link
-          href="/checkout"
+          href="/cart"
           className="btn btn-outline btn-block"
           onClick={(e) => {
             if (onClose) onClose()
           }}
         >
-          Checkout
+          View Cart
         </Link>
       </div>
     </div>

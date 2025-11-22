@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { ShoppingCart, X } from 'lucide-react'
 import { useCart, getCartItemCount } from '@/providers'
 import MiniCart from '../MiniCart'
@@ -9,14 +9,44 @@ export default function CartButton() {
   const { cart } = useCart()
   const count = getCartItemCount(cart)
   const [isOpen, setIsOpen] = useState(false)
+  const isManualClose = useRef(false)
 
   const closeSlider = () => {
+    isManualClose.current = true
     setIsOpen(false)
   }
 
   const openSlider = () => {
     setIsOpen(true)
   }
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen) {
+        isManualClose.current = false
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen])
+
+  // Manage browser history state
+  useEffect(() => {
+    if (isOpen) {
+      // Push a state when cart opens
+      window.history.pushState({ cartOpen: true }, '')
+    } else if (isManualClose.current) {
+      // Go back when manually closing to remove the cart state
+      isManualClose.current = false
+      window.history.back()
+    }
+  }, [isOpen])
 
   // Prevent body scroll when slider is open
   useEffect(() => {
@@ -35,7 +65,7 @@ export default function CartButton() {
     <>
       <button
         type="button"
-        className="btn btn-ghost btn-sm relative"
+        className="btn btn-ghost btn-circle btn-sm relative hover:bg-base-200"
         title="Cart"
         onClick={openSlider}
       >
@@ -44,7 +74,7 @@ export default function CartButton() {
         {count > 0 && (
           <span
             aria-live="polite"
-            className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-content text-xs font-medium"
+            className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-content text-xs font-bold shadow-md"
           >
             {count}
           </span>

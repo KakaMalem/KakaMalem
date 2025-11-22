@@ -407,7 +407,6 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                 </div>
               )}
 
-
             {/* Quantity selector and action buttons */}
             <div className="space-y-3">
               <div className="flex items-center gap-4 flex-wrap">

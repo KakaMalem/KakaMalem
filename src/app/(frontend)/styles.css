@@ -1,9 +1,65 @@
 @import 'tailwindcss';
-@plugin "daisyui" {
-  themes:
-    light --default,
-    dark --prefersdark,
-    light;
+@plugin "daisyui";
+
+@plugin "daisyui/theme" {
+  name: 'kakamalem';
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  /* Base colors - Clean light backgrounds */
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(97% 0.003 264);
+  --color-base-300: oklch(94% 0.006 264);
+  --color-base-content: oklch(25% 0.015 264);
+
+  /* Primary - Vibrant red */
+  --color-primary: oklch(58% 0.22 25);
+  --color-primary-content: oklch(100% 0 0);
+
+  /* Secondary - Elegant purple */
+  --color-secondary: oklch(60% 0.2 300);
+  --color-secondary-content: oklch(100% 0 0);
+
+  /* Accent - Vibrant teal */
+  --color-accent: oklch(65% 0.2 180);
+  --color-accent-content: oklch(100% 0 0);
+
+  /* Neutral - Balanced grays */
+  --color-neutral: oklch(40% 0.01 264);
+  --color-neutral-content: oklch(100% 0 0);
+
+  /* Info - Clear blue */
+  --color-info: oklch(65% 0.2 240);
+  --color-info-content: oklch(100% 0 0);
+
+  /* Success - Fresh green */
+  --color-success: oklch(65% 0.2 145);
+  --color-success-content: oklch(100% 0 0);
+
+  /* Warning - Warm orange */
+  --color-warning: oklch(75% 0.18 75);
+  --color-warning-content: oklch(25% 0.015 75);
+
+  /* Error - Clear red */
+  --color-error: oklch(60% 0.25 25);
+  --color-error-content: oklch(100% 0 0);
+
+  /* Border radius */
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+
+  /* Base sizes */
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  /* Border size */
+  --border: 1px;
+
+  /* Effects */
+  --depth: 1;
+  --noise: 0;
 }
 
 /* Hide scrollbars */

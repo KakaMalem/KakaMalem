@@ -12,7 +12,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 
   return (
-    <html lang="en" data-theme="light">
+    <html lang="en" data-theme="kakamalem">
       <body>
         <Toaster />
 

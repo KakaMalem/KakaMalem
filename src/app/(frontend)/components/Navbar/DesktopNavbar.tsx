@@ -29,22 +29,32 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
   )
 
   return (
-    <div className="hidden lg:block">
+    <div className="hidden lg:block border-b border-base-200">
       {/* Top bar */}
-      <div className="bg-base-100 border-b border-base-200">
-        <div className="max-w-7xl mx-auto px-6 py-3">
+      <div className="bg-base-100">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-8">
-            {/* Logo & SearchBar */}
-            <Logo variant="desktop" />
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              <Logo variant="desktop" />
+            </div>
 
-            <SearchBar />
+            {/* SearchBar - Centered and flexible */}
+            <div className="flex-1 max-w-2xl">
+              <SearchBar />
+            </div>
 
             {/* Actions */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2">
               {/* Account */}
               <div className="dropdown dropdown-end">
-                <div tabIndex={0} role="button" className="btn btn-ghost btn-sm" title="Account">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-ghost btn-circle btn-sm hover:bg-base-200"
+                  title="Account"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -55,17 +65,17 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
                 </div>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 rounded-lg w-52"
+                  className="dropdown-content z-10 menu p-2 shadow-xl bg-base-100 rounded-xl w-56 mt-2 border border-base-200"
                 >
                   {accountMenuItems.map((item, index) =>
                     item.isDivider ? (
-                      <div key={index} className="divider my-0"></div>
+                      <div key={index} className="divider my-1"></div>
                     ) : item.href ? (
                       <li key={index}>
                         <Link
                           href={item.href}
-                          className={`text-sm py-2 hover:bg-base-200 rounded-md ${
-                            item.isBold ? 'font-medium' : ''
+                          className={`text-sm py-2.5 px-3 hover:bg-base-200 rounded-lg ${
+                            item.isBold ? 'font-semibold' : ''
                           }`}
                         >
                           {item.label}
@@ -84,26 +94,37 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
       </div>
 
       {/* Categories Bar */}
-      <div className="sticky top-0 z-40 bg-base-200/80 backdrop-blur-sm border-b border-base-300">
-        <div className="max-w-7xl mx-auto px-6 py-2">
-          <div className="flex items-center space-x-8 overflow-x-auto scrollbar-hide">
+      <div className="sticky top-0 z-40 bg-base-100">
+        <div className="max-w-7xl mx-auto px-6 py-3.5">
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
             <Link
               href="/shop"
-              className="text-sm text-base-content hover:text-primary transition-colors whitespace-nowrap font-medium"
+              className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                pathname === '/shop'
+                  ? 'bg-primary text-primary-content shadow-md'
+                  : 'bg-base-200 text-base-content hover:bg-base-300'
+              }`}
             >
               All Products
             </Link>
             {categories
               .filter((cat) => cat.value !== 'all')
-              .map((category) => (
-                <Link
-                  key={category.value}
-                  href={`/shop?${category.slug}`}
-                  className="text-sm text-base-content/80 hover:text-primary transition-colors whitespace-nowrap"
-                >
-                  {category.label}
-                </Link>
-              ))}
+              .map((category) => {
+                const isActive = pathname === `/${category.slug}`
+                return (
+                  <Link
+                    key={category.value}
+                    href={`/${category.slug}`}
+                    className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-primary text-primary-content shadow-md'
+                        : 'bg-base-200 text-base-content hover:bg-base-300'
+                    }`}
+                  >
+                    {category.label}
+                  </Link>
+                )
+              })}
           </div>
         </div>
       </div>

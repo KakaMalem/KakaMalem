@@ -29,14 +29,19 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
   )
 
   return (
-    <div className="lg:hidden">
+    <div className="lg:hidden border-b border-base-200">
       {/* Main Mobile Navbar */}
-      <div className="bg-base-100 border-b border-base-200">
+      <div className="bg-base-100">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-3">
             {/* Mobile Menu Button */}
             <div className="dropdown">
-              <div tabIndex={0} role="button" className="btn btn-ghost btn-sm" title="Menu">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-ghost btn-circle btn-sm hover:bg-base-200"
+                title="Menu"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -48,17 +53,17 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
               </div>
               <ul
                 tabIndex={0}
-                className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 rounded-lg w-52"
+                className="dropdown-content z-10 menu p-2 shadow-xl bg-base-100 rounded-xl w-56 mt-2 border border-base-200"
               >
                 {accountMenuItems.map((item, index) =>
                   item.isDivider ? (
-                    <div key={index} className="divider my-0"></div>
+                    <div key={index} className="divider my-1"></div>
                   ) : item.href ? (
                     <li key={index}>
                       <Link
                         href={item.href}
-                        className={`text-sm py-2 hover:bg-base-200 rounded-md ${
-                          item.isBold ? 'font-medium' : ''
+                        className={`text-sm py-2.5 px-3 hover:bg-base-200 rounded-lg ${
+                          item.isBold ? 'font-semibold' : ''
                         }`}
                       >
                         {item.label}
@@ -69,8 +74,12 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
               </ul>
             </div>
 
-            {/* Logo & Cart */}
-            <Logo variant="mobile" />
+            {/* Logo */}
+            <div className="flex-1 flex justify-center">
+              <Logo variant="mobile" />
+            </div>
+
+            {/* Cart */}
             <CartButton />
           </div>
 
@@ -82,26 +91,37 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
       </div>
 
       {/* Mobile Categories Bar */}
-      <div className="bg-base-200/80 backdrop-blur-sm border-b border-base-300">
-        <div className="py-2">
-          <div className="flex items-center space-x-6 overflow-x-auto hide-scrollbar px-4">
+      <div className="sticky top-0 z-40 bg-base-100">
+        <div className="py-2.5">
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar px-4">
             <Link
               href="/shop"
-              className="text-sm text-base-content hover:text-primary transition-colors whitespace-nowrap font-medium"
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                pathname === '/shop'
+                  ? 'bg-primary text-primary-content shadow-md scale-105'
+                  : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
+              }`}
             >
               All Products
             </Link>
             {categories
               .filter((cat) => cat.value !== 'all')
-              .map((category) => (
-                <Link
-                  key={category.value}
-                  href={`/shop?${category.slug}`}
-                  className="text-sm text-base-content/80 hover:text-primary transition-colors whitespace-nowrap"
-                >
-                  {category.label}
-                </Link>
-              ))}
+              .map((category) => {
+                const isActive = pathname === `/${category.slug}`
+                return (
+                  <Link
+                    key={category.value}
+                    href={`/${category.slug}`}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-primary text-primary-content shadow-md scale-105'
+                        : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
+                    }`}
+                  >
+                    {category.label}
+                  </Link>
+                )
+              })}
           </div>
         </div>
       </div>
