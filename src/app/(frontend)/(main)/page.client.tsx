@@ -125,23 +125,30 @@ export default function HomeClient({ data }: HomeClientProps) {
             </div>
             {currentHero && (
               <div className="flex gap-4 justify-center flex-wrap">
-                <button
-                  className="btn btn-primary btn-lg"
-                  onClick={async () => {
-                    try {
-                      await addItem(currentHero.id, 1)
-                    } catch (e) {
-                      console.error('Error adding to cart:', e)
-                    }
-                  }}
-                  disabled={cartLoading}
-                >
-                  {cartLoading ? (
-                    <span className="loading loading-spinner loading-sm"></span>
-                  ) : (
-                    'Add to Cart'
-                  )}
-                </button>
+                {currentHero.stockStatus === 'out_of_stock' ||
+                currentHero.stockStatus === 'discontinued' ? (
+                  <button className="btn btn-lg btn-disabled" disabled>
+                    {currentHero.stockStatus === 'discontinued' ? 'Discontinued' : 'Out of Stock'}
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary btn-lg"
+                    onClick={async () => {
+                      try {
+                        await addItem(currentHero.id, 1)
+                      } catch (e) {
+                        console.error('Error adding to cart:', e)
+                      }
+                    }}
+                    disabled={cartLoading}
+                  >
+                    {cartLoading ? (
+                      <span className="loading loading-spinner loading-sm"></span>
+                    ) : (
+                      'Add to Cart'
+                    )}
+                  </button>
+                )}
                 <a
                   href={`/shop/${currentHero.slug}`}
                   className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary"
@@ -234,7 +241,7 @@ export default function HomeClient({ data }: HomeClientProps) {
               <h2 className="text-4xl md:text-5xl font-bold mb-4">Flash Deals</h2>
               <p className="text-lg md:text-xl opacity-70">Hurry! These deals won't last long</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {data.featuredDeals.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -261,7 +268,7 @@ export default function HomeClient({ data }: HomeClientProps) {
                 View All <ChevronRight className="w-5 h-5" />
               </a>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {data.trendingProducts.map((product) => (
                 <ProductCard key={product.id} product={product} size="compact" />
               ))}

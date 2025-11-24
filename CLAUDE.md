@@ -87,7 +87,7 @@ Custom endpoints defined in `src/endpoints/`:
 
 **Products:**
 
-- `GET /api/products` - Search/filter products with pagination (supports `category`, `minPrice`, `maxPrice`, `rating`, `sort`, `page`, `limit`)
+- `GET /api/search-products` - Search/filter products with pagination (supports `q`, `category`, `minPrice`, `maxPrice`, `rating`, `sort`, `page`, `limit`)
 
 **Cart:**
 
@@ -228,6 +228,7 @@ Custom endpoints defined in `src/endpoints/`:
 
 ### Common Gotchas
 
+- Don't run the build command on every change
 - Category pages use category slug in URL: `/{category}` not `/shop/category/{category}`
 - Cart slider has higher z-index (80) than navbar (60) and overlay (70)
 - Product cards always show star ratings, even with 0 reviews

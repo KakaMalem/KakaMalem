@@ -50,7 +50,11 @@ function normalizeApiBody(body: any): ShopPageData {
   }
 }
 
-export default async function Page({ searchParams }: { searchParams?: Promise<SearchParams> | SearchParams }) {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams> | SearchParams
+}) {
   const params = await Promise.resolve(searchParams || {})
   const q = (params?.q as string) ?? ''
   const page = parseInt((params?.page as string) ?? '1', 10) || 1
@@ -58,7 +62,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Se
   const sort = (params?.sort as string) ?? 'featured'
 
   const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  const url = new URL('/api/products', base)
+  const url = new URL('/api/search-products', base)
   url.searchParams.set('page', String(page))
   url.searchParams.set('limit', String(limit))
   url.searchParams.set('sort', sort)
@@ -78,7 +82,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Se
     <div className="min-h-screen bg-base-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Pass only the props the client expects */}
-        <ShopClient initialData={initialData} initialPage={page} />
+        <ShopClient initialData={initialData} initialPage={page} searchQuery={q} />
       </div>
     </div>
   )

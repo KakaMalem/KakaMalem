@@ -15,21 +15,32 @@ interface ShopPageData {
 interface Props {
   initialData: ShopPageData
   initialPage?: number
+  searchQuery?: string
 }
 
 const PAGE_SIZE = 12
 
-export default function ShopClient({ initialData, initialPage = 1 }: Props) {
+export default function ShopClient({ initialData, initialPage = 1, searchQuery = '' }: Props) {
   const [products, setProducts] = useState<Product[]>(initialData.products)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [hasMore, setHasMore] = useState(initialData.currentPage < initialData.totalPages)
   const [loading, setLoading] = useState(false)
-  const [totalProducts] = useState(initialData.totalProducts)
+  const [totalProducts, setTotalProducts] = useState(initialData.totalProducts)
+  const [query, setQuery] = useState(searchQuery)
 
   const { ref, inView } = useInView({
     threshold: 0,
     triggerOnce: false,
   })
+
+  // Reset state when searchQuery prop changes (when user searches from navbar)
+  useEffect(() => {
+    setQuery(searchQuery)
+    setProducts(initialData.products)
+    setCurrentPage(initialPage)
+    setHasMore(initialData.currentPage < initialData.totalPages)
+    setTotalProducts(initialData.totalProducts)
+  }, [searchQuery, initialData, initialPage])
 
   const normalizeBody = (body: any): ShopPageData => {
     if (!body) return { products: [], totalPages: 0, currentPage: 1, totalProducts: 0 }
@@ -64,8 +75,11 @@ export default function ShopClient({ initialData, initialPage = 1 }: Props) {
       const params = new URLSearchParams()
       params.append('page', String(nextPage))
       params.append('limit', String(PAGE_SIZE))
+      if (query && query.trim()) {
+        params.append('q', query.trim())
+      }
 
-      const response = await fetch(`/api/products?${params.toString()}`)
+      const response = await fetch(`/api/search-products?${params.toString()}`)
       const body = await response.json().catch(() => null)
 
       const normalized = normalizeBody(body)
@@ -83,7 +97,7 @@ export default function ShopClient({ initialData, initialPage = 1 }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, currentPage])
+  }, [loading, hasMore, currentPage, query])
 
   // Trigger load more when the sentinel element comes into view
   useEffect(() => {
@@ -96,8 +110,12 @@ export default function ShopClient({ initialData, initialPage = 1 }: Props) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="text-center py-20">
-          <p className="text-xl text-base-content/70">No products found</p>
-          <p className="text-sm text-base-content/50 mt-2">Check back soon for new items</p>
+          <p className="text-xl text-base-content/70">
+            {query ? `No products found for "${query}"` : 'No products found'}
+          </p>
+          <p className="text-sm text-base-content/50 mt-2">
+            {query ? 'Try searching with different keywords' : 'Check back soon for new items'}
+          </p>
         </div>
       </div>
     )
@@ -105,6 +123,16 @@ export default function ShopClient({ initialData, initialPage = 1 }: Props) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Search Query Display */}
+      {query && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-base-content">Search results for "{query}"</h1>
+          <p className="text-sm text-base-content/60 mt-1">
+            Found {totalProducts} {totalProducts === 1 ? 'product' : 'products'}
+          </p>
+        </div>
+      )}
+
       {/* Products Grid */}
       <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {products.map((product) => (

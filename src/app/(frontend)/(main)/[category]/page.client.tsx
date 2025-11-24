@@ -68,7 +68,7 @@ export default function CategoryPageClient({
       params.append('limit', String(PAGE_SIZE))
       params.append('category', category.id)
 
-      const response = await fetch(`/api/products?${params.toString()}`)
+      const response = await fetch(`/api/search-products?${params.toString()}`)
       const body = await response.json().catch(() => null)
 
       const normalized = normalizeBody(body)
@@ -130,7 +130,7 @@ export default function CategoryPageClient({
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

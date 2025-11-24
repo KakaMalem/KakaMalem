@@ -75,7 +75,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   useEffect(() => {
     if (!cartLoading && (!cart || cart.length === 0) && !orderPlaced) {
       toast.error('Your cart is empty. Add items to checkout.')
-      router.push('/cart')
+      router.push('/shop')
     }
   }, [cart, cartLoading, router, orderPlaced])
 
@@ -222,9 +222,9 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       {/* Header */}
       <div className="bg-base-200 border-b border-base-300">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <Link href="/cart" className="btn btn-ghost btn-sm mb-4">
+          <Link href="/shop" className="btn btn-ghost btn-sm mb-4">
             <ArrowLeft className="w-4 h-4" />
-            Back to Cart
+            Back to Shop
           </Link>
           <div className="flex items-center gap-3 mb-6">
             <ShoppingCart className="w-8 h-8 text-primary" />

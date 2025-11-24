@@ -48,7 +48,7 @@ async function Navbar() {
 
   return (
     <nav
-      className="relative bg-base-300 text-base-content overflow-visible z-[60]"
+      className="relative z-[60] text-base-content overflow-visible"
       role="navigation"
       aria-label="Main navigation"
     >
@@ -62,7 +62,6 @@ async function Navbar() {
         aria-hidden
       />
 
-      {/* Cart count is handled client-side via CartProvider */}
       <div className="relative z-20">
         <MobileNavbar categories={categories} user={user} />
         <DesktopNavbar categories={categories} user={user} />

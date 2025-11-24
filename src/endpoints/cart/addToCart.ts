@@ -117,7 +117,9 @@ export const addToCart: Endpoint = {
         }
 
         updatedItems = items.map((item: CartItem, index: number) =>
-          index === existingItemIndex ? { ...item, quantity: newQuantity } : item,
+          index === existingItemIndex
+            ? { ...item, quantity: newQuantity, addedAt: new Date().toISOString() }
+            : item,
         )
       } else {
         // Add new item

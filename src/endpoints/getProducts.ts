@@ -12,7 +12,7 @@ interface SearchQuery {
 }
 
 export const getProducts: Endpoint = {
-  path: '/products',
+  path: '/search-products',
   method: 'get',
   handler: async (req) => {
     const { payload } = req

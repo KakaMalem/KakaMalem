@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Headroom from 'react-headroom'
 import { getAccountMenuItems } from './constants'
 import Logo from '../Logo'
 import SearchBar from './SearchBar'
@@ -18,7 +19,6 @@ interface MobileNavbarProps {
 export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
   const pathname = usePathname()
 
-  // Generate menu items based on auth status
   const friendlyName = user?.firstName || user?.email
   const userRoles = user?.roles as string[] | undefined
   const accountMenuItems = getAccountMenuItems(
@@ -28,10 +28,40 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
     userRoles,
   )
 
+  // CHANGE: Removed "pathname !== '/'"
+  const shouldShowCategories = pathname
+    ? !pathname.startsWith('/shop/') && !pathname.startsWith('/account')
+    : false
+
+  // Estimate mobile top bar height (Logo row + Search row)
+  const MOBILE_TOP_BAR_HEIGHT = '130px'
+
   return (
-    <div className="lg:hidden border-b border-base-200">
-      {/* Main Mobile Navbar */}
-      <div className="bg-base-100">
+    <div className="lg:hidden relative">
+      <style jsx global>{`
+        .mobile-headroom-wrapper .headroom {
+          z-index: 50 !important;
+        }
+        .mobile-headroom-wrapper .headroom--pinned,
+        .mobile-headroom-wrapper .headroom--unfixed {
+          transform: translateY(${MOBILE_TOP_BAR_HEIGHT}) !important;
+          transition: transform 0.3s ease-in-out;
+        }
+
+        .mobile-headroom-wrapper .headroom--unpinned {
+          transform: translateY(0) !important;
+          transition: transform 0.3s ease-in-out;
+        }
+      `}</style>
+
+      {/* 1. SPACER DIV */}
+      <div style={{ height: MOBILE_TOP_BAR_HEIGHT }} />
+
+      {/* 2. FIXED TOP BAR */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[60] bg-base-100 border-b border-base-200"
+        style={{ height: MOBILE_TOP_BAR_HEIGHT }}
+      >
         <div className="px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             {/* Mobile Menu Button */}
@@ -53,7 +83,7 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
               </div>
               <ul
                 tabIndex={0}
-                className="dropdown-content z-10 menu p-2 shadow-xl bg-base-100 rounded-xl w-56 mt-2 border border-base-200"
+                className="dropdown-content z-[70] menu p-2 shadow-xl bg-base-100 rounded-xl w-56 mt-2 border border-base-200"
               >
                 {accountMenuItems.map((item, index) =>
                   item.isDivider ? (
@@ -90,41 +120,57 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
         </div>
       </div>
 
-      {/* Mobile Categories Bar */}
-      <div className="sticky top-0 z-40 bg-base-100">
-        <div className="py-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar px-4">
-            <Link
-              href="/shop"
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                pathname === '/shop'
-                  ? 'bg-primary text-primary-content shadow-md scale-105'
-                  : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
-              }`}
-            >
-              All Products
-            </Link>
-            {categories
-              .filter((cat) => cat.value !== 'all')
-              .map((category) => {
-                const isActive = pathname === `/${category.slug}`
-                return (
-                  <Link
-                    key={category.value}
-                    href={`/${category.slug}`}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                      isActive
-                        ? 'bg-primary text-primary-content shadow-md scale-105'
-                        : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
-                    }`}
-                  >
-                    {category.label}
-                  </Link>
-                )
-              })}
+      {/* 3. MOBILE CATEGORIES (Headroom) */}
+      {shouldShowCategories && (
+        <Headroom
+          className="mobile-headroom-wrapper"
+          pinStart={0}
+          upTolerance={10}
+          downTolerance={10}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 50,
+          }}
+        >
+          <div className="bg-base-100 shadow-sm border-b border-base-200">
+            <div className="py-2.5">
+              <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar px-4">
+                <Link
+                  href="/shop"
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    pathname === '/shop'
+                      ? 'bg-primary text-primary-content shadow-md scale-105'
+                      : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
+                  }`}
+                >
+                  All Products
+                </Link>
+                {categories
+                  .filter((cat) => cat.value !== 'all')
+                  .map((category) => {
+                    const isActive = pathname === `/${category.slug}`
+                    return (
+                      <Link
+                        key={category.value}
+                        href={`/${category.slug}`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                          isActive
+                            ? 'bg-primary text-primary-content shadow-md scale-105'
+                            : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
+                        }`}
+                      >
+                        {category.label}
+                      </Link>
+                    )
+                  })}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </Headroom>
+      )}
     </div>
   )
 }
