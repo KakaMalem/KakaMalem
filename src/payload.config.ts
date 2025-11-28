@@ -15,8 +15,9 @@ import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
 import { Terms } from './globals/Terms'
 import { PrivacyPolicy } from './globals/PrivacyPolicy'
-import { registerUser } from './endpoints/registerUser'
-import { loginUser } from './endpoints/loginUser'
+import { registerUser } from './endpoints/users/registerUser'
+import { loginUser } from './endpoints/users/loginUser'
+import { setPassword } from './endpoints/users/setPassword'
 import { getProducts } from './endpoints/getProducts'
 import { addToCart } from './endpoints/cart/addToCart'
 import { getCart } from './endpoints/cart/getCart'
@@ -48,6 +49,7 @@ export default buildConfig({
   endpoints: [
     registerUser,
     loginUser,
+    setPassword,
     getProducts,
     addToCart,
     getCart,

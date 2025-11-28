@@ -68,6 +68,7 @@ export const registerUser: Endpoint = {
           lastName: lastName.trim(),
           phone: phone?.trim() || undefined,
           roles: ['customer'],
+          hasPassword: true,
         },
       })
 

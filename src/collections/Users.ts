@@ -12,8 +12,42 @@ export const Users: CollectionConfig = {
       sameSite: 'Lax',
       secure: process.env.NODE_ENV === 'production',
     },
+    // verify: false, // Disable email verification for OAuth users
   },
   fields: [
+    {
+      name: 'sub',
+      type: 'text',
+      admin: {
+        hidden: true,
+      },
+      index: true,
+    },
+    {
+      name: 'picture',
+      type: 'text',
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'hasPassword',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        readOnly: true,
+        description: 'Indicates if user has set a custom password (auto-managed)',
+      },
+    },
+    {
+      name: 'ogfan',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Original Fan - Early supporter badge',
+        position: 'sidebar',
+      },
+    },
     {
       name: 'roles',
       type: 'select',
@@ -34,12 +68,12 @@ export const Users: CollectionConfig = {
     {
       name: 'firstName',
       type: 'text',
-      required: true,
+      required: false, // Allow OAuth users without firstName
     },
     {
       name: 'lastName',
       type: 'text',
-      required: true,
+      required: false, // Allow OAuth users without lastName
     },
     {
       name: 'phone',

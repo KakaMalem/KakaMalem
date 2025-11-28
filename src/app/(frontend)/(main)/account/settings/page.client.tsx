@@ -21,9 +21,14 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ user: initialUser }: SettingsClientProps) {
   const [user, setUser] = useState(initialUser)
-  const [saving, setSaving] = useState(false)
+  const [savingPreferences, setSavingPreferences] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Check if user needs to set a password (OAuth users who haven't set one yet)
+  const needsToSetPassword = !!user.sub && !user.hasPassword
 
   // Preferences state
   const [newsletter, setNewsletter] = useState(user.preferences?.newsletter || false)
@@ -43,7 +48,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
   const handleSavePreferences = async () => {
-    setSaving(true)
+    setSavingPreferences(true)
     try {
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PATCH',
@@ -70,17 +75,24 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       console.error('Error updating preferences:', err)
       toast.error('Failed to update preferences. Please try again.')
     } finally {
-      setSaving(false)
+      setSavingPreferences(false)
     }
   }
 
   const handleChangePassword = async () => {
     setPasswordError(null)
 
-    // Validation
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      setPasswordError('All fields are required')
-      return
+    // Validation - Users setting password for first time don't need current password
+    if (needsToSetPassword) {
+      if (!passwordData.newPassword || !passwordData.confirmPassword) {
+        setPasswordError('Please enter and confirm your new password')
+        return
+      }
+    } else {
+      if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+        setPasswordError('All fields are required')
+        return
+      }
     }
 
     if (passwordData.newPassword.length < 8) {
@@ -93,37 +105,43 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       return
     }
 
-    setSaving(true)
+    setSavingPassword(true)
     try {
-      // Note: This endpoint might need to be adjusted based on your Payload setup
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PATCH',
+      const response = await fetch('/api/set-password', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({
-          password: passwordData.newPassword,
+          currentPassword: passwordData.currentPassword || undefined,
+          newPassword: passwordData.newPassword,
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to change password')
+        throw new Error(data.error || 'Failed to set password')
       }
 
-      toast.success('Password changed successfully!')
+      toast.success(data.message || 'Password updated successfully!')
+
+      // Update user state to reflect that they now have a password
+      setUser({ ...user, hasPassword: true })
+
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setShowPasswordForm(false)
     } catch (err: any) {
-      console.error('Error changing password:', err)
-      setPasswordError('Failed to change password. Please check your current password.')
+      console.error('Error setting password:', err)
+      setPasswordError(err.message || 'Failed to set password. Please try again.')
     } finally {
-      setSaving(false)
+      setSavingPassword(false)
     }
   }
 
   const handleDeleteAccount = async () => {
-    setSaving(true)
+    setDeletingAccount(true)
     try {
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'DELETE',
@@ -141,7 +159,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       console.error('Error deleting account:', err)
       toast.error('Failed to delete account. Please try again.')
     } finally {
-      setSaving(false)
+      setDeletingAccount(false)
       setShowDeleteConfirm(false)
     }
   }
@@ -209,9 +227,9 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               <button
                 onClick={handleSavePreferences}
                 className="btn btn-primary gap-2"
-                disabled={saving}
+                disabled={savingPreferences}
               >
-                {saving ? (
+                {savingPreferences ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
                     Saving...
@@ -238,16 +256,41 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
           {!showPasswordForm ? (
             <div>
-              <p className="text-sm text-base-content/70 mb-4">
-                Keep your account secure by using a strong password
-              </p>
-              <button
-                onClick={() => setShowPasswordForm(true)}
-                className="btn btn-outline gap-2"
-              >
-                <Lock className="w-4 h-4" />
-                Change Password
-              </button>
+              {needsToSetPassword ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 p-3 bg-base-300/50 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-base-content">
+                        You're signed in with Google
+                      </p>
+                      <p className="text-base-content/70 mt-1">
+                        Create a password to enable signing in with both Google and email/password
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowPasswordForm(true)}
+                    className="btn btn-outline gap-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    Set Password
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-base-content/70 mb-4">
+                    Keep your account secure by using a strong password
+                  </p>
+                  <button
+                    onClick={() => setShowPasswordForm(true)}
+                    className="btn btn-outline gap-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    Change Password
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -258,40 +301,53 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 </div>
               )}
 
-              {/* Current Password */}
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-medium">Current Password</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.current ? 'text' : 'password'}
-                    className="input input-bordered w-full pr-12"
-                    value={passwordData.currentPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPasswords({ ...showPasswords, current: !showPasswords.current })
-                    }
-                    className="btn btn-ghost btn-sm absolute right-1 top-1"
-                  >
-                    {showPasswords.current ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
+              {needsToSetPassword && (
+                <div className="alert alert-info">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>
+                    Setting a password allows you to sign in with either Google or email/password.
+                  </span>
                 </div>
-              </div>
+              )}
+
+              {/* Current Password - Only show if user already has a password */}
+              {!needsToSetPassword && (
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Current Password</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      className="input input-bordered w-full pr-12"
+                      value={passwordData.currentPassword}
+                      onChange={(e) =>
+                        setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPasswords({ ...showPasswords, current: !showPasswords.current })
+                      }
+                      className="btn btn-ghost btn-sm absolute right-1 top-1"
+                    >
+                      {showPasswords.current ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* New Password */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">New Password</span>
+                  <span className="label-text font-medium">
+                    {needsToSetPassword ? 'Password' : 'New Password'}
+                  </span>
                 </label>
                 <div className="relative">
                   <input
@@ -326,7 +382,9 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               {/* Confirm Password */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">Confirm New Password</span>
+                  <span className="label-text font-medium">
+                    {needsToSetPassword ? 'Confirm Password' : 'Confirm New Password'}
+                  </span>
                 </label>
                 <div className="relative">
                   <input
@@ -358,17 +416,17 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 <button
                   onClick={handleChangePassword}
                   className="btn btn-primary gap-2"
-                  disabled={saving}
+                  disabled={savingPassword}
                 >
-                  {saving ? (
+                  {savingPassword ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
-                      Changing...
+                      {needsToSetPassword ? 'Setting...' : 'Changing...'}
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      Change Password
+                      {needsToSetPassword ? 'Set Password' : 'Change Password'}
                     </>
                   )}
                 </button>
@@ -379,7 +437,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     setPasswordError(null)
                   }}
                   className="btn btn-ghost"
-                  disabled={saving}
+                  disabled={savingPassword}
                 >
                   Cancel
                 </button>
@@ -427,9 +485,9 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 <button
                   onClick={handleDeleteAccount}
                   className="btn btn-error gap-2"
-                  disabled={saving}
+                  disabled={deletingAccount}
                 >
-                  {saving ? (
+                  {deletingAccount ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
                       Deleting...
@@ -444,7 +502,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   className="btn btn-ghost"
-                  disabled={saving}
+                  disabled={deletingAccount}
                 >
                   Cancel
                 </button>

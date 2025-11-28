@@ -137,9 +137,19 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  sub?: string | null;
+  picture?: string | null;
+  /**
+   * Indicates if user has set a custom password (auto-managed)
+   */
+  hasPassword?: boolean | null;
+  /**
+   * Original Fan - Early supporter badge
+   */
+  ogfan?: boolean | null;
   roles: ('customer' | 'admin')[];
-  firstName: string;
-  lastName: string;
+  firstName?: string | null;
+  lastName?: string | null;
   phone?: string | null;
   addresses?:
     | {
@@ -499,6 +509,10 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  sub?: T;
+  picture?: T;
+  hasPassword?: T;
+  ogfan?: T;
   roles?: T;
   firstName?: T;
   lastName?: T;
