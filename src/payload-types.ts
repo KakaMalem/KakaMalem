@@ -276,6 +276,49 @@ export interface Product {
    * Total number of units sold
    */
   totalSold?: number | null;
+  /**
+   * Product performance analytics (system-managed)
+   */
+  analytics?: {
+    /**
+     * Total number of product page views
+     */
+    viewCount?: number | null;
+    /**
+     * Number of unique users who viewed this product
+     */
+    uniqueViewCount?: number | null;
+    /**
+     * Number of times product was added to cart
+     */
+    addToCartCount?: number | null;
+    /**
+     * Number of times added to wishlist
+     */
+    wishlistCount?: number | null;
+    /**
+     * Conversion rate (purchases / views) as percentage
+     */
+    conversionRate?: number | null;
+    /**
+     * Cart to purchase rate (purchases / add-to-cart) as percentage
+     */
+    cartConversionRate?: number | null;
+    /**
+     * Timestamp of last product view
+     */
+    lastViewedAt?: string | null;
+    /**
+     * Track unique users who viewed (for unique view count)
+     */
+    viewedByUsers?:
+      | {
+          userId: string;
+          viewedAt: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   description?: {
     root: {
       type: string;
@@ -299,17 +342,29 @@ export interface Product {
   salePrice?: number | null;
   currency: 'AFN' | 'USD';
   sku?: string | null;
-  quantity: number;
+  /**
+   * Enable inventory tracking for this product
+   */
+  trackQuantity?: boolean | null;
+  /**
+   * Current stock quantity
+   */
+  quantity?: number | null;
+  /**
+   * Alert threshold for low stock
+   */
   lowStockThreshold?: number | null;
   images: (string | Media)[];
   categories?: (string | Category)[] | null;
   publishedAt?: string | null;
   /**
-   * Inventory/stock status of the product
+   * Stock status - Auto-managed when inventory tracking is enabled. Manual control when disabled.
    */
   stockStatus: 'in_stock' | 'out_of_stock' | 'low_stock' | 'on_backorder' | 'discontinued';
   featured?: boolean | null;
-  trackQuantity?: boolean | null;
+  /**
+   * Allow purchases when out of stock
+   */
   allowBackorders?: boolean | null;
   requiresShipping?: boolean | null;
   slug?: string | null;
@@ -768,12 +823,31 @@ export interface ProductsSelect<T extends boolean = true> {
   averageRating?: T;
   reviewCount?: T;
   totalSold?: T;
+  analytics?:
+    | T
+    | {
+        viewCount?: T;
+        uniqueViewCount?: T;
+        addToCartCount?: T;
+        wishlistCount?: T;
+        conversionRate?: T;
+        cartConversionRate?: T;
+        lastViewedAt?: T;
+        viewedByUsers?:
+          | T
+          | {
+              userId?: T;
+              viewedAt?: T;
+              id?: T;
+            };
+      };
   description?: T;
   shortDescription?: T;
   price?: T;
   salePrice?: T;
   currency?: T;
   sku?: T;
+  trackQuantity?: T;
   quantity?: T;
   lowStockThreshold?: T;
   images?: T;
@@ -781,7 +855,6 @@ export interface ProductsSelect<T extends boolean = true> {
   publishedAt?: T;
   stockStatus?: T;
   featured?: T;
-  trackQuantity?: T;
   allowBackorders?: T;
   requiresShipping?: T;
   slug?: T;

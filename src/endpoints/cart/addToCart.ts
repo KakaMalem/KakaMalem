@@ -100,10 +100,10 @@ export const addToCart: Endpoint = {
         const currentInCart = items[existingItemIndex].quantity
         newQuantity = currentInCart + quantity
 
-        // Stock validation (only if not allowing back orders)
-        if (product.trackQuantity && !product.allowBackorders) {
-          if (newQuantity > product.quantity) {
-            const availableToAdd = Math.max(0, product.quantity - currentInCart)
+        // Stock validation (only if tracking inventory and not allowing back orders)
+        if (product.trackQuantity === true && !product.allowBackorders) {
+          if (newQuantity > (product.quantity || 0)) {
+            const availableToAdd = Math.max(0, (product.quantity || 0) - currentInCart)
             return Response.json(
               {
                 success: false,
@@ -124,7 +124,8 @@ export const addToCart: Endpoint = {
         )
       } else {
         // Add new item
-        if (product.trackQuantity && !product.allowBackorders && quantity > product.quantity) {
+        // Stock validation (only if tracking inventory and not allowing back orders)
+        if (product.trackQuantity === true && !product.allowBackorders && quantity > (product.quantity || 0)) {
           return Response.json(
             {
               success: false,
@@ -156,21 +157,59 @@ export const addToCart: Endpoint = {
         )
       }
 
-      // Save cart
+      // Update product analytics - increment addToCartCount
+      const analytics = product.analytics || {}
+      const addToCartCount = (analytics.addToCartCount || 0) + 1
+      const viewCount = analytics.viewCount || 0
+      const totalSold = product.totalSold || 0
+
+      // Recalculate conversion rates
+      const conversionRate = viewCount > 0 ? (totalSold / viewCount) * 100 : 0
+      const cartConversionRate = addToCartCount > 0 ? (totalSold / addToCartCount) * 100 : 0
+
+      // Save cart and update analytics in parallel
       if (user) {
-        // Update authenticated user's cart
-        await req.payload.update({
-          collection: 'users',
-          id: user.id,
-          data: {
-            cart: { items: updatedItems },
-          },
-        })
+        // Update authenticated user's cart and product analytics
+        await Promise.all([
+          req.payload.update({
+            collection: 'users',
+            id: user.id,
+            data: {
+              cart: { items: updatedItems },
+            },
+          }),
+          req.payload.update({
+            collection: 'products',
+            id: productId,
+            data: {
+              analytics: {
+                ...analytics,
+                addToCartCount,
+                conversionRate: parseFloat(conversionRate.toFixed(2)),
+                cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
+              },
+            },
+          }),
+        ])
         // Clear guest cart cookie for authenticated users
         await saveGuestCart(req, { items: [] })
       } else {
-        // Save guest cart to session
-        await saveGuestCart(req, { items: updatedItems })
+        // Save guest cart to session and update analytics
+        await Promise.all([
+          saveGuestCart(req, { items: updatedItems }),
+          req.payload.update({
+            collection: 'products',
+            id: productId,
+            data: {
+              analytics: {
+                ...analytics,
+                addToCartCount,
+                conversionRate: parseFloat(conversionRate.toFixed(2)),
+                cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
+              },
+            },
+          }),
+        ])
       }
 
       return createCartResponse(

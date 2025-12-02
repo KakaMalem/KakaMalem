@@ -25,6 +25,8 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
         <Image
           src={imageSrc}
           alt={category.name}
+          width={400}
+          height={400}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         {/* subtle dark gradient to improve text readability */}

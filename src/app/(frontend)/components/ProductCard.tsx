@@ -169,6 +169,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size: _size =
           <Image
             src={productImage.url}
             alt={productImage.alt}
+            width={400}
+            height={400}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           {hasDiscount && (
@@ -253,12 +255,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size: _size =
             </div>
           </div>
 
-          {product.trackQuantity && product.quantity <= 5 && product.quantity > 0 && (
-            <div className="text-xs text-warning mt-2 flex items-center gap-1">
-              <span className="inline-block w-2 h-2 bg-warning rounded-full"></span>
-              Only {product.quantity} left!
-            </div>
-          )}
+          {product.trackQuantity &&
+            product.quantity !== null &&
+            product.quantity !== undefined &&
+            product.quantity <= 5 &&
+            product.quantity > 0 && (
+              <div className="text-xs text-warning mt-2 flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-warning rounded-full"></span>
+                Only {product.quantity} left!
+              </div>
+            )}
         </div>
       </article>
     </Link>

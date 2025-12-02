@@ -128,6 +128,8 @@ export function ReviewStep({
                       <Image
                         src={imageUrl || '/placeholder.jpg'}
                         alt={product.name}
+                        width={64}
+                        height={64}
                         className="object-cover"
                       />
                     </div>

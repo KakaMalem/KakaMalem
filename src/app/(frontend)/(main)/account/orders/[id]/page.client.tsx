@@ -127,6 +127,8 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                             <Image
                               src={imageUrl || '/placeholder.jpg'}
                               alt={product?.name || 'Product'}
+                              width={80}
+                              height={80}
                               className="object-cover"
                             />
                           </div>

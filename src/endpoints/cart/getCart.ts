@@ -36,7 +36,7 @@ export const getCart: Endpoint = {
             let isInStock = true
             let availableQuantity = null
 
-            if (product.trackQuantity) {
+            if (product.trackQuantity && product.quantity !== null && product.quantity !== undefined) {
               isInStock = item.quantity <= product.quantity
               availableQuantity = product.quantity
 

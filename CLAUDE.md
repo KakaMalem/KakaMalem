@@ -45,20 +45,32 @@ The app follows **Next.js 15 App Router** with route groups:
 - `/shop/{slug}` - Individual product detail pages
 - `/checkout` - Multi-step checkout (shipping, payment, review)
 - `/order-confirmation/{id}` - Order success page
+- `/account` - User account dashboard
+- `/account/orders` - Order history
+- `/account/addresses` - Saved addresses
+- `/account/wishlist` - Wishlist
+- `/account/settings` - Account settings
 
 ### Database & CMS
 
 - **Payload CMS 3.x** for content management and API generation
 - **MongoDB** via Mongoose adapter
 - Auto-generated GraphQL and REST APIs
-- Authentication system with role-based access (customer/admin)
+- Authentication system with role-based access (customer, seller, admin, superadmin, developer)
 
 **Collections:**
 
-- `Users` - Auth-enabled with roles, addresses, shopping cart, wishlist
+- `Users` - Auth-enabled with roles (customer, seller, admin, superadmin, developer), addresses, shopping cart, wishlist
+  - OAuth support (Google Sign-In) with profile picture and sub fields
+  - `hasPassword` flag to track if OAuth users have set a custom password
+  - Sellers have limited admin panel access (products, orders, media only)
 - `Products` - E-commerce items with `stockStatus` auto-updated via `beforeChange` hook
+  - Auto-assign seller field when created by seller role
+  - Comprehensive analytics tracking: viewCount, uniqueViewCount, addToCartCount, wishlistCount, conversion rates
+  - Analytics are system-managed (read-only) and automatically updated via endpoints
 - `Categories` - Product organization with slugs used in routing
 - `Orders` - Transaction records with automated `totalSold` updates
+  - Complex access control: admins see all, sellers see only their product orders, customers see only their own
 - `Reviews` - Product reviews with verification of purchases
 - `Media` - Sharp-processed image uploads
 
@@ -84,10 +96,20 @@ Custom endpoints defined in `src/endpoints/`:
 
 - `POST /api/register` - User registration
 - `POST /api/login` - User login
+- `POST /api/set-password` - Set password for OAuth users (allows OAuth users to enable password login)
+- `GET /api/oauth/google` - Initiate Google OAuth flow
+- `GET /api/oauth/google/callback` - Google OAuth callback handler
 
 **Products:**
 
 - `GET /api/search-products` - Search/filter products with pagination (supports `q`, `category`, `minPrice`, `maxPrice`, `rating`, `sort`, `page`, `limit`)
+
+**Product Tracking & Analytics:**
+
+- `POST /api/products/track-view` - Track product view (increments viewCount and uniqueViewCount)
+- `GET /api/products/recently-viewed` - Get recently viewed products
+- `POST /api/products/merge-recently-viewed` - Merge guest recently viewed on login
+- `GET /api/products/:id/analytics` - Get product analytics (admin/seller only)
 
 **Cart:**
 
@@ -121,11 +143,12 @@ Custom endpoints defined in `src/endpoints/`:
 
 - Shopping cart with persistent storage (localStorage for guests, database for authenticated users)
 - Cart slider panel (slides from right, z-index: 80, with backdrop overlay)
-- Infinite scroll on shop and category pages (12 products per page)
+- Infinite scroll on shop and category pages (12 products per page by default, configured in page components)
 - Stock status management with automatic updates
 - Multi-currency support (USD, AF)
 - Product reviews with verified purchase badges
 - Star ratings displayed for all products (gray when no reviews)
+- Recently viewed products tracking (localStorage for guests, database for authenticated users)
 
 **Checkout Flow:**
 
@@ -137,10 +160,19 @@ Custom endpoints defined in `src/endpoints/`:
 
 **Inventory:**
 
-- Automatic `stockStatus` calculation based on quantity
-- `totalSold` tracking per product
-- Low stock threshold configuration
-- Backorder support
+- **Optional inventory tracking** - Toggle `trackQuantity` checkbox to enable/disable per product
+- When `trackQuantity` is **enabled** (default):
+  - Automatic `stockStatus` calculation based on quantity (read-only in admin)
+  - Stock validation on add-to-cart and checkout
+  - Quantity decremented when orders are placed
+  - Low stock threshold configuration
+  - Backorder support
+- When `trackQuantity` is **disabled**:
+  - Manual `stockStatus` control (editable in admin)
+  - No stock validation - unlimited purchases allowed
+  - Quantity field hidden in admin
+  - Ideal for digital products, services, or products with unlimited availability
+- `totalSold` tracking per product (always enabled regardless of inventory tracking)
 
 ## Development Guidelines
 
@@ -152,6 +184,9 @@ Custom endpoints defined in `src/endpoints/`:
 - Environment variables in `.env` (copy from `.env.example`)
   - `DATABASE_URI` - MongoDB connection string
   - `PAYLOAD_SECRET` - Secret for Payload CMS
+  - `NEXT_PUBLIC_SERVER_URL` - Public URL (e.g., http://localhost:3000)
+  - `GOOGLE_CLIENT_ID` - Google OAuth client ID (optional, for Google Sign-In)
+  - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret (optional, for Google Sign-In)
 
 ### Code Conventions
 
@@ -168,6 +203,7 @@ Custom endpoints defined in `src/endpoints/`:
 - `src/collections/` - Payload collection definitions
 - `src/endpoints/` - Custom API endpoints
 - `src/globals/` - Global content types
+- `src/access/` - Role-based access control functions
 - `src/utilities/` - Shared utilities (includes `getMeUser` function)
 - `src/payload.config.ts` - Payload CMS configuration
 - `src/payload-types.ts` - Auto-generated types (do not edit manually)
@@ -197,6 +233,17 @@ Custom endpoints defined in `src/endpoints/`:
 - Text: `text-base-content`, `text-primary`
 - Loading: `loading loading-spinner loading-lg text-primary`
 
+### Access Control Architecture
+
+The application uses a comprehensive role-based access control system defined in `src/access/`:
+
+- **Roles hierarchy**: `developer` > `superadmin` > `admin` > `seller` > `customer`
+- Access control functions for collections: `isAdmin`, `isAdminOrSelf`, `isAdminOrSeller`, `isAdminOrSellerOwner`, etc.
+- Field-level access controls for sensitive data (e.g., OAuth fields restricted to system)
+- Sellers have limited admin panel access (products, orders, media only)
+- Products auto-assign seller field when created by seller role
+- Orders implement complex access: admins see all, sellers see only their product orders, customers see only their own
+
 ### Important Patterns
 
 **Infinite Scroll:**
@@ -215,16 +262,32 @@ Custom endpoints defined in `src/endpoints/`:
 
 **Product Stock Updates:**
 
-- `beforeChange` hook in Products collection automatically updates `stockStatus`
+- `beforeChange` hook in Products collection automatically updates `stockStatus` when `trackQuantity` is enabled
 - Hook runs based on `trackQuantity`, `quantity`, `lowStockThreshold`, and `allowBackorders`
-- Never manually set `stockStatus` - let the hook handle it
+- When `trackQuantity` is enabled: Never manually set `stockStatus` - let the hook handle it (field is read-only)
+- When `trackQuantity` is disabled: Manually set `stockStatus` as needed (field is editable)
+- Stock validation in cart and checkout endpoints only runs when `trackQuantity === true`
 
 **Order Processing:**
 
 - Creates order record in database
-- Updates product `totalSold` and `quantity`
+- Updates product `totalSold` (always, regardless of inventory tracking)
+- Updates product `quantity` only when `trackQuantity` is enabled
+- Recalculates conversion rates when products are sold
 - Clears user's cart after successful order
 - Sends confirmation with order details
+
+**Product Analytics:**
+
+- Analytics are automatically tracked and updated across multiple endpoints:
+  - `viewCount` and `uniqueViewCount` - Updated when product is viewed (track-view endpoint)
+  - `addToCartCount` - Incremented when product is added to cart
+  - `wishlistCount` - Incremented when product is added to wishlist
+  - `conversionRate` - (totalSold / viewCount) × 100, recalculated on purchases
+  - `cartConversionRate` - (totalSold / addToCartCount) × 100, recalculated on purchases
+- Analytics fields are read-only in admin panel - never manually edit them
+- Access to analytics endpoint restricted to admins, developers, and product's seller
+- Tracks up to 1000 unique viewers per product for unique view counting
 
 ### Common Gotchas
 

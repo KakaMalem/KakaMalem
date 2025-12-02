@@ -22,6 +22,7 @@ import { getProducts } from './endpoints/getProducts'
 import { trackProductView } from './endpoints/products/trackView'
 import { getRecentlyViewed } from './endpoints/products/getRecentlyViewed'
 import { mergeRecentlyViewed } from './endpoints/products/mergeRecentlyViewed'
+import { getProductAnalytics } from './endpoints/products/getAnalytics'
 import { addToCart } from './endpoints/cart/addToCart'
 import { getCart } from './endpoints/cart/getCart'
 import { updateCart } from './endpoints/cart/updateCart'
@@ -60,6 +61,7 @@ export default buildConfig({
     trackProductView,
     getRecentlyViewed,
     mergeRecentlyViewed,
+    getProductAnalytics,
     addToCart,
     getCart,
     updateCart,

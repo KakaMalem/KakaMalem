@@ -87,7 +87,12 @@ export const mergeCart: Endpoint = {
           })
 
           if (product && (!product._status || product._status === 'published')) {
-            if (product.trackQuantity && newQuantity > product.quantity) {
+            if (
+              product.trackQuantity &&
+              product.quantity !== null &&
+              product.quantity !== undefined &&
+              newQuantity > product.quantity
+            ) {
               // Adjust to available quantity
               newQuantity = product.quantity
               stockErrors.push(`${product.name}: adjusted to ${product.quantity} (available stock)`)

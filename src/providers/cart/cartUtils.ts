@@ -97,7 +97,11 @@ export function validateCartItemStock(item: CartItem): {
     return { isValid: false, message: 'Product is no longer available' }
   }
 
-  if (item.product.trackQuantity) {
+  if (
+    item.product.trackQuantity &&
+    item.product.quantity !== null &&
+    item.product.quantity !== undefined
+  ) {
     if (item.quantity > item.product.quantity) {
       return {
         isValid: false,

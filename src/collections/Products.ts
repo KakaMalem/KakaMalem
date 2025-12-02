@@ -132,6 +132,101 @@ export const Products: CollectionConfig = {
       },
     },
     {
+      name: 'analytics',
+      type: 'group',
+      access: {
+        // Analytics fields are read-only - only system can update
+        update: nobody,
+      },
+      admin: {
+        description: 'Product performance analytics (system-managed)',
+      },
+      fields: [
+        {
+          name: 'viewCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Total number of product page views',
+          },
+        },
+        {
+          name: 'uniqueViewCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Number of unique users who viewed this product',
+          },
+        },
+        {
+          name: 'addToCartCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Number of times product was added to cart',
+          },
+        },
+        {
+          name: 'wishlistCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Number of times added to wishlist',
+          },
+        },
+        {
+          name: 'conversionRate',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Conversion rate (purchases / views) as percentage',
+          },
+        },
+        {
+          name: 'cartConversionRate',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Cart to purchase rate (purchases / add-to-cart) as percentage',
+          },
+        },
+        {
+          name: 'lastViewedAt',
+          type: 'date',
+          admin: {
+            readOnly: true,
+            description: 'Timestamp of last product view',
+          },
+        },
+        {
+          name: 'viewedByUsers',
+          type: 'array',
+          admin: {
+            readOnly: true,
+            description: 'Track unique users who viewed (for unique view count)',
+          },
+          fields: [
+            {
+              name: 'userId',
+              type: 'text',
+              required: true,
+            },
+            {
+              name: 'viewedAt',
+              type: 'date',
+              required: true,
+            },
+          ],
+        },
+      ],
+    },
+    {
       name: 'description',
       type: 'richText',
     },
@@ -197,16 +292,26 @@ export const Products: CollectionConfig = {
       ],
     },
     {
+      name: 'trackQuantity',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        position: 'sidebar',
+        description: 'Enable inventory tracking for this product',
+      },
+    },
+    {
       type: 'row',
       fields: [
         {
           name: 'quantity',
           type: 'number',
-          required: true,
           defaultValue: 0,
           min: 0,
           admin: {
             width: '50%',
+            condition: (data) => data?.trackQuantity === true,
+            description: 'Current stock quantity',
           },
         },
         {
@@ -216,6 +321,8 @@ export const Products: CollectionConfig = {
           min: 0,
           admin: {
             width: '50%',
+            condition: (data) => data?.trackQuantity === true,
+            description: 'Alert threshold for low stock',
           },
         },
       ],
@@ -270,9 +377,14 @@ export const Products: CollectionConfig = {
           value: 'discontinued',
         },
       ],
+      access: {
+        // Only allow updates when trackQuantity is false
+        update: ({ data }) => data?.trackQuantity !== true,
+      },
       admin: {
         position: 'sidebar',
-        description: 'Inventory/stock status of the product',
+        description:
+          'Stock status - Auto-managed when inventory tracking is enabled. Manual control when disabled.',
       },
     },
     {
@@ -284,19 +396,13 @@ export const Products: CollectionConfig = {
       },
     },
     {
-      name: 'trackQuantity',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: {
-        position: 'sidebar',
-      },
-    },
-    {
       name: 'allowBackorders',
       type: 'checkbox',
       defaultValue: false,
       admin: {
         position: 'sidebar',
+        condition: (data) => data?.trackQuantity === true,
+        description: 'Allow purchases when out of stock',
       },
     },
     {

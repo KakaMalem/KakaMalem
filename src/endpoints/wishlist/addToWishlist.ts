@@ -25,11 +25,17 @@ export const addToWishlist: Endpoint = {
     }
 
     try {
-      // Get current wishlist
-      const currentUser = await payload.findByID({
-        collection: 'users',
-        id: user.id,
-      })
+      // Get current wishlist and verify product exists
+      const [currentUser, product] = await Promise.all([
+        payload.findByID({
+          collection: 'users',
+          id: user.id,
+        }),
+        payload.findByID({
+          collection: 'products',
+          id: productId,
+        }),
+      ])
 
       // Handle both string IDs and populated Product objects
       const currentWishlist = ((currentUser.wishlist || []) as Array<string | Product>).map(
@@ -41,14 +47,30 @@ export const addToWishlist: Endpoint = {
         return Response.json({ error: 'Product already in wishlist' }, { status: 400 })
       }
 
-      // Add to wishlist
-      const updatedUser = await payload.update({
-        collection: 'users',
-        id: user.id,
-        data: {
-          wishlist: [...currentWishlist, productId],
-        },
-      })
+      // Update product analytics - increment wishlistCount
+      const analytics = product.analytics || {}
+      const wishlistCount = (analytics.wishlistCount || 0) + 1
+
+      // Add to wishlist and update analytics in parallel
+      const [updatedUser] = await Promise.all([
+        payload.update({
+          collection: 'users',
+          id: user.id,
+          data: {
+            wishlist: [...currentWishlist, productId],
+          },
+        }),
+        payload.update({
+          collection: 'products',
+          id: productId,
+          data: {
+            analytics: {
+              ...analytics,
+              wishlistCount,
+            },
+          },
+        }),
+      ])
 
       return Response.json({
         success: true,

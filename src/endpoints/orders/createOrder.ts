@@ -122,11 +122,11 @@ export const createOrder: Endpoint = {
           return Response.json({ error: `Product ${cartItem.product} not found` }, { status: 400 })
         }
 
-        // Check stock availability
+        // Check stock availability (only if tracking inventory)
         if (
-          product.trackQuantity &&
+          product.trackQuantity === true &&
           !product.allowBackorders &&
-          product.quantity < cartItem.quantity
+          (product.quantity || 0) < cartItem.quantity
         ) {
           return Response.json({ error: `Insufficient stock for ${product.name}` }, { status: 400 })
         }
@@ -143,17 +143,41 @@ export const createOrder: Endpoint = {
           total: itemTotal,
         })
 
-        // Update product inventory
-        if (product.trackQuantity) {
-          const newQuantity = Math.max(0, product.quantity - cartItem.quantity)
-          await payload.update({
-            collection: 'products',
-            id: product.id,
-            data: {
-              quantity: newQuantity,
-            },
-          })
+        // Update product inventory and analytics
+        const analytics = product.analytics || {}
+        const viewCount = analytics.viewCount || 0
+        const addToCartCount = analytics.addToCartCount || 0
+        const newTotalSold = (product.totalSold || 0) + cartItem.quantity
+
+        // Recalculate conversion rates with updated totalSold
+        const conversionRate = viewCount > 0 ? (newTotalSold / viewCount) * 100 : 0
+        const cartConversionRate = addToCartCount > 0 ? (newTotalSold / addToCartCount) * 100 : 0
+
+        // Build update data - only include quantity if tracking inventory
+        const updateData: {
+          quantity?: number
+          analytics: {
+            conversionRate: number
+            cartConversionRate: number
+            [key: string]: unknown
+          }
+        } = {
+          analytics: {
+            ...analytics,
+            conversionRate: parseFloat(conversionRate.toFixed(2)),
+            cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
+          },
         }
+
+        if (product.trackQuantity === true) {
+          updateData.quantity = Math.max(0, (product.quantity || 0) - cartItem.quantity)
+        }
+
+        await payload.update({
+          collection: 'products',
+          id: product.id,
+          data: updateData,
+        })
       }
 
       // Calculate shipping

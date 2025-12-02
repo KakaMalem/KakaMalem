@@ -339,12 +339,15 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
                         </span>
                       </td>
                     </tr>
-                    {product.trackQuantity && product.quantity > 0 && (
-                      <tr>
-                        <td className="font-medium">Stock Quantity</td>
-                        <td>{product.quantity} units available</td>
-                      </tr>
-                    )}
+                    {product.trackQuantity &&
+                      product.quantity !== null &&
+                      product.quantity !== undefined &&
+                      product.quantity > 0 && (
+                        <tr>
+                          <td className="font-medium">Stock Quantity</td>
+                          <td>{product.quantity} units available</td>
+                        </tr>
+                      )}
                     <tr>
                       <td className="font-medium">Shipping</td>
                       <td>

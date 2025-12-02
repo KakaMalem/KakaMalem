@@ -36,9 +36,10 @@ export const trackProductView: Endpoint = {
         )
       }
 
-      // Verify product exists
+      // Verify product exists and get current analytics
+      let product
       try {
-        await payload.findByID({
+        product = await payload.findByID({
           collection: 'products',
           id: productId,
         })
@@ -78,14 +79,70 @@ export const trackProductView: Endpoint = {
       // Limit to MAX_RECENT_ITEMS
       const limitedViewed = updatedViewed.slice(0, MAX_RECENT_ITEMS)
 
-      // Update user
-      await payload.update({
-        collection: 'users',
-        id: user.id,
-        data: {
-          recentlyViewed: limitedViewed,
-        },
-      })
+      // Update product analytics
+      const analytics = product.analytics || {}
+      const viewedByUsers = (analytics.viewedByUsers || []) as Array<{
+        userId?: string
+        viewedAt?: string
+        id?: string | null
+      }>
+
+      // Check if this is a unique view
+      const isUniqueView = !viewedByUsers.some((v) => v.userId === user.id)
+
+      // Update viewedByUsers array (keep last 1000 unique users)
+      const updatedViewedByUsers: Array<{
+        userId: string
+        viewedAt: string
+      }> = isUniqueView
+        ? [{ userId: user.id, viewedAt: new Date().toISOString() }, ...viewedByUsers.map(v => ({
+            userId: v.userId || '',
+            viewedAt: v.viewedAt || new Date().toISOString(),
+          }))].slice(0, 1000)
+        : viewedByUsers.map((v) =>
+            v.userId === user.id
+              ? { userId: user.id, viewedAt: new Date().toISOString() }
+              : { userId: v.userId || '', viewedAt: v.viewedAt || new Date().toISOString() },
+          )
+
+      // Calculate updated analytics
+      const viewCount = (analytics.viewCount || 0) + 1
+      const uniqueViewCount = isUniqueView
+        ? (analytics.uniqueViewCount || 0) + 1
+        : (analytics.uniqueViewCount || 0)
+
+      // Calculate conversion rates
+      const totalSold = product.totalSold || 0
+      const addToCartCount = analytics.addToCartCount || 0
+      const conversionRate = viewCount > 0 ? (totalSold / viewCount) * 100 : 0
+      const cartConversionRate = addToCartCount > 0 ? (totalSold / addToCartCount) * 100 : 0
+
+      // Update both user and product in parallel
+      await Promise.all([
+        payload.update({
+          collection: 'users',
+          id: user.id,
+          data: {
+            recentlyViewed: limitedViewed,
+          },
+        }),
+        payload.update({
+          collection: 'products',
+          id: productId,
+          data: {
+            analytics: {
+              viewCount,
+              uniqueViewCount,
+              addToCartCount: analytics.addToCartCount || 0,
+              wishlistCount: analytics.wishlistCount || 0,
+              conversionRate: parseFloat(conversionRate.toFixed(2)),
+              cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
+              lastViewedAt: new Date().toISOString(),
+              viewedByUsers: updatedViewedByUsers,
+            },
+          },
+        }),
+      ])
 
       return Response.json(
         {

@@ -95,7 +95,13 @@ export const updateCart: Endpoint = {
             )
           }
 
-          if (product.trackQuantity && !product.allowBackorders && quantity > product.quantity) {
+          if (
+            product.trackQuantity &&
+            product.quantity !== null &&
+            product.quantity !== undefined &&
+            !product.allowBackorders &&
+            quantity > product.quantity
+          ) {
             return Response.json(
               {
                 success: false,

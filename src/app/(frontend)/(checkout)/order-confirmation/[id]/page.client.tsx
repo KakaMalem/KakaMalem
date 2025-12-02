@@ -138,6 +138,8 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                           <Image
                             src={imageUrl || '/placeholder.jpg'}
                             alt={product?.name || 'Product'}
+                            width={64}
+                            height={64}
                             className="object-cover"
                           />
                         </div>

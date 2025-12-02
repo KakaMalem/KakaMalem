@@ -196,6 +196,8 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                               <Image
                                 src={imageUrl}
                                 alt={item.product.name}
+                                width={96}
+                                height={96}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                               />
                             </div>
