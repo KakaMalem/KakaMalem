@@ -32,7 +32,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
   // Preferences state
   const [newsletter, setNewsletter] = useState(user.preferences?.newsletter || false)
-  const [currency, setCurrency] = useState<'USD' | 'AF'>(user.preferences?.currency || 'USD')
+  const [currency, setCurrency] = useState<'USD' | 'AFN'>(user.preferences?.currency || 'AFN')
 
   // Password state
   const [passwordData, setPasswordData] = useState({
@@ -71,7 +71,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
       toast.success('Preferences updated successfully!')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating preferences:', err)
       toast.error('Failed to update preferences. Please try again.')
     } finally {
@@ -89,7 +89,11 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
         return
       }
     } else {
-      if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      if (
+        !passwordData.currentPassword ||
+        !passwordData.newPassword ||
+        !passwordData.confirmPassword
+      ) {
         setPasswordError('All fields are required')
         return
       }
@@ -132,9 +136,11 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setShowPasswordForm(false)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting password:', err)
-      setPasswordError(err.message || 'Failed to set password. Please try again.')
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to set password. Please try again.'
+      setPasswordError(errorMessage)
     } finally {
       setSavingPassword(false)
     }
@@ -155,7 +161,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       // Redirect to home after deletion
       toast.success('Account deleted successfully')
       window.location.href = '/'
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting account:', err)
       toast.error('Failed to delete account. Please try again.')
     } finally {
@@ -210,10 +216,10 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               <select
                 className="select select-bordered w-full max-w-xs"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value as 'USD' | 'AF')}
+                onChange={(e) => setCurrency(e.target.value as 'USD' | 'AFN')}
               >
+                <option value="AFN">AFN - Afghan Afghani</option>
                 <option value="USD">USD - US Dollar</option>
-                <option value="AF">AFN - Afghan Afghani</option>
               </select>
               <label className="label">
                 <span className="label-text-alt text-base-content/60">
@@ -262,7 +268,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
                       <p className="font-medium text-base-content">
-                        You're signed in with Google
+                        You&apos;re signed in with Google
                       </p>
                       <p className="text-base-content/70 mt-1">
                         Create a password to enable signing in with both Google and email/password
@@ -360,9 +366,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPasswords({ ...showPasswords, new: !showPasswords.new })
-                    }
+                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
                     className="btn btn-ghost btn-sm absolute right-1 top-1"
                   >
                     {showPasswords.new ? (
@@ -373,9 +377,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                   </button>
                 </div>
                 <label className="label">
-                  <span className="label-text-alt text-base-content/60">
-                    Minimum 8 characters
-                  </span>
+                  <span className="label-text-alt text-base-content/60">Minimum 8 characters</span>
                 </label>
               </div>
 

@@ -120,7 +120,7 @@ export default function LogoutPage() {
               </div>
               <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
               <p className="text-base-content/70 mb-6">
-                We couldn't sign you out. Please try again.
+                We couldn&apos;t sign you out. Please try again.
               </p>
               <div className="flex gap-3 justify-center">
                 <button onClick={() => window.location.reload()} className="btn btn-primary">

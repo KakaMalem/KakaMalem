@@ -240,7 +240,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             <strong>Click on Map:</strong> Simply click your location on the map above
           </li>
           <li>
-            <strong>Use GPS (Quick):</strong> Click "Use My Current Location" button
+            <strong>Use GPS (Quick):</strong> Click &ldquo;Use My Current Location&rdquo; button
           </li>
           <li>
             <strong>Mobile Users:</strong> Make sure location/GPS is enabled in device settings for

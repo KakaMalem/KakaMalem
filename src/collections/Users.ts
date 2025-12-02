@@ -1,10 +1,68 @@
 import type { CollectionConfig } from 'payload'
+import { isAdmin, isAdminField } from '../access/isAdmin'
+import { isAdminOrSelf } from '../access/isAdminOrSelf'
+import { isDeveloperField } from '../access/isDeveloper'
+import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
+import { nobody } from '../access/nobody'
 
 export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
     useAsTitle: 'email',
     defaultColumns: ['firstName', 'lastName', 'email', 'roles'],
+    hidden: ({ user }) => {
+      // Only show to admins, superadmins, and developers
+      return !(
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('superadmin') ||
+        user?.roles?.includes('developer')
+      )
+    },
+  },
+  access: {
+    /**
+     * ADMIN PANEL ACCESS
+     * - Superadmins, Admins, Developers: Full admin panel access
+     * - Sellers: Limited admin panel access (products, orders, media)
+     * - Customers: No admin panel access
+     */
+    admin: ({ req: { user } }) => {
+      if (!user) return false
+      return !!(
+        user.roles?.includes('superadmin') ||
+        user.roles?.includes('admin') ||
+        user.roles?.includes('developer') ||
+        user.roles?.includes('seller')
+      )
+    },
+    /**
+     * CREATE ACCESS
+     * - Anyone can create users (public registration)
+     * - New users default to 'customer' role
+     * - Role elevation requires admin intervention
+     */
+    create: () => true,
+    /**
+     * READ ACCESS
+     * - Admins: Can read all users
+     * - Users: Can only read their own data
+     * - Prevents user enumeration and data leakage
+     */
+    read: isAdminOrSelf,
+    /**
+     * UPDATE ACCESS
+     * - Admins: Can update any user
+     * - Users: Can only update their own data
+     * - Field-level access controls restrict sensitive fields
+     */
+    update: isAdminOrSelf,
+    /**
+     * DELETE ACCESS
+     * - Only admins and superadmins can delete users
+     * - Prevents users from deleting their own accounts
+     * - Ensures proper user lifecycle management
+     */
+    delete: isAdmin,
   },
   auth: {
     tokenExpiration: 60 * 60 * 24 * 7, // 7 days (when "remember me" is checked)
@@ -18,34 +76,68 @@ export const Users: CollectionConfig = {
     {
       name: 'sub',
       type: 'text',
+      access: {
+        // OAuth field - system managed, no manual updates
+        update: nobody,
+      },
       admin: {
-        hidden: true,
+        readOnly: true,
+        // Hidden from non-developers/superadmins
+        condition: (data, siblingData, { user }) => {
+          return isSuperAdminOrDeveloper(user)
+        },
+        description: 'OAuth provider subject ID (system-managed)',
       },
       index: true,
     },
     {
       name: 'picture',
       type: 'text',
+      access: {
+        // OAuth field - system managed, no manual updates
+        update: nobody,
+      },
       admin: {
-        hidden: true,
+        readOnly: true,
+        // Hidden from non-developers/superadmins
+        condition: (data, siblingData, { user }) => {
+          return isSuperAdminOrDeveloper(user)
+        },
+        description: 'OAuth provider profile picture URL (system-managed)',
       },
     },
     {
       name: 'hasPassword',
       type: 'checkbox',
       defaultValue: false,
+      access: {
+        // System-managed field, no manual updates
+        update: nobody,
+      },
       admin: {
         readOnly: true,
-        description: 'Indicates if user has set a custom password (auto-managed)',
+        // Hidden from non-developers/superadmins
+        condition: (data, siblingData, { user }) => {
+          return isSuperAdminOrDeveloper(user)
+        },
+        description: 'Indicates if user has set a custom password (system-managed)',
       },
     },
     {
       name: 'ogfan',
       type: 'checkbox',
       defaultValue: false,
+      access: {
+        // Only developers can update this field (super exclusive!)
+        update: isDeveloperField,
+      },
       admin: {
         description: 'Original Fan - Early supporter badge',
         position: 'sidebar',
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
       },
     },
     {
@@ -60,10 +152,56 @@ export const Users: CollectionConfig = {
           value: 'customer',
         },
         {
+          label: 'Seller',
+          value: 'seller',
+        },
+        {
           label: 'Admin',
           value: 'admin',
         },
+        {
+          label: 'Developer',
+          value: 'developer',
+        },
+        {
+          label: 'Super Admin',
+          value: 'superadmin',
+        },
       ],
+      admin: {
+        description:
+          'User role permissions (Developer and Super Admin can only be assigned by Super Admins)',
+        // Filter options based on user's role
+        condition: (data, siblingData, { user }) => {
+          // Show roles field to admins and superadmins
+          return !!(user?.roles?.includes('admin') || user?.roles?.includes('superadmin'))
+        },
+      },
+      access: {
+        /**
+         * ROLES FIELD ACCESS
+         * - Only admins can assign/change roles
+         * - Hook prevents non-superadmins from assigning superadmin/developer roles
+         */
+        create: isAdminField,
+        update: isAdminField,
+      },
+      hooks: {
+        beforeChange: [
+          ({ req, value }) => {
+            // Prevent non-superadmins from assigning superadmin or developer roles
+            if (value && Array.isArray(value)) {
+              const isSuperAdmin = req.user?.roles?.includes('superadmin')
+
+              // Filter out restricted roles if user is not a superadmin
+              if (!isSuperAdmin) {
+                return value.filter((role: string) => role !== 'superadmin' && role !== 'developer')
+              }
+            }
+            return value
+          },
+        ],
+      },
     },
     {
       name: 'firstName',
@@ -167,15 +305,15 @@ export const Users: CollectionConfig = {
         {
           name: 'currency',
           type: 'select',
-          defaultValue: 'USD',
+          defaultValue: 'AFN',
           options: [
+            {
+              label: 'AFN (Afghan Afghani)',
+              value: 'AFN',
+            },
             {
               label: 'USD',
               value: 'USD',
-            },
-            {
-              label: 'AF',
-              value: 'AF',
             },
           ],
         },
@@ -189,8 +327,17 @@ export const Users: CollectionConfig = {
     {
       name: 'cart',
       type: 'json',
+      access: {
+        // Cart is managed via API endpoints only, not through admin UI
+        update: nobody,
+      },
       admin: {
-        hidden: true,
+        readOnly: true,
+        // Hidden from non-developers/superadmins
+        condition: (data, siblingData, { user }) => {
+          return isSuperAdminOrDeveloper(user)
+        },
+        description: 'Shopping cart data (managed via API, JSON format)',
       },
     },
     {
@@ -201,6 +348,36 @@ export const Users: CollectionConfig = {
       admin: {
         description: 'Products added to wishlist',
       },
+    },
+    {
+      name: 'recentlyViewed',
+      type: 'array',
+      access: {
+        // Managed via API endpoints only, not through admin UI
+        update: nobody,
+      },
+      admin: {
+        readOnly: true,
+        description: 'Recently viewed products (managed via API, max 20 items)',
+      },
+      fields: [
+        {
+          name: 'product',
+          type: 'relationship',
+          relationTo: 'products',
+          required: true,
+        },
+        {
+          name: 'viewedAt',
+          type: 'date',
+          required: true,
+          admin: {
+            date: {
+              pickerAppearance: 'dayAndTime',
+            },
+          },
+        },
+      ],
     },
     {
       name: 'orders',

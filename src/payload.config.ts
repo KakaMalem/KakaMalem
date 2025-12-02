@@ -19,6 +19,9 @@ import { registerUser } from './endpoints/users/registerUser'
 import { loginUser } from './endpoints/users/loginUser'
 import { setPassword } from './endpoints/users/setPassword'
 import { getProducts } from './endpoints/getProducts'
+import { trackProductView } from './endpoints/products/trackView'
+import { getRecentlyViewed } from './endpoints/products/getRecentlyViewed'
+import { mergeRecentlyViewed } from './endpoints/products/mergeRecentlyViewed'
 import { addToCart } from './endpoints/cart/addToCart'
 import { getCart } from './endpoints/cart/getCart'
 import { updateCart } from './endpoints/cart/updateCart'
@@ -27,6 +30,9 @@ import { clearCart } from './endpoints/cart/clearCart'
 import { mergeCart } from './endpoints/cart/mergeCart'
 import { createReview } from './endpoints/reviews/createReview'
 import { getProductReviews } from './endpoints/reviews/getProductReviews'
+import { getUserReview } from './endpoints/reviews/getUserReview'
+import { updateReview } from './endpoints/reviews/updateReview'
+import { deleteReview } from './endpoints/reviews/deleteReview'
 import { markHelpful } from './endpoints/reviews/markHelpful'
 import { addToWishlist } from './endpoints/wishlist/addToWishlist'
 import { removeFromWishlist } from './endpoints/wishlist/removeFromWishlist'
@@ -51,6 +57,9 @@ export default buildConfig({
     loginUser,
     setPassword,
     getProducts,
+    trackProductView,
+    getRecentlyViewed,
+    mergeRecentlyViewed,
     addToCart,
     getCart,
     updateCart,
@@ -59,6 +68,9 @@ export default buildConfig({
     mergeCart,
     createReview,
     getProductReviews,
+    getUserReview,
+    updateReview,
+    deleteReview,
     markHelpful,
     addToWishlist,
     removeFromWishlist,

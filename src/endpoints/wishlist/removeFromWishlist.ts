@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import type { Product } from '@/payload-types'
 
 export const removeFromWishlist: Endpoint = {
   path: '/wishlist/remove',
@@ -13,7 +14,7 @@ export const removeFromWishlist: Endpoint = {
     let body: { productId: string }
     try {
       body = (await req.json?.()) || req.body
-    } catch (e) {
+    } catch (_e) {
       return Response.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
@@ -31,8 +32,8 @@ export const removeFromWishlist: Endpoint = {
       })
 
       // Handle both string IDs and populated Product objects
-      const currentWishlist = ((currentUser.wishlist || []) as any[]).map((item) =>
-        typeof item === 'string' ? item : item.id,
+      const currentWishlist = ((currentUser.wishlist || []) as Array<string | Product>).map(
+        (item) => (typeof item === 'string' ? item : item.id),
       )
 
       // Remove from wishlist
@@ -50,8 +51,8 @@ export const removeFromWishlist: Endpoint = {
         success: true,
         wishlist: updatedUser.wishlist,
       })
-    } catch (error: any) {
-      console.error('Error removing from wishlist:', error)
+    } catch (_error) {
+      console.error('Error removing from wishlist:', _error)
       return Response.json({ error: 'Failed to remove from wishlist' }, { status: 500 })
     }
   },

@@ -10,6 +10,20 @@ interface ShopPageData {
   totalProducts: number
 }
 
+interface ApiResponse {
+  success?: boolean
+  products?: Product[]
+  docs?: Product[]
+  pagination?: {
+    totalPages?: number
+    page?: number
+    totalDocs?: number
+  }
+  totalPages?: number
+  page?: number
+  totalDocs?: number
+}
+
 const PAGE_SIZE = 12
 
 type SearchParams = {
@@ -19,7 +33,7 @@ type SearchParams = {
   sort?: string
 }
 
-function normalizeApiBody(body: any): ShopPageData {
+function normalizeApiBody(body: ApiResponse | null): ShopPageData {
   if (!body) {
     return { products: [], totalPages: 0, currentPage: 1, totalProducts: 0 }
   }
@@ -50,12 +64,8 @@ function normalizeApiBody(body: any): ShopPageData {
   }
 }
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: Promise<SearchParams> | SearchParams
-}) {
-  const params = await Promise.resolve(searchParams || {})
+export default async function Page({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+  const params = searchParams ? await searchParams : {}
   const q = (params?.q as string) ?? ''
   const page = parseInt((params?.page as string) ?? '1', 10) || 1
   const limit = parseInt((params?.limit as string) ?? String(PAGE_SIZE), 10) || PAGE_SIZE
@@ -69,10 +79,10 @@ export default async function Page({
   if (q && q.trim()) url.searchParams.set('q', q.trim())
 
   const res = await fetch(url.toString(), { cache: 'no-store' })
-  let body: any
+  let body: ApiResponse | null
   try {
     body = await res.json()
-  } catch (e) {
+  } catch (_e) {
     body = null
   }
 

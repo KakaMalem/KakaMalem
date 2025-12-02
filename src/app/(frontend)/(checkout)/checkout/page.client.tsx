@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react' // Added useMemo
 import { useCart } from '@/providers/cart'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -53,9 +53,11 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     },
   })
 
-  const userAddresses = user?.addresses || []
-  const currency = user?.preferences?.currency || 'USD'
-  const cart = cartData?.items || []
+  // FIX: Memoize these values to prevent referential instability on every render
+  const userAddresses = useMemo(() => user?.addresses || [], [user])
+  const cart = useMemo(() => cartData?.items || [], [cartData])
+
+  const currency = user?.preferences?.currency || 'AFN'
 
   const steps = [
     { number: 1, name: 'Shipping', component: 'shipping' },
@@ -209,9 +211,10 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
 
       // Redirect to order confirmation page
       router.push(`/order-confirmation/${data.order.id}`)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Checkout error:', error)
-      toast.error(error.message || 'Failed to place order')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to place order'
+      toast.error(errorMessage)
     } finally {
       setProcessing(false)
     }
@@ -241,15 +244,11 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
                       currentStep === step.number
                         ? 'bg-primary text-primary-content scale-110'
                         : currentStep > step.number
-                        ? 'bg-success text-success-content'
-                        : 'bg-base-300 text-base-content'
+                          ? 'bg-success text-success-content'
+                          : 'bg-base-300 text-base-content'
                     }`}
                   >
-                    {currentStep > step.number ? (
-                      <Check className="w-5 h-5" />
-                    ) : (
-                      step.number
-                    )}
+                    {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number}
                   </div>
                   <span
                     className={`text-sm font-medium ${

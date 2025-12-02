@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Truck,
   ShieldCheck,
@@ -11,11 +12,14 @@ import {
   Tag,
   ChevronRight,
   ArrowRight,
+  Check,
 } from 'lucide-react'
 import { ProductCard } from '../components/ProductCard'
 import { CategoryCard } from '../components/CategoryCard'
+import { RecentlyViewed } from '../components/RecentlyViewed'
 import { Category, Product } from '@/payload-types'
 import { useCart } from '@/providers/cart'
+import { formatPrice } from '@/utilities/currency'
 
 interface HomeData {
   heroProducts: Product[]
@@ -30,7 +34,9 @@ interface HomeClientProps {
 
 export default function HomeClient({ data }: HomeClientProps) {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0)
-  const { addItem, loading: cartLoading } = useCart()
+  const [justAdded, setJustAdded] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
+  const { addItem } = useCart()
 
   useEffect(() => {
     if (!data?.heroProducts || data.heroProducts.length === 0) return
@@ -39,6 +45,50 @@ export default function HomeClient({ data }: HomeClientProps) {
     }, 5000)
     return () => clearInterval(interval)
   }, [data])
+
+  // Play success sound - a pleasant two-tone beep
+  const playSuccessSound = () => {
+    try {
+      // Type for older browsers with webkitAudioContext
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const audioContext = new AudioContextConstructor()
+
+      // First tone (higher pitch)
+      const oscillator1 = audioContext.createOscillator()
+      const gainNode1 = audioContext.createGain()
+
+      oscillator1.connect(gainNode1)
+      gainNode1.connect(audioContext.destination)
+
+      oscillator1.type = 'sine'
+      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
+      gainNode1.gain.setValueAtTime(0.2, audioContext.currentTime)
+      gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+
+      oscillator1.start(audioContext.currentTime)
+      oscillator1.stop(audioContext.currentTime + 0.15)
+
+      // Second tone (even higher pitch) - delayed slightly
+      const oscillator2 = audioContext.createOscillator()
+      const gainNode2 = audioContext.createGain()
+
+      oscillator2.connect(gainNode2)
+      gainNode2.connect(audioContext.destination)
+
+      oscillator2.type = 'sine'
+      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1) // E5
+      gainNode2.gain.setValueAtTime(0.2, audioContext.currentTime + 0.1)
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25)
+
+      oscillator2.start(audioContext.currentTime + 0.1)
+      oscillator2.stop(audioContext.currentTime + 0.25)
+    } catch (error) {
+      // Silently fail if audio doesn't work
+      console.debug('Audio playback not available:', error)
+    }
+  }
 
   // Show empty state if no products at all
   const hasProducts =
@@ -55,9 +105,9 @@ export default function HomeClient({ data }: HomeClientProps) {
           <p className="text-base-content/70 mb-6">
             Our store is being set up. Check back soon for amazing products!
           </p>
-          <a href="/shop" className="btn btn-primary">
+          <Link href="/shop" className="btn btn-primary">
             Go to Shop
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -74,8 +124,8 @@ export default function HomeClient({ data }: HomeClientProps) {
 
     if (typeof firstImage === 'string') {
       bgImageUrl = firstImage
-    } else if (typeof firstImage === 'object' && firstImage?.url) {
-      bgImageUrl = firstImage.url
+    } else if (typeof firstImage === 'object' && firstImage && 'url' in firstImage) {
+      bgImageUrl = (firstImage as { url?: string }).url || ''
     }
   }
 
@@ -111,15 +161,15 @@ export default function HomeClient({ data }: HomeClientProps) {
               {currentHero?.salePrice ? (
                 <>
                   <span className="text-4xl md:text-5xl font-bold text-primary">
-                    {currentHero.currency || 'USD'} {currentHero.salePrice}
+                    {formatPrice(currentHero.salePrice, currentHero.currency || 'AFN')}
                   </span>
                   <span className="text-2xl md:text-3xl line-through opacity-60">
-                    {currentHero.currency || 'USD'} {currentHero.price}
+                    {formatPrice(currentHero.price, currentHero.currency || 'AFN')}
                   </span>
                 </>
               ) : currentHero?.price ? (
                 <span className="text-4xl md:text-5xl font-bold text-primary">
-                  {currentHero.currency || 'USD'} {currentHero.price}
+                  {formatPrice(currentHero.price, currentHero.currency || 'AFN')}
                 </span>
               ) : null}
             </div>
@@ -132,29 +182,50 @@ export default function HomeClient({ data }: HomeClientProps) {
                   </button>
                 ) : (
                   <button
-                    className="btn btn-primary btn-lg"
+                    className={`btn btn-lg transition-all duration-300 ${
+                      justAdded ? 'btn-success' : 'btn-primary'
+                    }`}
                     onClick={async () => {
+                      if (isAdding || justAdded) return
+
+                      setIsAdding(true)
                       try {
                         await addItem(currentHero.id, 1)
+
+                        // Success - show checkmark and play sound
+                        setJustAdded(true)
+                        playSuccessSound()
+
+                        // Reset after 2 seconds
+                        setTimeout(() => {
+                          setJustAdded(false)
+                        }, 2000)
                       } catch (e) {
                         console.error('Error adding to cart:', e)
+                      } finally {
+                        setIsAdding(false)
                       }
                     }}
-                    disabled={cartLoading}
+                    disabled={isAdding || justAdded}
                   >
-                    {cartLoading ? (
+                    {isAdding ? (
                       <span className="loading loading-spinner loading-sm"></span>
+                    ) : justAdded ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        Added to Cart
+                      </>
                     ) : (
                       'Add to Cart'
                     )}
                   </button>
                 )}
-                <a
+                <Link
                   href={`/shop/${currentHero.slug}`}
                   className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary"
                 >
                   View Details
-                </a>
+                </Link>
               </div>
             )}
           </div>
@@ -181,7 +252,7 @@ export default function HomeClient({ data }: HomeClientProps) {
               <Truck className="w-8 h-8 text-primary" />
               <div className="text-left">
                 <div className="font-bold">Free Shipping</div>
-                <div className="text-sm opacity-70">Orders over $50</div>
+                <div className="text-sm opacity-70">Orders over 1000 AFN</div>
               </div>
             </div>
             <div className="flex items-center justify-center gap-3">
@@ -215,11 +286,11 @@ export default function HomeClient({ data }: HomeClientProps) {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-2">Shop by Category</h2>
-              <p className="opacity-70">Find what you're looking for</p>
+              <p className="opacity-70">Find what you&apos;re looking for</p>
             </div>
-            <a href="/shop" className="btn btn-ghost text-primary">
+            <Link href="/shop" className="btn btn-ghost text-primary">
               View All <ChevronRight className="w-5 h-5" />
-            </a>
+            </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {data.categories.slice(0, 6).map((category) => (
@@ -239,7 +310,9 @@ export default function HomeClient({ data }: HomeClientProps) {
                 Limited Time
               </div>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">Flash Deals</h2>
-              <p className="text-lg md:text-xl opacity-70">Hurry! These deals won't last long</p>
+              <p className="text-lg md:text-xl opacity-70">
+                Hurry! These deals won&apos;t last long
+              </p>
             </div>
             <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {data.featuredDeals.map((product) => (
@@ -247,9 +320,9 @@ export default function HomeClient({ data }: HomeClientProps) {
               ))}
             </div>
             <div className="text-center mt-8">
-              <a href="/shop" className="btn btn-primary btn-lg">
+              <Link href="/shop" className="btn btn-primary btn-lg">
                 View All Products <ArrowRight className="w-5 h-5" />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -264,9 +337,9 @@ export default function HomeClient({ data }: HomeClientProps) {
                 <h2 className="text-3xl md:text-4xl font-bold mb-2">Trending Now</h2>
                 <p className="opacity-70">Popular products this week</p>
               </div>
-              <a href="/shop" className="btn btn-ghost text-primary">
+              <Link href="/shop" className="btn btn-ghost text-primary">
                 View All <ChevronRight className="w-5 h-5" />
-              </a>
+              </Link>
             </div>
             <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {data.trendingProducts.map((product) => (
@@ -276,6 +349,13 @@ export default function HomeClient({ data }: HomeClientProps) {
           </div>
         </section>
       )}
+
+      {/* Recently Viewed Products */}
+      <section className="py-16 bg-base-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <RecentlyViewed />
+        </div>
+      </section>
 
       {/* Newsletter / CTA */}
       <section className="py-20 bg-gradient-to-r from-primary to-primary/80">

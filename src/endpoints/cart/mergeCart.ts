@@ -86,7 +86,7 @@ export const mergeCart: Endpoint = {
             id: guestItem.productId,
           })
 
-          if (product && product.status === 'published') {
+          if (product && (!product._status || product._status === 'published')) {
             if (product.trackQuantity && newQuantity > product.quantity) {
               // Adjust to available quantity
               newQuantity = product.quantity

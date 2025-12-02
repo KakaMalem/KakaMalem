@@ -24,7 +24,7 @@ export const setPassword: Endpoint = {
     let body: SetPasswordRequest
     try {
       body = (await req.json?.()) || req.body
-    } catch (e) {
+    } catch (_e) {
       return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 })
     }
 
@@ -57,7 +57,7 @@ export const setPassword: Endpoint = {
             password: currentPassword,
           },
         })
-      } catch (error) {
+      } catch (_error) {
         return Response.json({ error: 'Current password is incorrect' }, { status: 400 })
       }
 

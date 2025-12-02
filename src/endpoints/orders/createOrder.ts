@@ -1,4 +1,17 @@
 import type { Endpoint } from 'payload'
+import type { User, Product } from '@/payload-types'
+
+interface CartItem {
+  product: string | Product
+  quantity: number
+  price: number
+  variantId?: string
+}
+
+interface RequestCartItem {
+  product: string
+  quantity: number
+}
 
 interface CreateOrderRequest {
   shippingAddress: {
@@ -17,13 +30,10 @@ interface CreateOrderRequest {
     isDefault?: boolean
   }
   paymentMethod: 'cod' | 'bank_transfer' | 'credit_card'
-  currency: 'USD' | 'AF'
+  currency: 'USD' | 'AFN'
   saveAddress?: boolean
   guestEmail?: string
-  items?: Array<{
-    product: string
-    quantity: number
-  }>
+  items?: RequestCartItem[]
 }
 
 export const createOrder: Endpoint = {
@@ -36,7 +46,7 @@ export const createOrder: Endpoint = {
     let body: CreateOrderRequest
     try {
       body = (await req.json?.()) || req.body
-    } catch (e) {
+    } catch (_e) {
       return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 })
     }
 
@@ -64,12 +74,12 @@ export const createOrder: Endpoint = {
 
     try {
       // Get cart items - either from request or from user's saved cart
-      let cart: any[]
-      let userDoc: any = null
+      let cart: CartItem[]
+      let userDoc: User | null = null
 
       if (requestItems && Array.isArray(requestItems) && requestItems.length > 0) {
-        // Use items from request
-        cart = requestItems
+        // Use items from request - they'll be enriched with price data later
+        cart = requestItems as unknown as CartItem[]
       } else if (user) {
         // Fall back to fetching from database (only if authenticated)
         userDoc = await payload.findByID({
@@ -77,7 +87,7 @@ export const createOrder: Endpoint = {
           id: user.id,
         })
 
-        cart = userDoc.cart as any
+        cart = userDoc.cart as CartItem[]
       } else {
         // Guest user must provide items in request
         return Response.json(
@@ -92,12 +102,20 @@ export const createOrder: Endpoint = {
 
       // Calculate order totals
       let subtotal = 0
-      const orderItems: any[] = []
+      const orderItems: Array<{
+        product: string
+        quantity: number
+        price: number
+        total: number
+        variantId?: string
+      }> = []
 
       for (const cartItem of cart) {
+        const productId =
+          typeof cartItem.product === 'string' ? cartItem.product : cartItem.product.id
         const product = await payload.findByID({
           collection: 'products',
-          id: cartItem.product,
+          id: productId,
         })
 
         if (!product) {
@@ -143,7 +161,21 @@ export const createOrder: Endpoint = {
       const total = subtotal + shipping
 
       // Create order
-      const orderData: any = {
+      const orderData: {
+        orderNumber: string
+        items: typeof orderItems
+        subtotal: number
+        shipping: number
+        total: number
+        shippingAddress: typeof shippingAddress
+        paymentMethod: 'cod' | 'bank_transfer' | 'credit_card'
+        paymentStatus: 'pending' | 'paid' | 'failed'
+        status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+        currency: 'USD' | 'AFN'
+        customer?: string
+        guestEmail?: string
+      } = {
+        orderNumber: `ORD-${Date.now()}`, // Auto-generated order number
         items: orderItems,
         subtotal,
         shipping,

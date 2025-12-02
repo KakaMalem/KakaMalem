@@ -18,7 +18,7 @@ export const registerUser: Endpoint = {
     let body: RegisterRequest
     try {
       body = (await req.json?.()) || req.body
-    } catch (e) {
+    } catch (_e) {
       return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 })
     }
 
@@ -132,7 +132,7 @@ export const registerUser: Endpoint = {
       // Handle specific PayloadCMS validation errors
       if (error && typeof error === 'object' && 'name' in error) {
         if (error.name === 'ValidationError') {
-          const validationError = error as any
+          const validationError = error as { data?: unknown; message?: string }
           return Response.json(
             {
               error: 'Validation failed',
@@ -143,7 +143,7 @@ export const registerUser: Endpoint = {
         }
 
         if (error.name === 'MongoError' || error.name === 'BulkWriteError') {
-          const dbError = error as any
+          const dbError = error as { code?: number }
           if (dbError.code === 11000) {
             return Response.json({ error: 'Email already exists' }, { status: 409 })
           }

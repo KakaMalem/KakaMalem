@@ -1,24 +1,57 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Product } from '@/payload-types'
+import React, { useState, useEffect } from 'react'
+import { Product, Media } from '@/payload-types'
 import { Star, Plus, Minus, AlertCircle, Check, X, Heart } from 'lucide-react'
 import { useCart } from '@/providers/cart'
 import { useWishlist } from '@/providers/wishlist'
+import { useRecentlyViewed } from '@/providers/recentlyViewed'
 import { ReviewsSection } from '@/app/(frontend)/components/ReviewsSection'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { formatPrice } from '@/utilities/currency'
 
 type Props = {
   product: Product
-  isAuthenticated: boolean
   descriptionHtml: string
 }
 
-export default function ProductDetailsClient({ product, isAuthenticated, descriptionHtml }: Props) {
+interface ErrorWithMessage {
+  message?: string
+}
+
+export default function ProductDetailsClient({ product, descriptionHtml }: Props) {
   const router = useRouter()
   const { addItem, loading: cartLoading, cart } = useCart()
   const { isInWishlist, toggleWishlist, loadingItems } = useWishlist()
+  const { trackView } = useRecentlyViewed()
+
+  // Client-side authentication check
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/users/me', {
+          credentials: 'include',
+        })
+        setIsAuthenticated(response.ok)
+      } catch (_error) {
+        setIsAuthenticated(false)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  // Track product view on mount
+  useEffect(() => {
+    trackView(product.id)
+  }, [product.id, trackView])
 
   // Check if product is already in cart
   const cartItem = cart?.items?.find((item) => item.productId === product.id)
@@ -29,9 +62,9 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
 
   // Handle images - they can be Media objects or string IDs
   const images = (product.images ?? [])
-    .map((i: any) => {
+    .map((i: string | Media) => {
       if (typeof i === 'string') return i
-      if (i?.url) return i.url
+      if (typeof i === 'object' && i?.url) return i.url
       return null
     })
     .filter(Boolean) as string[]
@@ -64,20 +97,21 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
   const decrease = () => setQty((q) => Math.max(1, q - 1))
 
   // Helper function for error handling
-  const handleError = (e: any, context: string) => {
+  const handleError = (e: unknown, context: string) => {
     console.error(`Error in ${context}:`, e)
 
     let errorMessage = `Unable to ${context}. Please try again.`
 
-    if (e?.message) {
-      if (e.message.includes('stock') || e.message.includes('available')) {
-        errorMessage = e.message
-      } else if (e.message.includes('network') || e.message.includes('fetch')) {
+    const error = e as ErrorWithMessage
+    if (error?.message) {
+      if (error.message.includes('stock') || error.message.includes('available')) {
+        errorMessage = error.message
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
         errorMessage = 'Network error. Please check your connection and try again.'
-      } else if (e.message.includes('auth') || e.message.includes('login')) {
+      } else if (error.message.includes('auth') || error.message.includes('login')) {
         errorMessage = 'Please log in to continue.'
       } else {
-        errorMessage = e.message
+        errorMessage = error.message
       }
     }
 
@@ -91,7 +125,11 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
   // Play success sound - a pleasant two-tone beep
   const playSuccessSound = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      // Type for older browsers with webkitAudioContext
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const audioContext = new AudioContextConstructor()
 
       // First tone (higher pitch)
       const oscillator1 = audioContext.createOscillator()
@@ -146,10 +184,11 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
 
       // Reset after 2 seconds
       setTimeout(() => setJustAdded(false), 2000)
-    } catch (e: any) {
+    } catch (e: unknown) {
       handleError(e, 'add item to cart')
       // Reset quantity to available amount if stock error
-      if (e?.message?.includes('available in stock')) {
+      const error = e as ErrorWithMessage
+      if (error?.message?.includes('available in stock')) {
         setQty(1)
       }
     }
@@ -171,11 +210,12 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
       setTimeout(() => {
         router.push('/checkout')
       }, 300)
-    } catch (e: any) {
+    } catch (e: unknown) {
       handleError(e, 'process your purchase')
       setBuyNowLoading(false)
       // Reset quantity to available amount if stock error
-      if (e?.message?.includes('available in stock')) {
+      const error = e as ErrorWithMessage
+      if (error?.message?.includes('available in stock')) {
         setQty(1)
       }
     }
@@ -185,13 +225,14 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
     try {
       await toggleWishlist(product.id)
       toast.success(inWishlist ? 'Removed from wishlist' : 'Added to wishlist')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling wishlist:', error)
-      if (error.message?.includes('Unauthorized')) {
+      const err = error as ErrorWithMessage
+      if (err.message?.includes('Unauthorized')) {
         toast.error('Please login to add to wishlist')
         window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`
       } else {
-        toast.error(error.message || 'Failed to update wishlist')
+        toast.error(err.message || 'Failed to update wishlist')
       }
     }
   }
@@ -225,7 +266,6 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
             {images.length > 1 && (
               <div className="mt-4 flex gap-2 overflow-x-auto">
                 {images.map((src, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <button
                     key={String(i)}
                     onClick={() => setSelected(i)}
@@ -233,6 +273,7 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
                       selected === i ? 'border-primary' : 'border-base-200'
                     }`}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={src}
                       alt={`${product.name} ${i}`}
@@ -361,18 +402,22 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
               {product.salePrice ? (
                 <>
                   <div className="text-2xl font-bold">
-                    {product.currency} {product.salePrice}
+                    {formatPrice(product.salePrice, product.currency)}
                   </div>
                   <div className="text-sm line-through text-base-content/50">
-                    {product.currency} {product.price}
+                    {formatPrice(product.price, product.currency)}
                   </div>
                   <div className="text-sm text-success font-medium">
-                    Save {product.currency} {Number(product.price) - Number(product.salePrice)}
+                    Save{' '}
+                    {formatPrice(
+                      Number(product.price) - Number(product.salePrice),
+                      product.currency,
+                    )}
                   </div>
                 </>
               ) : (
                 <div className="text-2xl font-bold">
-                  {product.currency} {product.price}
+                  {formatPrice(product.price, product.currency)}
                 </div>
               )}
             </div>
@@ -592,7 +637,14 @@ export default function ProductDetailsClient({ product, isAuthenticated, descrip
 
       {/* Reviews Section */}
       <div id="reviews" className="mt-16 scroll-mt-24">
-        <ReviewsSection productId={product.id} isAuthenticated={isAuthenticated} />
+        {authLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="loading loading-spinner loading-lg text-primary"></div>
+            <span className="ml-3">Loading reviews...</span>
+          </div>
+        ) : (
+          <ReviewsSection productId={product.id} isAuthenticated={isAuthenticated} />
+        )}
       </div>
     </>
   )

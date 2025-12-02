@@ -4,12 +4,15 @@ import { cookies } from 'next/headers'
 import OrderConfirmationClient from './page.client'
 import { redirect } from 'next/navigation'
 
+// Force dynamic rendering since we use cookies
+export const dynamic = 'force-dynamic'
+
 interface OrderConfirmationPageProps {
   params: Promise<{ id: string }>
 }
 
 export default async function OrderConfirmationPage({ params }: OrderConfirmationPageProps) {
-  const { id } = await Promise.resolve(params)
+  const { id } = await params
 
   try {
     const baseURL = getServerSideURL()
@@ -31,7 +34,7 @@ export default async function OrderConfirmationPage({ params }: OrderConfirmatio
     const order = await response.json()
 
     return <OrderConfirmationClient order={order} />
-  } catch (error) {
+  } catch (_error) {
     redirect('/shop')
   }
 }

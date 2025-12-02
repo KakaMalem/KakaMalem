@@ -1,4 +1,7 @@
 import type { CollectionConfig } from 'payload'
+import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
+import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
+import { nobody } from '../access/nobody'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -6,14 +9,65 @@ export const Categories: CollectionConfig = {
     useAsTitle: 'name',
     defaultColumns: ['name', 'parent', 'status', 'displayOrder'],
     group: 'E-commerce',
+    hidden: ({ user }) => {
+      // Only show to admins, superadmins, developers, and sellers
+      return !(
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('superadmin') ||
+        user?.roles?.includes('developer') ||
+        user?.roles?.includes('seller')
+      )
+    },
   },
   access: {
-    read: () => true,
+    /**
+     * READ ACCESS
+     * - Admins, Developers, Sellers: Can read all categories (including inactive/hidden)
+     * - Public/Customers: Can only read active categories
+     * - Ensures proper category visibility on storefront
+     */
+    read: ({ req: { user } }) => {
+      // Technical and business staff can read all categories
+      if (
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('superadmin') ||
+        user?.roles?.includes('developer') ||
+        user?.roles?.includes('seller')
+      ) {
+        return true
+      }
+      // Public can only read active categories
+      return {
+        status: {
+          equals: 'active',
+        },
+      }
+    },
+    /**
+     * CREATE ACCESS
+     * - Admins, Developers, Sellers: Can create categories
+     * - Customers: No access
+     */
+    create: isAdminSellerOrDeveloper,
+    /**
+     * UPDATE ACCESS
+     * - Admins, Developers, Sellers: Can update categories
+     * - Customers: No access
+     */
+    update: isAdminSellerOrDeveloper,
+    /**
+     * DELETE ACCESS
+     * - Only admins and developers can delete categories
+     * - Prevents sellers from accidentally removing categories
+     * - Ensures category structure integrity
+     */
+    delete: isAdminOrDeveloper,
   },
   hooks: {
     beforeChange: [
       ({ data }) => {
-        if (data.name && !data.slug) {
+        // Auto-generate slug from name whenever name changes
+        if (data.name) {
           data.slug = data.name
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
@@ -34,6 +88,14 @@ export const Categories: CollectionConfig = {
       type: 'text',
       required: true,
       unique: true,
+      access: {
+        // Slug is auto-generated from name, prevent manual updates
+        update: nobody,
+      },
+      admin: {
+        readOnly: true,
+        description: 'Auto-generated from category name',
+      },
     },
     {
       name: 'categoryImage',

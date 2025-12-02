@@ -4,8 +4,11 @@ import type { Order } from '@/payload-types'
 import OrdersClient from './page.client'
 import { getServerSideURL } from '@/utilities/getURL'
 
+// Force dynamic rendering since we use authentication (cookies)
+export const dynamic = 'force-dynamic'
+
 export default async function OrdersPage() {
-  const { user } = await getMeUser({
+  const { user: _user } = await getMeUser({
     nullUserRedirect: '/auth/login?redirect=/account/orders',
   })
 

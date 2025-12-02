@@ -149,6 +149,27 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
       <h4 className="font-bold text-lg mb-2">{review.title}</h4>
       <p className="text-base-content/80 whitespace-pre-wrap">{review.comment}</p>
 
+      {/* Admin Response */}
+      {review.adminResponse && review.adminResponse.response && (
+        <div className="mt-4 p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg">
+          <div className="flex items-start gap-2 mb-2">
+            <div className="badge badge-primary badge-sm">Store Response</div>
+            {review.adminResponse.respondedAt && (
+              <span className="text-xs opacity-60">
+                {new Date(review.adminResponse.respondedAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </span>
+            )}
+          </div>
+          <p className="text-base-content/90 text-sm whitespace-pre-wrap">
+            {review.adminResponse.response}
+          </p>
+        </div>
+      )}
+
       <div className="mt-4 flex items-center gap-4">
         <p className="text-sm opacity-60">Was this review helpful?</p>
         <div className="flex items-center gap-2">
@@ -234,10 +255,7 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold">Customer Reviews</h3>
           {selectedRating && (
-            <button
-              onClick={() => setSelectedRating(null)}
-              className="btn btn-sm btn-ghost gap-2"
-            >
+            <button onClick={() => setSelectedRating(null)} className="btn btn-sm btn-ghost gap-2">
               <span>Showing {selectedRating} ★ reviews</span>
               <span className="text-lg">×</span>
             </button>

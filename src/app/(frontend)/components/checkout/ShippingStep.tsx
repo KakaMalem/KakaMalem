@@ -102,9 +102,7 @@ export function ShippingStep({
               </div>
             ) : (
               <div className="alert alert-warning">
-                <span>
-                  You have no saved addresses. Please add one in your account settings.
-                </span>
+                <span>You have no saved addresses. Please add one in your account settings.</span>
               </div>
             )}
 
@@ -244,9 +242,7 @@ export function ShippingStep({
                 placeholder="Provide detailed directions from the nearest landmark e.g., from shaheed square of shahr e naw, go towards zarghoona high school, after 20 meters you'll see institute of banking and finance of afghanistan, go to the alley infront of it, house number 306, in front of the qala e fathullah mosque"
                 className="textarea textarea-bordered h-24"
                 value={guestForm.detailedDirections}
-                onChange={(e) =>
-                  setGuestForm({ ...guestForm, detailedDirections: e.target.value })
-                }
+                onChange={(e) => setGuestForm({ ...guestForm, detailedDirections: e.target.value })}
               />
               <label className="label">
                 <span className="label-text-alt">
@@ -279,8 +275,8 @@ export function ShippingStep({
             <div className="alert alert-info text-sm">
               <MapPin className="w-4 h-4" />
               <span>
-                Adding GPS location and landmarks helps ensure smooth delivery. Create an account
-                to save this information for future orders!
+                Adding GPS location and landmarks helps ensure smooth delivery. Create an account to
+                save this information for future orders!
               </span>
             </div>
           </div>

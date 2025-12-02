@@ -1,5 +1,11 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 
+interface HelpfulVote {
+  user?: string | { id: string } | null
+  votedAt?: string | Date | null
+  id?: string | null
+}
+
 export const getProductReviews: Endpoint = {
   path: '/product-reviews',
   method: 'get',
@@ -57,7 +63,7 @@ export const getProductReviews: Endpoint = {
       // Calculate score for each review
       const scoredReviews = allReviews.map((review) => {
         let score = 0
-        let scoreBreakdown: Record<string, number> = {} // For debugging
+        const scoreBreakdown: Record<string, number> = {} // For debugging
 
         // 1. RECENCY BOOST - New reviews get initial visibility
         const createdAt = new Date(review.createdAt).getTime()
@@ -86,7 +92,7 @@ export const getProductReviews: Endpoint = {
         if (helpfulVotes.length > 0) {
           let engagementScore = 0
 
-          helpfulVotes.forEach((vote: any) => {
+          helpfulVotes.forEach((vote: HelpfulVote) => {
             const voteTime = vote.votedAt ? new Date(vote.votedAt).getTime() : createdAt // Fallback to review creation if no votedAt
 
             const voteAgeHours = (now - voteTime) / (1000 * 60 * 60)
@@ -195,14 +201,14 @@ export const getProductReviews: Endpoint = {
         let userVote = null
         if (user?.id) {
           if (
-            helpfulVotes.some((v: any) => {
+            helpfulVotes.some((v: HelpfulVote) => {
               const userId = typeof v.user === 'string' ? v.user : v.user?.id
               return userId === user.id
             })
           ) {
             userVote = 'helpful'
           } else if (
-            notHelpfulVotes.some((v: any) => {
+            notHelpfulVotes.some((v: HelpfulVote) => {
               const userId = typeof v.user === 'string' ? v.user : v.user?.id
               return userId === user.id
             })

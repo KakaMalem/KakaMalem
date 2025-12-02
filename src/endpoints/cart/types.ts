@@ -8,6 +8,12 @@ export interface CartItem {
   product?: Product // Populated product data
 }
 
+export interface PopulatedCartItem extends CartItem {
+  product: Product
+  isInStock: boolean
+  availableQuantity: number | null
+}
+
 export interface CartData {
   items: CartItem[]
 }

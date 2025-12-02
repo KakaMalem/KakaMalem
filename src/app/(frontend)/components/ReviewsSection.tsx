@@ -3,21 +3,41 @@
 import React, { useEffect, useState } from 'react'
 import { ReviewDisplay } from './ReviewDisplay'
 import { ReviewForm } from './ReviewForm'
+import type { Review } from '@/payload-types'
 
 interface ReviewsSectionProps {
   productId: string
   isAuthenticated: boolean
 }
 
+interface ReviewStats {
+  averageRating: number
+  totalReviews: number
+  verifiedPurchases: number
+  ratingDistribution: { 1: number; 2: number; 3: number; 4: number; 5: number }
+}
+
+interface PaginationInfo {
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+  totalPages: number
+  page: number
+}
+
+interface ReviewWithUser extends Omit<Review, 'user'> {
+  user: { id: string; name?: string; email?: string } | string
+  userVote?: 'helpful' | 'not-helpful' | null
+}
+
 export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAuthenticated }) => {
-  const [reviews, setReviews] = useState<any[]>([])
-  const [stats, setStats] = useState<any>({
+  const [reviews, setReviews] = useState<ReviewWithUser[]>([])
+  const [stats, setStats] = useState<ReviewStats>({
     averageRating: 0,
     totalReviews: 0,
     verifiedPurchases: 0,
     ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   })
-  const [pagination, setPagination] = useState<any>(null)
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -52,9 +72,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
       } else {
         throw new Error(data.error || 'Failed to fetch reviews')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching reviews:', err)
-      setError(err.message || 'Failed to load reviews')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load reviews'
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -62,6 +83,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
 
   useEffect(() => {
     fetchReviews(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId])
 
   const handleLoadMore = () => {

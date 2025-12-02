@@ -1,4 +1,4 @@
-import type { Endpoint } from 'payload'
+import type { Endpoint, Where } from 'payload'
 
 interface SearchQuery {
   q?: string // Search query
@@ -9,6 +9,7 @@ interface SearchQuery {
   sort?: 'price-asc' | 'price-desc' | 'rating' | 'newest' | 'featured'
   page?: number
   limit?: number
+  ids?: string[] // Specific product IDs to fetch
 }
 
 export const getProducts: Endpoint = {
@@ -54,48 +55,63 @@ export const getProducts: Endpoint = {
         sort: (url.searchParams.get('sort') as SearchQuery['sort']) || 'featured',
         page: url.searchParams.get('page') ? parseInt(url.searchParams.get('page')!) : 1,
         limit: url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 12,
+        ids: url.searchParams.get('ids')
+          ? url.searchParams.get('ids')!.split(',').filter(Boolean)
+          : undefined,
       }
 
       // Build where clause
-      const where: any = {
+      const where: Where = {
         and: [
-          { status: { equals: 'published' } }, // Only show published products
+          // Show published products or products without _status (legacy)
+          {
+            or: [{ _status: { equals: 'published' } }, { _status: { exists: false } }],
+          },
         ],
       }
 
-      // Search by name or description
-      if (searchParams.q) {
-        where.and.push({
-          or: [
-            { name: { contains: searchParams.q } },
-            { shortDescription: { contains: searchParams.q } },
-          ],
+      // Filter by specific IDs (takes precedence over other filters)
+      if (searchParams.ids && searchParams.ids.length > 0) {
+        where.and?.push({
+          id: { in: searchParams.ids },
         })
-      }
+      } else {
+        // Only apply these filters if not fetching specific IDs
 
-      // Filter by category
-      if (searchParams.category) {
-        where.and.push({
-          categories: { contains: searchParams.category },
-        })
+        // Search by name or description
+        if (searchParams.q) {
+          where.and?.push({
+            or: [
+              { name: { contains: searchParams.q } },
+              { shortDescription: { contains: searchParams.q } },
+            ],
+          })
+        }
+
+        // Filter by category
+        if (searchParams.category) {
+          where.and?.push({
+            categories: { contains: searchParams.category },
+          })
+        }
       }
 
       // Filter by price range
       if (searchParams.minPrice !== undefined) {
-        where.and.push({
+        where.and?.push({
           price: { greater_than_equal: searchParams.minPrice },
         })
       }
 
       if (searchParams.maxPrice !== undefined) {
-        where.and.push({
+        where.and?.push({
           price: { less_than_equal: searchParams.maxPrice },
         })
       }
 
       // Filter by rating
       if (searchParams.rating !== undefined) {
-        where.and.push({
+        where.and?.push({
           averageRating: { greater_than_equal: searchParams.rating },
         })
       }

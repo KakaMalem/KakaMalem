@@ -1,6 +1,6 @@
 import type { PayloadRequest, Endpoint } from 'payload'
 import { getGuestCart } from '../../utilities/cartUtils'
-import type { CartItem, CartData } from './types'
+import type { CartItem, CartData, PopulatedCartItem } from './types'
 
 export const getCart: Endpoint = {
   path: '/cart',
@@ -28,7 +28,7 @@ export const getCart: Endpoint = {
             })
 
             // Check if product is still available
-            if (!product || product.status !== 'published') {
+            if (!product || (product._status && product._status !== 'published')) {
               return null // Product no longer available
             }
 
@@ -60,17 +60,16 @@ export const getCart: Endpoint = {
       )
 
       // Filter out null items (deleted/unavailable products)
-      const validItems = populatedItems.filter(Boolean)
+      const validItems = populatedItems.filter((item): item is PopulatedCartItem => item !== null)
 
       // Calculate totals
-      const subtotal = validItems.reduce((sum: number, item: any) => {
-        if (!item) return sum
-        const price = item.product?.salePrice || item.product?.price || 0
+      const subtotal = validItems.reduce((sum: number, item: PopulatedCartItem) => {
+        const price = item.product.salePrice || item.product.price || 0
         return sum + price * item.quantity
       }, 0)
 
       const itemCount = validItems.reduce(
-        (sum: number, item: any) => sum + (item?.quantity || 0),
+        (sum: number, item: PopulatedCartItem) => sum + item.quantity,
         0,
       )
 

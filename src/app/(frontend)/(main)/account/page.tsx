@@ -5,6 +5,9 @@ import AccountClient from './page.client'
 import { getServerSideURL } from '@/utilities/getURL'
 import { cookies } from 'next/headers'
 
+// Force dynamic rendering since we use authentication (cookies)
+export const dynamic = 'force-dynamic'
+
 export default async function AccountOverviewPage() {
   const { user } = await getMeUser({
     nullUserRedirect: '/auth/login?redirect=/account',

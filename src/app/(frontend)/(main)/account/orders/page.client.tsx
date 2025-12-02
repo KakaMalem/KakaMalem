@@ -3,7 +3,14 @@
 import React from 'react'
 import Link from 'next/link'
 import { Package, Calendar, CreditCard, Truck, CheckCircle, XCircle, Clock } from 'lucide-react'
-import type { Order } from '@/payload-types'
+import type { Order, Product } from '@/payload-types'
+
+interface OrderItem {
+  product: string | Product
+  quantity: number
+  price?: number
+  total?: number
+}
 
 interface OrdersClientProps {
   orders: Order[]
@@ -45,7 +52,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
             <Package className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
             <h3 className="text-xl font-bold mb-2">No Orders Yet</h3>
             <p className="text-base-content/70 mb-6">
-              You haven't placed any orders yet. Start shopping to see your order history here.
+              You haven&apos;t placed any orders yet. Start shopping to see your order history here.
             </p>
             <Link href="/shop" className="btn btn-primary">
               Start Shopping
@@ -107,12 +114,12 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                       <div className="mt-3 pl-14">
                         <p className="text-sm text-base-content/60 mb-2">Items:</p>
                         <div className="space-y-1">
-                          {order.items.slice(0, 3).map((item: any, index: number) => {
-                            const product =
-                              typeof item.product === 'object' ? item.product : null
+                          {(order.items as OrderItem[]).slice(0, 3).map((item, index: number) => {
+                            const product = typeof item.product === 'object' ? item.product : null
                             return (
                               <div key={index} className="text-sm text-base-content/80">
-                                • {product?.name || 'Product'} {item.quantity > 1 && `(×${item.quantity})`}
+                                • {product?.name || 'Product'}{' '}
+                                {item.quantity > 1 && `(×${item.quantity})`}
                               </div>
                             )
                           })}
@@ -141,10 +148,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                     </span>
 
                     <div className="flex gap-2">
-                      <Link
-                        href={`/account/orders/${order.id}`}
-                        className="btn btn-outline btn-sm"
-                      >
+                      <Link href={`/account/orders/${order.id}`} className="btn btn-outline btn-sm">
                         View Details
                       </Link>
                     </div>

@@ -12,6 +12,20 @@ interface ShopPageData {
   totalProducts: number
 }
 
+interface ApiResponse {
+  success?: boolean
+  products?: Product[]
+  docs?: Product[]
+  pagination?: {
+    totalPages?: number
+    page?: number
+    totalDocs?: number
+  }
+  totalPages?: number
+  page?: number
+  totalDocs?: number
+}
+
 interface Props {
   initialData: ShopPageData
   initialPage?: number
@@ -42,7 +56,7 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
     setTotalProducts(initialData.totalProducts)
   }, [searchQuery, initialData, initialPage])
 
-  const normalizeBody = (body: any): ShopPageData => {
+  const normalizeBody = (body: ApiResponse | null): ShopPageData => {
     if (!body) return { products: [], totalPages: 0, currentPage: 1, totalProducts: 0 }
 
     if (body.success && Array.isArray(body.products)) {
@@ -126,7 +140,9 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
       {/* Search Query Display */}
       {query && (
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-base-content">Search results for "{query}"</h1>
+          <h1 className="text-2xl font-bold text-base-content">
+            Search results for &quot;{query}&quot;
+          </h1>
           <p className="text-sm text-base-content/60 mt-1">
             Found {totalProducts} {totalProducts === 1 ? 'product' : 'products'}
           </p>
@@ -136,7 +152,7 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
       {/* Products Grid */}
       <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {products.map((product) => (
-          <div key={(product as any).id ?? (product as any)._id} className="w-full h-full">
+          <div key={product.id} className="w-full h-full">
             <ProductCard product={product} />
           </div>
         ))}
@@ -153,7 +169,7 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
       {!hasMore && products.length > 0 && (
         <div className="text-center py-8">
           <p className="text-sm text-base-content/60">
-            You've reached the end. Showing all {totalProducts} products.
+            You&apos;ve reached the end. Showing all {totalProducts} products.
           </p>
         </div>
       )}

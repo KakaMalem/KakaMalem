@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 export default function ClearInvalidToken() {
-  const [cleared, setCleared] = useState(false)
+  const [_cleared, setCleared] = useState(false)
 
   useEffect(() => {
     // Check if there's an error in the URL

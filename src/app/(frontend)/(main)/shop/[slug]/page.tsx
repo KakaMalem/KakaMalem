@@ -1,6 +1,5 @@
 import React from 'react'
 import { notFound } from 'next/navigation'
-import { cookies } from 'next/headers'
 import ProductDetailsClient from './page.client'
 import { Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -10,48 +9,33 @@ interface Params {
   slug: string
 }
 
+// Generate static paths for all products
+// Note: Returns empty array to rely on on-demand ISR generation
+// This avoids build-time dependency on running server
 export async function generateStaticParams(): Promise<Params[]> {
-  try {
-    const baseUrl = getServerSideURL()
-    const url = new URL('/api/products', baseUrl)
-    url.searchParams.set('limit', '1000') // Get all products for static generation
-    url.searchParams.set('depth', '0') // Shallow fetch for slugs only
-
-    const res = await fetch(url.toString(), {
-      cache: 'no-store',
-      next: { revalidate: 3600 }, // Revalidate every hour
-    })
-
-    if (!res.ok) {
-      console.error('Failed to fetch products for static params')
-      return []
-    }
-
-    const body = await res.json()
-    const products = body.docs || body.products || []
-
-    return products.filter((p: any) => p.slug).map((p: any) => ({ slug: p.slug }))
-  } catch (error) {
-    console.error('Error generating static params:', error)
-    return []
-  }
+  // Pages will be generated on-demand and cached with ISR
+  // This approach works without requiring the server to be running during build
+  return []
 }
 
 async function getProductBySlug(slug: string): Promise<Product | null> {
   try {
     const baseUrl = getServerSideURL()
+
+    // Decode the slug in case it comes URL-encoded, then re-encode for the API query
+    const decodedSlug = decodeURIComponent(slug)
+
     const url = new URL('/api/products', baseUrl)
-    url.searchParams.set('where[slug][equals]', slug)
+    url.searchParams.set('where[slug][equals]', decodedSlug)
     url.searchParams.set('depth', '2') // Populate relationships like images and categories
     url.searchParams.set('limit', '1')
 
     const res = await fetch(url.toString(), {
-      cache: 'no-store',
       next: { revalidate: 60 }, // Revalidate every minute
     })
 
     if (!res.ok) {
-      console.error(`Failed to fetch product with slug: ${slug}`)
+      console.error(`Failed to fetch product with slug: ${decodedSlug}`)
       return null
     }
 
@@ -71,23 +55,14 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   if (!product) return notFound()
 
-  // Check if user is authenticated
-  const cookieStore = await cookies()
-  const token = cookieStore.get('payload-token')?.value
-  const isAuthenticated = !!token
-
   // Serialize rich text description to HTML
   const descriptionHtml = product.description ? serializeRichText(product.description) : ''
 
   return (
     <div className="min-h-screen bg-base-100 py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* ProductDetailsClient expects serializable product props */}
-        <ProductDetailsClient
-          product={product as Product}
-          isAuthenticated={isAuthenticated}
-          descriptionHtml={descriptionHtml}
-        />
+        {/* ProductDetailsClient will check auth on client side */}
+        <ProductDetailsClient product={product as Product} descriptionHtml={descriptionHtml} />
       </div>
     </div>
   )

@@ -12,8 +12,16 @@ import {
   ShoppingBag,
   FileText,
 } from 'lucide-react'
-import type { Order } from '@/payload-types'
+import type { Order, Product } from '@/payload-types'
 import confetti from 'canvas-confetti'
+import Image from 'next/image'
+
+interface OrderItem {
+  product: string | Product
+  quantity: number
+  price?: number
+  total?: number
+}
 
 interface OrderConfirmationClientProps {
   order: Order
@@ -21,7 +29,7 @@ interface OrderConfirmationClientProps {
 
 export default function OrderConfirmationClient({ order }: OrderConfirmationClientProps) {
   const [confettiShown, setConfettiShown] = React.useState(false)
-  const currency = order.currency || 'USD'
+  const currency = order.currency || 'AFN'
   const isGuest = !order.customer
 
   // Show confetti on mount
@@ -55,7 +63,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
           </div>
           <h1 className="text-4xl font-bold mb-3">Order Confirmed!</h1>
           <p className="text-lg opacity-80 mb-2">
-            Thank you for your order. We've received it and will process it shortly.
+            Thank you for your order. We&apos;ve received it and will process it shortly.
           </p>
           <div className="inline-block bg-base-200 px-6 py-3 rounded-lg mt-4">
             <div className="text-sm opacity-70">Order Number</div>
@@ -72,7 +80,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
             <div>
               <div className="font-semibold">Order confirmation sent!</div>
               <div className="text-sm">
-                We've sent a confirmation email to <strong>{order.guestEmail}</strong>
+                We&apos;ve sent a confirmation email to <strong>{order.guestEmail}</strong>
               </div>
             </div>
           </div>
@@ -116,8 +124,8 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
               </h2>
 
               <div className="space-y-3 mb-4">
-                {order.items.map((item: any, index: number) => {
-                  const product = item.product
+                {(order.items as OrderItem[]).map((item, index: number) => {
+                  const product = typeof item.product === 'object' ? item.product : null
                   const imageUrl =
                     typeof product?.images?.[0] === 'object'
                       ? product.images[0]?.url
@@ -127,7 +135,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                     <div key={index} className="flex gap-3 p-3 bg-base-100 rounded-lg">
                       <div className="avatar">
                         <div className="w-16 h-16 rounded-lg">
-                          <img
+                          <Image
                             src={imageUrl || '/placeholder.jpg'}
                             alt={product?.name || 'Product'}
                             className="object-cover"
@@ -268,11 +276,11 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
             {/* What's Next */}
             <div className="card bg-primary text-primary-content">
               <div className="card-body">
-                <h3 className="card-title text-lg">What's Next?</h3>
+                <h3 className="card-title text-lg">What&apos;s Next?</h3>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>We'll send you an email confirmation</span>
+                    <span>We&apos;ll send you an email confirmation</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -280,7 +288,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>You'll receive tracking information once shipped</span>
+                    <span>You&apos;ll receive tracking information once shipped</span>
                   </li>
                 </ul>
               </div>

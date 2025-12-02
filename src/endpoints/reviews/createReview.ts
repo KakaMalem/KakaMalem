@@ -1,4 +1,5 @@
 import type { Endpoint, PayloadRequest } from 'payload'
+import { checkVerifiedPurchase } from '../../hooks/verifyPurchase'
 
 export const createReview: Endpoint = {
   path: '/create-review',
@@ -97,7 +98,7 @@ export const createReview: Endpoint = {
           collection: 'products',
           id: productId,
         })
-      } catch (error) {
+      } catch (_error) {
         return Response.json(
           {
             success: false,
@@ -126,29 +127,7 @@ export const createReview: Endpoint = {
       }
 
       // Check if user has purchased this product (for verified purchase badge)
-      let verifiedPurchase = false
-      try {
-        const userOrders = await payload.find({
-          collection: 'orders',
-          where: {
-            customer: { equals: user.id },
-          },
-          limit: 100,
-        })
-
-        if (userOrders.docs && userOrders.docs.length > 0) {
-          verifiedPurchase = userOrders.docs.some((order: any) => {
-            return order.items?.some((item: any) => {
-              const itemProductId =
-                typeof item.product === 'string' ? item.product : item.product?.id
-              return itemProductId === productId
-            })
-          })
-        }
-      } catch (error) {
-        console.warn('Failed to check verified purchase status:', error)
-        // Continue without verified purchase status
-      }
+      const verifiedPurchase = await checkVerifiedPurchase(payload, user.id, productId)
 
       // Create the review
       const review = await payload.create({

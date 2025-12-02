@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { X, ShoppingBag, ArrowRight, Plus, Minus, Package, Trash2 } from 'lucide-react'
 import { useCart, formatCurrency, calculateSubtotal } from '@/providers'
+import Image from 'next/image'
 
 interface DesktopCartSidebarProps {
   isOpen: boolean
@@ -17,6 +18,13 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
   const subtotal = calculateSubtotal(items)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const [mounted, setMounted] = React.useState(false)
+
+  // Always use AFN for display since calculateSubtotal converts everything to AFN
+  // This handles mixed-currency carts correctly
+  const cartCurrency: 'USD' | 'AFN' = 'AFN'
+
+  // Free shipping threshold is always 1000 AFN (all prices are converted to AFN)
+  const freeShippingThreshold = 1000
 
   // Handle mounting
   useEffect(() => {
@@ -145,7 +153,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
               </div>
               <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
               <p className="text-base-content/60 text-center mb-8">
-                Looks like you haven't added anything to your cart yet
+                Looks like you haven&apos;t added anything to your cart yet
               </p>
               <Link href="/shop" className="btn btn-primary" onClick={onClose}>
                 <ShoppingBag className="w-5 h-5" />
@@ -185,7 +193,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                             onClick={onClose}
                           >
                             <div className="w-24 h-24 bg-base-200 rounded-lg overflow-hidden group">
-                              <img
+                              <Image
                                 src={imageUrl}
                                 alt={item.product.name}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
@@ -267,19 +275,21 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
               {/* Cart Footer */}
               <div className="border-t border-base-200 p-6 bg-base-100">
                 {/* Free Shipping Progress */}
-                {subtotal < 5000 && (
+                {subtotal < freeShippingThreshold && (
                   <div className="mb-4 p-3 bg-info/10 rounded-xl">
                     <p className="text-sm mb-2">
                       Add{' '}
                       <span className="font-bold text-info">
-                        {formatCurrency(5000 - subtotal, 'AFN')}
+                        {formatCurrency(freeShippingThreshold - subtotal, cartCurrency)}
                       </span>{' '}
                       more for free shipping!
                     </p>
                     <div className="w-full bg-base-300 rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-primary to-info h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min((subtotal / 5000) * 100, 100)}%` }}
+                        style={{
+                          width: `${Math.min((subtotal / freeShippingThreshold) * 100, 100)}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -289,7 +299,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                 <div className="flex justify-between items-center mb-4 p-4 bg-base-200 rounded-xl">
                   <span className="text-lg font-semibold">Subtotal:</span>
                   <span className="text-2xl font-bold text-primary">
-                    {formatCurrency(subtotal, 'AFN')}
+                    {formatCurrency(subtotal, cartCurrency)}
                   </span>
                 </div>
 

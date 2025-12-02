@@ -73,6 +73,7 @@ export interface Config {
     products: Product;
     orders: Order;
     reviews: Review;
+    'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -89,6 +90,7 @@ export interface Config {
     products: ProductsSelect<false> | ProductsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
+    'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -109,7 +111,13 @@ export interface Config {
     collection: 'users';
   };
   jobs: {
-    tasks: unknown;
+    tasks: {
+      schedulePublish: TaskSchedulePublish;
+      inline: {
+        input: unknown;
+        output: unknown;
+      };
+    };
     workflows: unknown;
   };
 }
@@ -137,17 +145,26 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  /**
+   * OAuth provider subject ID (system-managed)
+   */
   sub?: string | null;
+  /**
+   * OAuth provider profile picture URL (system-managed)
+   */
   picture?: string | null;
   /**
-   * Indicates if user has set a custom password (auto-managed)
+   * Indicates if user has set a custom password (system-managed)
    */
   hasPassword?: boolean | null;
   /**
    * Original Fan - Early supporter badge
    */
   ogfan?: boolean | null;
-  roles: ('customer' | 'admin')[];
+  /**
+   * User role permissions (Developer and Super Admin can only be assigned by Super Admins)
+   */
+  roles?: ('customer' | 'seller' | 'admin' | 'developer' | 'superadmin')[] | null;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
@@ -188,9 +205,12 @@ export interface User {
       }[]
     | null;
   preferences?: {
-    currency?: ('USD' | 'AF') | null;
+    currency?: ('AFN' | 'USD') | null;
     newsletter?: boolean | null;
   };
+  /**
+   * Shopping cart data (managed via API, JSON format)
+   */
   cart?:
     | {
         [k: string]: unknown;
@@ -204,6 +224,16 @@ export interface User {
    * Products added to wishlist
    */
   wishlist?: (string | Product)[] | null;
+  /**
+   * Recently viewed products (managed via API, max 20 items)
+   */
+  recentlyViewed?:
+    | {
+        product: string | Product;
+        viewedAt: string;
+        id?: string | null;
+      }[]
+    | null;
   orders?: {
     docs?: (string | Order)[];
     hasNextPage?: boolean;
@@ -234,7 +264,6 @@ export interface User {
 export interface Product {
   id: string;
   name: string;
-  slug: string;
   /**
    * Average rating (calculated from approved reviews)
    */
@@ -268,16 +297,13 @@ export interface Product {
   shortDescription?: string | null;
   price: number;
   salePrice?: number | null;
-  currency: 'AF' | 'USD';
+  currency: 'AFN' | 'USD';
   sku?: string | null;
   quantity: number;
   lowStockThreshold?: number | null;
   images: (string | Media)[];
   categories?: (string | Category)[] | null;
-  /**
-   * Publication status of the product
-   */
-  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string | null;
   /**
    * Inventory/stock status of the product
    */
@@ -286,8 +312,15 @@ export interface Product {
   trackQuantity?: boolean | null;
   allowBackorders?: boolean | null;
   requiresShipping?: boolean | null;
+  slug?: string | null;
+  slugLock?: boolean | null;
+  /**
+   * Seller who owns this product (leave empty for platform products). Auto-assigned for sellers.
+   */
+  seller?: (string | null) | User;
   updatedAt: string;
   createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -296,6 +329,7 @@ export interface Product {
 export interface Media {
   id: string;
   alt: string;
+  uploadedBy?: (string | null) | User;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -315,6 +349,9 @@ export interface Media {
 export interface Category {
   id: string;
   name: string;
+  /**
+   * Auto-generated from category name
+   */
   slug: string;
   categoryImage?: (string | null) | Media;
   description?: string | null;
@@ -336,6 +373,9 @@ export interface Category {
  */
 export interface Order {
   id: string;
+  /**
+   * Auto-generated unique order identifier
+   */
   orderNumber: string;
   /**
    * Leave empty for guest orders
@@ -350,6 +390,10 @@ export interface Order {
     quantity: number;
     price: number;
     total: number;
+    /**
+     * Seller who owns this product (auto-populated)
+     */
+    productSeller?: (string | null) | User;
     id?: string | null;
   }[];
   subtotal: number;
@@ -370,13 +414,13 @@ export interface Order {
   };
   trackingNumber?: string | null;
   /**
-   * Internal notes
+   * Internal notes - only visible to admins and developers
    */
   notes?: string | null;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: ('cod' | 'bank_transfer' | 'credit_card') | null;
-  currency: 'AF' | 'USD';
+  currency: 'AFN' | 'USD';
   updatedAt: string;
   createdAt: string;
 }
@@ -387,6 +431,9 @@ export interface Order {
 export interface Review {
   id: string;
   product: string | Product;
+  /**
+   * Auto-populated with current user
+   */
   user: string | User;
   /**
    * Rating from 1 to 5 stars
@@ -394,17 +441,20 @@ export interface Review {
   rating: number;
   title: string;
   comment: string;
+  /**
+   * Review moderation status (admins only)
+   */
   status: 'pending' | 'approved' | 'rejected';
   /**
-   * User purchased this product
+   * User purchased this product (auto-verified)
    */
   verifiedPurchase?: boolean | null;
   /**
-   * Number of users who found this helpful
+   * Number of users who found this helpful (auto-calculated)
    */
   helpful?: number | null;
   /**
-   * Users who voted this review as helpful
+   * Users who voted this review as helpful (managed via API)
    */
   helpfulVotes?:
     | {
@@ -414,7 +464,7 @@ export interface Review {
       }[]
     | null;
   /**
-   * Users who voted this review as not helpful
+   * Users who voted this review as not helpful (managed via API)
    */
   notHelpfulVotes?:
     | {
@@ -424,10 +474,108 @@ export interface Review {
       }[]
     | null;
   images?: (string | null) | Media;
+  /**
+   * Official response from store admins
+   */
   adminResponse?: {
     response?: string | null;
+    /**
+     * Auto-populated when response is added
+     */
     respondedAt?: string | null;
   };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs".
+ */
+export interface PayloadJob {
+  id: string;
+  /**
+   * Input data provided to the job
+   */
+  input?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  taskStatus?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  completedAt?: string | null;
+  totalTried?: number | null;
+  /**
+   * If hasError is true this job will not be retried
+   */
+  hasError?: boolean | null;
+  /**
+   * If hasError is true, this is the error that caused it
+   */
+  error?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Task execution log
+   */
+  log?:
+    | {
+        executedAt: string;
+        completedAt: string;
+        taskSlug: 'inline' | 'schedulePublish';
+        taskID: string;
+        input?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        output?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        state: 'failed' | 'succeeded';
+        error?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  taskSlug?: ('inline' | 'schedulePublish') | null;
+  queue?: string | null;
+  waitUntil?: string | null;
+  processing?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -461,6 +609,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'reviews';
         value: string | Review;
+      } | null)
+    | ({
+        relationTo: 'payload-jobs';
+        value: string | PayloadJob;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -545,6 +697,13 @@ export interface UsersSelect<T extends boolean = true> {
       };
   cart?: T;
   wishlist?: T;
+  recentlyViewed?:
+    | T
+    | {
+        product?: T;
+        viewedAt?: T;
+        id?: T;
+      };
   orders?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -569,6 +728,7 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  uploadedBy?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -605,7 +765,6 @@ export interface CategoriesSelect<T extends boolean = true> {
  */
 export interface ProductsSelect<T extends boolean = true> {
   name?: T;
-  slug?: T;
   averageRating?: T;
   reviewCount?: T;
   totalSold?: T;
@@ -619,14 +778,18 @@ export interface ProductsSelect<T extends boolean = true> {
   lowStockThreshold?: T;
   images?: T;
   categories?: T;
-  status?: T;
+  publishedAt?: T;
   stockStatus?: T;
   featured?: T;
   trackQuantity?: T;
   allowBackorders?: T;
   requiresShipping?: T;
+  slug?: T;
+  slugLock?: T;
+  seller?: T;
   updatedAt?: T;
   createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -643,6 +806,7 @@ export interface OrdersSelect<T extends boolean = true> {
         quantity?: T;
         price?: T;
         total?: T;
+        productSeller?: T;
         id?: T;
       };
   subtotal?: T;
@@ -708,6 +872,37 @@ export interface ReviewsSelect<T extends boolean = true> {
         response?: T;
         respondedAt?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs_select".
+ */
+export interface PayloadJobsSelect<T extends boolean = true> {
+  input?: T;
+  taskStatus?: T;
+  completedAt?: T;
+  totalTried?: T;
+  hasError?: T;
+  error?: T;
+  log?:
+    | T
+    | {
+        executedAt?: T;
+        completedAt?: T;
+        taskSlug?: T;
+        taskID?: T;
+        input?: T;
+        output?: T;
+        state?: T;
+        error?: T;
+        id?: T;
+      };
+  taskSlug?: T;
+  queue?: T;
+  waitUntil?: T;
+  processing?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -836,6 +1031,23 @@ export interface PrivacyPolicySelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSchedulePublish".
+ */
+export interface TaskSchedulePublish {
+  input: {
+    type?: ('publish' | 'unpublish') | null;
+    locale?: string | null;
+    doc?: {
+      relationTo: 'products';
+      value: string | Product;
+    } | null;
+    global?: string | null;
+    user?: (string | null) | User;
+  };
+  output?: unknown;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

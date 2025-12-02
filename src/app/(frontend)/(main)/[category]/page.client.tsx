@@ -14,6 +14,20 @@ interface CategoryPageClientProps {
   currentPage: number
 }
 
+interface ApiResponse {
+  success?: boolean
+  products?: Product[]
+  docs?: Product[]
+  pagination?: {
+    totalPages?: number
+    page?: number
+    totalDocs?: number
+  }
+  totalPages?: number
+  page?: number
+  totalDocs?: number
+}
+
 const PAGE_SIZE = 12
 
 export default function CategoryPageClient({
@@ -33,7 +47,7 @@ export default function CategoryPageClient({
     triggerOnce: false,
   })
 
-  const normalizeBody = (body: any) => {
+  const normalizeBody = (body: ApiResponse | null) => {
     if (!body) return { products: [], totalPages: 0, currentPage: 1, totalProducts: 0 }
 
     if (body.success && Array.isArray(body.products)) {
@@ -147,7 +161,7 @@ export default function CategoryPageClient({
         {!hasMore && products.length > 0 && (
           <div className="text-center py-8">
             <p className="text-sm text-base-content/60">
-              You've reached the end. Showing all {totalProducts} products.
+              You&apos;ve reached the end. Showing all {totalProducts} products.
             </p>
           </div>
         )}

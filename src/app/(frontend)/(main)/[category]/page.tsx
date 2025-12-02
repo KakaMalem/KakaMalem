@@ -4,12 +4,18 @@ import { notFound } from 'next/navigation'
 import CategoryPageClient from './page.client'
 import type { Category } from '@/payload-types'
 
+// Force dynamic rendering since we use Payload which accesses cookies
+export const dynamic = 'force-dynamic'
+
 interface CategoryPageProps {
   params: Promise<{ category: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
+export default async function CategoryPage({
+  params,
+  searchParams: _searchParams,
+}: CategoryPageProps) {
   const { category: slug } = await params
   const payload = await getPayload({ config })
 
@@ -32,7 +38,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const productsResult = await payload.find({
     collection: 'products',
     where: {
-      and: [{ status: { equals: 'published' } }, { categories: { contains: category.id } }],
+      and: [
+        {
+          or: [{ _status: { equals: 'published' } }, { _status: { exists: false } }],
+        },
+        { categories: { contains: category.id } },
+      ],
     },
     page: 1,
     limit: 12,

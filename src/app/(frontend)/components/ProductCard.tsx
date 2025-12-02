@@ -6,6 +6,8 @@ import { ShoppingCart, Check } from 'lucide-react'
 import { Product } from '@/payload-types'
 import { useCart } from '@/providers'
 import { StarRating } from './StarRating'
+import { formatPrice } from '@/utilities/currency'
+import Image from 'next/image'
 
 interface ProductCardProps {
   product: Product
@@ -14,15 +16,34 @@ interface ProductCardProps {
 
 const placeholderImage = '/images/placeholder.jpg'
 
-const getMediaUrl = (media?: string | { url?: string } | any): string => {
+interface MediaObject {
+  url?: string
+  data?: {
+    url?: string
+  }
+}
+
+const getMediaUrl = (media?: string | MediaObject): string => {
   if (!media) return placeholderImage
   if (typeof media === 'string') return media
-  if (typeof media === 'object' && media.url) return media.url
-  return media.data?.url ?? placeholderImage
+  if (typeof media === 'object' && 'url' in media && media.url) return media.url
+  if (typeof media === 'object' && 'data' in media && media.data?.url) return media.data.url
+  return placeholderImage
+}
+
+interface ImageWithAlt {
+  image?: string | MediaObject
+  alt?: string
+}
+
+interface ProductWithImageField extends Product {
+  image?: Array<MediaObject & { alt?: string }>
 }
 
 const getProductImage = (product: Product): { url: string; alt: string } => {
-  const imageField = (product as any).image
+  const productWithImage = product as ProductWithImageField
+  const imageField = productWithImage.image
+
   if (Array.isArray(imageField) && imageField.length > 0) {
     const firstImage = imageField[0]
     return {
@@ -33,9 +54,10 @@ const getProductImage = (product: Product): { url: string; alt: string } => {
 
   if (product.images && Array.isArray(product.images) && product.images.length > 0) {
     const firstImage = product.images[0]
+    const imageWithAlt = firstImage as unknown as ImageWithAlt
     return {
-      url: getMediaUrl((firstImage as any).image || firstImage),
-      alt: (firstImage as any).alt || product.name || 'Product image',
+      url: getMediaUrl(imageWithAlt.image || (firstImage as MediaObject)),
+      alt: imageWithAlt.alt || product.name || 'Product image',
     }
   }
 
@@ -45,7 +67,7 @@ const getProductImage = (product: Product): { url: string; alt: string } => {
   }
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'normal' }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, size: _size = 'normal' }) => {
   const { addItem } = useCart()
   const [isAdding, setIsAdding] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
@@ -66,7 +88,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
   // Play success sound - a pleasant two-tone beep
   const playSuccessSound = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      // Type for older browsers with webkitAudioContext
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const audioContext = new AudioContextConstructor()
 
       // First tone (higher pitch)
       const oscillator1 = audioContext.createOscillator()
@@ -126,9 +152,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
       setTimeout(() => {
         setJustAdded(false)
       }, 2000)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding to cart:', error)
-      setError(error.message || 'Failed to add to cart')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add to cart'
+      setError(errorMessage)
       setTimeout(() => setError(null), 3000)
     } finally {
       setIsAdding(false)
@@ -136,10 +163,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
   }
 
   return (
-    <Link href={`/shop/${slug}`} className="block">
+    <Link href={`/shop/${encodeURIComponent(slug)}`} className="block">
       <article className="card bg-base-100 shadow-md hover:shadow-xl transition-all duration-300 group h-full">
         <figure className="relative overflow-hidden aspect-square">
-          <img
+          <Image
             src={productImage.url}
             alt={productImage.alt}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -171,15 +198,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size = 'norma
               {hasDiscount ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                   <span className="text-lg md:text-xl font-bold text-primary whitespace-nowrap">
-                    {product.currency} {salePrice}
+                    {formatPrice(salePrice as number, product.currency)}
                   </span>
                   <span className="text-xs md:text-sm opacity-60 line-through">
-                    {product.currency} {price}
+                    {formatPrice(price, product.currency)}
                   </span>
                 </div>
               ) : (
                 <span className="text-lg md:text-xl font-bold whitespace-nowrap">
-                  {product.currency} {price}
+                  {formatPrice(price, product.currency)}
                 </span>
               )}
             </div>

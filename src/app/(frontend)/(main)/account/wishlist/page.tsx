@@ -4,6 +4,9 @@ import WishlistClient from './page.client'
 import { Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 
+// Force dynamic rendering since we use authentication (cookies)
+export const dynamic = 'force-dynamic'
+
 export default async function WishlistPage() {
   const { user } = await getMeUser({
     nullUserRedirect: '/auth/login?redirect=/account/wishlist',

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import ReactIsCapsLockActive from '@matsun/reactiscapslockactive'
+import { CapsLockDetector } from '../../components/CapsLockDetector'
 import { signInWithGoogle } from '../actions'
 import { getRedirectUrl, safeRedirect } from '@/utilities/redirect'
 
@@ -125,9 +125,11 @@ export default function RegisterPage() {
           window.location.href = '/auth/login'
         }, 1500)
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during registration')
-      toast.error(err.message || 'Registration failed')
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'An error occurred during registration'
+      setError(errorMessage)
+      toast.error(errorMessage)
       setLoading(false)
     }
   }
@@ -249,14 +251,14 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            {/* Password */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Password</span>
-              </label>
-              <ReactIsCapsLockActive>
-                {(active) => (
-                  <>
+            <CapsLockDetector>
+              {(active) => (
+                <>
+                  {/* Password */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text font-medium">Password</span>
+                    </label>
                     <label className="input input-bordered flex items-center gap-2 w-full">
                       <Lock className="w-4 h-4 opacity-70 text-secondary" />
                       <input
@@ -305,19 +307,13 @@ export default function RegisterPage() {
                         </span>
                       )}
                     </label>
-                  </>
-                )}
-              </ReactIsCapsLockActive>
-            </div>
+                  </div>
 
-            {/* Confirm Password */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Confirm Password</span>
-              </label>
-              <ReactIsCapsLockActive>
-                {(active) => (
-                  <>
+                  {/* Confirm Password */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text font-medium">Confirm Password</span>
+                    </label>
                     <label className="input input-bordered flex items-center gap-2 w-full">
                       <Lock className="w-4 h-4 opacity-70 text-secondary" />
                       <input
@@ -362,10 +358,10 @@ export default function RegisterPage() {
                         </span>
                       </label>
                     )}
-                  </>
-                )}
-              </ReactIsCapsLockActive>
-            </div>
+                  </div>
+                </>
+              )}
+            </CapsLockDetector>
 
             {/* Terms & Conditions */}
             <div className="form-control">
@@ -409,7 +405,7 @@ export default function RegisterPage() {
           {/* Social Login */}
           <div className="space-y-3">
             <form
-              action={(formData) => {
+              action={(_formData) => {
                 const redirectUrl = getRedirectUrl(searchParams)
                 return signInWithGoogle(redirectUrl || undefined)
               }}

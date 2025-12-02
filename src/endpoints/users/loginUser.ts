@@ -16,7 +16,7 @@ export const loginUser: Endpoint = {
     let body: LoginRequest
     try {
       body = (await req.json?.()) || req.body
-    } catch (e) {
+    } catch (_e) {
       return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 })
     }
 
@@ -110,7 +110,7 @@ export const loginUser: Endpoint = {
 
       // Handle authentication errors
       if (error && typeof error === 'object' && 'message' in error) {
-        const errorMessage = (error as any).message
+        const errorMessage = (error as { message: string }).message
 
         if (errorMessage.includes('credentials')) {
           return Response.json({ error: 'Invalid email or password' }, { status: 401 })

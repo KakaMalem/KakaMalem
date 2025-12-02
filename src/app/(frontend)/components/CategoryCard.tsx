@@ -1,4 +1,5 @@
 import { Category } from '@/payload-types'
+import Image from 'next/image'
 import React from 'react'
 
 interface CategoryCardProps {
@@ -21,7 +22,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
                  group-hover:ring-2 group-hover:ring-primary group-hover:ring-opacity-30"
     >
       <figure className="relative aspect-square">
-        <img
+        <Image
           src={imageSrc}
           alt={category.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"

@@ -9,6 +9,10 @@ export interface CartData {
   }>
 }
 
+interface PayloadRequestWithCart extends PayloadRequest {
+  guestCartCookie?: string
+}
+
 const CART_COOKIE_NAME = 'guest_cart'
 const CART_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 
@@ -48,7 +52,7 @@ export const saveGuestCart = async (req: PayloadRequest, cart: CartData): Promis
     const cookieValue = `${CART_COOKIE_NAME}=${encoded}; Path=/; Max-Age=${CART_MAX_AGE}; HttpOnly; SameSite=Lax`
 
     // Store in request context for response handling
-    ;(req as any).guestCartCookie = cookieValue
+    ;(req as PayloadRequestWithCart).guestCartCookie = cookieValue
   } catch (error) {
     console.error('Error saving guest cart:', error)
   }
@@ -59,18 +63,22 @@ export const saveGuestCart = async (req: PayloadRequest, cart: CartData): Promis
  */
 export const clearGuestCart = async (req: PayloadRequest): Promise<void> => {
   const cookieValue = `${CART_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`
-  ;(req as any).guestCartCookie = cookieValue
+  ;(req as PayloadRequestWithCart).guestCartCookie = cookieValue
 }
 
 /**
  * Helper to create response with cart cookie
  */
-export const createCartResponse = (data: any, status: number, req: PayloadRequest): Response => {
+export const createCartResponse = (
+  data: unknown,
+  status: number,
+  req: PayloadRequest,
+): Response => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
 
-  const guestCartCookie = (req as any).guestCartCookie
+  const guestCartCookie = (req as PayloadRequestWithCart).guestCartCookie
   if (guestCartCookie) {
     headers['Set-Cookie'] = guestCartCookie
   }

@@ -7,7 +7,13 @@ import 'leaflet/dist/leaflet.css'
 
 // Fix for default marker icon in Leaflet with webpack
 import L from 'leaflet'
-delete (L.Icon.Default.prototype as any)._getIconUrl
+
+// Type assertion needed for Leaflet's internal icon property
+interface IconDefaultPrototype {
+  _getIconUrl?: unknown
+}
+
+delete (L.Icon.Default.prototype as IconDefaultPrototype)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',

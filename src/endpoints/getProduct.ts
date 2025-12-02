@@ -7,7 +7,7 @@ export const getProduct: Endpoint = {
     try {
       const { id } = req.routeParams || {}
 
-      if (!id) {
+      if (!id || typeof id !== 'string') {
         return Response.json(
           {
             success: false,
@@ -19,7 +19,7 @@ export const getProduct: Endpoint = {
 
       const product = await req.payload.findByID({
         collection: 'products',
-        id: id,
+        id,
       })
 
       if (!product) {

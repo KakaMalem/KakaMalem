@@ -10,8 +10,6 @@ interface AddressesClientProps {
   user: User
 }
 
-type Address = NonNullable<User['addresses']>[number]
-
 export default function AddressesClient({ user: initialUser }: AddressesClientProps) {
   const [user, setUser] = useState(initialUser)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -41,7 +39,7 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
       toast.success('Address deleted successfully!')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting address:', err)
       toast.error('Failed to delete address. Please try again.')
     } finally {
@@ -73,7 +71,7 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
       toast.success('Default address updated!')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting default address:', err)
       toast.error('Failed to set default address. Please try again.')
     } finally {

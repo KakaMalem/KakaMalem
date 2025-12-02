@@ -85,7 +85,7 @@ export const updateCart: Endpoint = {
             id: productId,
           })
 
-          if (!product || product.status !== 'published') {
+          if (!product || (product._status && product._status !== 'published')) {
             return Response.json(
               {
                 success: false,
@@ -105,7 +105,7 @@ export const updateCart: Endpoint = {
               { status: 400 },
             )
           }
-        } catch (error) {
+        } catch (_error) {
           return Response.json(
             {
               success: false,

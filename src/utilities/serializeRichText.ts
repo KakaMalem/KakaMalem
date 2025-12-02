@@ -1,9 +1,27 @@
-import type { SerializedEditorState, SerializedLexicalNode } from 'lexical'
+interface LexicalNode {
+  type: string
+  children?: LexicalNode[]
+  text?: string
+  format?: number | string
+  tag?: string
+  listType?: string
+  fields?: { url?: string }
+  url?: string
+  direction?: 'ltr' | 'rtl' | null
+  indent?: number
+  version?: number
+  [key: string]: unknown
+}
+
+interface LexicalContent {
+  root?: LexicalNode
+  [key: string]: unknown
+}
 
 /**
  * Serialize Payload's Lexical rich text to HTML
  */
-export function serializeRichText(content: any): string {
+export function serializeRichText(content: LexicalContent): string {
   if (!content || !content.root) {
     return ''
   }
@@ -17,7 +35,7 @@ export function serializeRichText(content: any): string {
   }
 }
 
-function serializeNode(node: any): string {
+function serializeNode(node: LexicalNode): string {
   if (!node) return ''
 
   const type = node.type
@@ -40,7 +58,7 @@ function serializeNode(node: any): string {
       let text = node.text || ''
 
       // Apply formatting
-      if (node.format) {
+      if (node.format && typeof node.format === 'number') {
         if (node.format & 1) text = `<strong>${text}</strong>` // Bold
         if (node.format & 2) text = `<em>${text}</em>` // Italic
         if (node.format & 4) text = `<s>${text}</s>` // Strikethrough

@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import type { Product } from '@/payload-types'
 
 export const addToWishlist: Endpoint = {
   path: '/wishlist/add',
@@ -13,7 +14,7 @@ export const addToWishlist: Endpoint = {
     let body: { productId: string }
     try {
       body = (await req.json?.()) || req.body
-    } catch (e) {
+    } catch (_e) {
       return Response.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
@@ -31,8 +32,8 @@ export const addToWishlist: Endpoint = {
       })
 
       // Handle both string IDs and populated Product objects
-      const currentWishlist = ((currentUser.wishlist || []) as any[]).map((item) =>
-        typeof item === 'string' ? item : item.id,
+      const currentWishlist = ((currentUser.wishlist || []) as Array<string | Product>).map(
+        (item) => (typeof item === 'string' ? item : item.id),
       )
 
       // Check if already in wishlist
@@ -53,7 +54,7 @@ export const addToWishlist: Endpoint = {
         success: true,
         wishlist: updatedUser.wishlist,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding to wishlist:', error)
       return Response.json({ error: 'Failed to add to wishlist' }, { status: 500 })
     }

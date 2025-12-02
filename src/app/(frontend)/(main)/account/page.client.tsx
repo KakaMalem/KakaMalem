@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Edit2, Save, X, Package, Heart, MapPin, ShoppingBag, AlertCircle } from 'lucide-react'
+import { Edit2, Save, X, Package, Heart, MapPin, ShoppingBag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import type { User as PayloadUser, Order } from '@/payload-types'
@@ -43,7 +43,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
       setUser(updatedData.doc || updatedData)
       toast.success('Profile updated successfully!')
       setEditMode(false)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating profile:', err)
       toast.error('Failed to update profile. Please try again.')
     } finally {
@@ -291,7 +291,8 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
 
                     <div className="text-left sm:text-right w-full sm:w-auto">
                       <div className="font-bold text-base md:text-lg mb-1">
-                        {order.currency || 'USD'} {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
+                        {order.currency || 'USD'}{' '}
+                        {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
                       </div>
                       <span
                         className={`badge badge-sm ${getStatusBadge(order.status || 'pending')}`}

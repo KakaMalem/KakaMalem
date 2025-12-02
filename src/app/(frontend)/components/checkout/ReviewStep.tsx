@@ -3,12 +3,8 @@
 import React from 'react'
 import { Truck, MapPin, CreditCard } from 'lucide-react'
 import type { User } from '@/payload-types'
-
-interface CartItem {
-  productId: string
-  quantity: number
-  product: any
-}
+import type { CartItem } from '@/providers/cart/types'
+import Image from 'next/image'
 
 interface GuestFormData {
   email: string
@@ -76,9 +72,13 @@ export function ReviewStep({
               <div>
                 {shippingAddress.firstName} {shippingAddress.lastName}
               </div>
-              {shippingAddress.state && <div className="text-sm opacity-70">{shippingAddress.state}</div>}
+              {shippingAddress.state && (
+                <div className="text-sm opacity-70">{shippingAddress.state}</div>
+              )}
               <div className="text-sm opacity-70">{shippingAddress.country}</div>
-              {shippingAddress.phone && <div className="text-sm opacity-70">Phone: {shippingAddress.phone}</div>}
+              {shippingAddress.phone && (
+                <div className="text-sm opacity-70">Phone: {shippingAddress.phone}</div>
+              )}
               {shippingAddress.nearbyLandmark && (
                 <div className="text-sm opacity-70">Landmark: {shippingAddress.nearbyLandmark}</div>
               )}
@@ -125,7 +125,7 @@ export function ReviewStep({
                 <div key={item.productId} className="flex gap-3">
                   <div className="avatar">
                     <div className="w-16 h-16 rounded-lg">
-                      <img
+                      <Image
                         src={imageUrl || '/placeholder.jpg'}
                         alt={product.name}
                         className="object-cover"
@@ -181,9 +181,7 @@ export function ReviewStep({
             <Truck className="w-5 h-5 text-primary mt-0.5" />
             <div className="text-sm">
               <div className="font-medium mb-1">Free Shipping</div>
-              <div className="opacity-70">
-                Orders over {currency} 100 qualify for free shipping
-              </div>
+              <div className="opacity-70">Orders over {currency} 100 qualify for free shipping</div>
             </div>
           </div>
         </div>

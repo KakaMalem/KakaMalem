@@ -1,4 +1,10 @@
 import type { CollectionConfig } from 'payload'
+import type { Review } from '@/payload-types'
+import { isAdminField } from '../access/isAdmin'
+import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
+import { isLoggedIn } from '../access/isLoggedIn'
+import { nobody } from '../access/nobody'
+import { verifyPurchaseHook } from '../hooks/verifyPurchase'
 
 export const Reviews: CollectionConfig = {
   slug: 'reviews',
@@ -8,25 +14,66 @@ export const Reviews: CollectionConfig = {
     group: 'E-commerce',
   },
   access: {
-    // Anyone can read all reviews
-    read: () => true,
-    // Only authenticated users can create reviews
-    create: ({ req: { user } }) => !!user,
-    // Users can update their own reviews, admins can update any
-    update: ({ req: { user } }) => {
-      if (user?.roles?.includes('admin')) {
+    /**
+     * READ ACCESS
+     * - Admins/Developers: Can read all reviews (including pending/rejected)
+     * - Public: Can only read approved reviews
+     * - Ensures review moderation
+     */
+    read: ({ req: { user } }) => {
+      // Technical staff can read all reviews
+      if (
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('superadmin') ||
+        user?.roles?.includes('developer')
+      ) {
         return true
       }
+      // Public can only read approved reviews
       return {
-        user: { equals: user?.id },
+        status: {
+          equals: 'approved',
+        },
       }
     },
-    // Only admins can delete reviews
-    delete: ({ req: { user } }) => user?.roles?.includes('admin') || false,
+    /**
+     * CREATE ACCESS
+     * - Only authenticated users can create reviews
+     * - Prevents spam and fake reviews
+     */
+    create: isLoggedIn,
+    /**
+     * UPDATE ACCESS
+     * - Admins/Developers: Can update any review
+     * - Users: Can only update their own reviews
+     * - Customers cannot edit after admin moderation
+     */
+    update: ({ req: { user } }) => {
+      if (!user) return false
+      // Technical staff can update any review
+      if (
+        user.roles?.includes('admin') ||
+        user.roles?.includes('superadmin') ||
+        user.roles?.includes('developer')
+      ) {
+        return true
+      }
+      // Users can only update their own reviews
+      return {
+        user: { equals: user.id },
+      }
+    },
+    /**
+     * DELETE ACCESS
+     * - Only admins and developers can delete reviews
+     * - Prevents users from removing negative reviews
+     * - Maintains review integrity
+     */
+    delete: isAdminOrDeveloper,
   },
   hooks: {
     afterChange: [
-      async ({ doc, req, operation }) => {
+      async ({ doc, req, operation: _operation }) => {
         // After creating or updating a review, recalculate product stats
         if (doc.product) {
           try {
@@ -48,7 +95,7 @@ export const Reviews: CollectionConfig = {
 
             if (reviewDocs.length > 0) {
               const totalRating = reviewDocs.reduce(
-                (sum: number, review: any) => sum + review.rating,
+                (sum: number, review: Review) => sum + review.rating,
                 0,
               )
               const averageRating = totalRating / reviewDocs.length
@@ -73,8 +120,8 @@ export const Reviews: CollectionConfig = {
                 },
               })
             }
-          } catch (error) {
-            console.error('Failed to update product review stats:', error)
+          } catch (_error) {
+            console.error('Failed to update product review stats:', _error)
           }
         }
       },
@@ -102,7 +149,7 @@ export const Reviews: CollectionConfig = {
 
             if (reviewDocs.length > 0) {
               const totalRating = reviewDocs.reduce(
-                (sum: number, review: any) => sum + review.rating,
+                (sum: number, review: Review) => sum + review.rating,
                 0,
               )
               const averageRating = totalRating / reviewDocs.length
@@ -148,9 +195,14 @@ export const Reviews: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       required: true,
+      access: {
+        // User field is auto-populated, prevent manual updates
+        update: nobody,
+      },
       admin: {
         position: 'sidebar',
         readOnly: true,
+        description: 'Auto-populated with current user',
       },
       hooks: {
         beforeChange: [
@@ -205,85 +257,56 @@ export const Reviews: CollectionConfig = {
           value: 'rejected',
         },
       ],
+      access: {
+        // Only admins and developers can change review status (moderation)
+        update: isAdminField,
+      },
       admin: {
         position: 'sidebar',
+        description: 'Review moderation status (admins only)',
       },
     },
     {
       name: 'verifiedPurchase',
       type: 'checkbox',
       defaultValue: false,
+      access: {
+        // System-managed field, auto-verified based on purchase history
+        update: nobody,
+      },
       admin: {
         position: 'sidebar',
-        description: 'User purchased this product',
+        description: 'User purchased this product (auto-verified)',
         readOnly: true,
       },
       hooks: {
-        beforeChange: [
-          async ({ req, value, siblingData }) => {
-            // Only auto-verify on creation or if not already set
-            if (value !== undefined && value !== false) {
-              return value
-            }
-
-            const userId = siblingData.user || req.user?.id
-            const productId = siblingData.product
-
-            if (!userId || !productId) {
-              return false
-            }
-
-            try {
-              // Check if user has purchased this product
-              const orders = await req.payload.find({
-                collection: 'orders',
-                where: {
-                  and: [
-                    {
-                      customer: {
-                        equals: userId,
-                      },
-                    },
-                    {
-                      'items.product': {
-                        equals: productId,
-                      },
-                    },
-                    {
-                      status: {
-                        in: ['processing', 'shipped', 'delivered'],
-                      },
-                    },
-                  ],
-                },
-                limit: 1,
-              })
-
-              return orders.docs.length > 0
-            } catch (error) {
-              console.error('Error checking verified purchase:', error)
-              return false
-            }
-          },
-        ],
+        beforeChange: [verifyPurchaseHook],
       },
     },
     {
       name: 'helpful',
       type: 'number',
       defaultValue: 0,
+      access: {
+        // System-managed field, calculated from votes
+        update: nobody,
+      },
       admin: {
         position: 'sidebar',
-        description: 'Number of users who found this helpful',
+        description: 'Number of users who found this helpful (auto-calculated)',
         readOnly: true,
       },
     },
     {
       name: 'helpfulVotes',
       type: 'array',
+      access: {
+        // Managed via API endpoints only
+        update: nobody,
+      },
       admin: {
         position: 'sidebar',
-        description: 'Users who voted this review as helpful',
+        description: 'Users who voted this review as helpful (managed via API)',
         readOnly: true,
       },
       fields: [
@@ -306,9 +329,13 @@ export const Reviews: CollectionConfig = {
     {
       name: 'notHelpfulVotes',
       type: 'array',
+      access: {
+        // Managed via API endpoints only
+        update: nobody,
+      },
       admin: {
         position: 'sidebar',
-        description: 'Users who voted this review as not helpful',
+        description: 'Users who voted this review as not helpful (managed via API)',
         readOnly: true,
       },
       fields: [
@@ -336,6 +363,29 @@ export const Reviews: CollectionConfig = {
     {
       name: 'adminResponse',
       type: 'group',
+      access: {
+        // Only admins and developers can add/edit admin responses
+        update: isAdminField,
+      },
+      admin: {
+        description: 'Official response from store admins',
+      },
+      hooks: {
+        beforeChange: [
+          ({ siblingData: _siblingData, value }) => {
+            // Auto-set respondedAt when response is added or changed
+            if (value?.response && value.response.trim().length > 0) {
+              if (!value.respondedAt) {
+                return {
+                  ...value,
+                  respondedAt: new Date().toISOString(),
+                }
+              }
+            }
+            return value
+          },
+        ],
+      },
       fields: [
         {
           name: 'response',
@@ -345,8 +395,13 @@ export const Reviews: CollectionConfig = {
         {
           name: 'respondedAt',
           type: 'date',
+          access: {
+            // Auto-populated timestamp, prevent manual updates
+            update: nobody,
+          },
           admin: {
             readOnly: true,
+            description: 'Auto-populated when response is added',
           },
         },
       ],

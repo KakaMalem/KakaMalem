@@ -1,13 +1,19 @@
 import type { GlobalConfig } from 'payload'
+import { isAdmin } from '../access/isAdmin'
 
 export const PrivacyPolicy: GlobalConfig = {
   slug: 'privacy-policy',
-  access: {
-    read: () => true, // Anyone can read
-    update: ({ req: { user } }) => {
-      // Only admins can update
-      return user?.roles?.includes('admin') ?? false
+  admin: {
+    hidden: ({ user }) => {
+      // Only show to admins and superadmins
+      return !(user?.roles?.includes('admin') || user?.roles?.includes('superadmin'))
     },
+  },
+  access: {
+    // Anyone can read privacy policy
+    read: () => true,
+    // Only admins can update privacy policy
+    update: isAdmin,
   },
   fields: [
     {

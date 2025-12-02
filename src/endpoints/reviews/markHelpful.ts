@@ -1,4 +1,11 @@
 import type { Endpoint, PayloadRequest } from 'payload'
+import type { Review } from '@/payload-types'
+
+interface VoteEntry {
+  user: string | { id: string }
+  votedAt?: string
+  id?: string
+}
 
 export const markHelpful: Endpoint = {
   path: '/mark-review-helpful',
@@ -46,13 +53,13 @@ export const markHelpful: Endpoint = {
       const userId = user.id
 
       // Fetch the review
-      let review: any
+      let review: Review
       try {
         review = await payload.findByID({
           collection: 'reviews',
           id: reviewId,
         })
-      } catch (error) {
+      } catch (_error) {
         return Response.json(
           {
             success: false,
@@ -63,31 +70,22 @@ export const markHelpful: Endpoint = {
       }
 
       // Get existing votes
-      const helpfulVotes = (review.helpfulVotes || []) as Array<{
-        user: any
-        votedAt?: string
-        id?: string
-      }>
-      const notHelpfulVotes = (review.notHelpfulVotes || []) as Array<{
-        user: any
-        votedAt?: string
-        id?: string
-      }>
+      const helpfulVotes = (review.helpfulVotes || []) as VoteEntry[]
+      const notHelpfulVotes = (review.notHelpfulVotes || []) as VoteEntry[]
 
       // Helper function to get user ID from vote (handles both string and populated object)
-      const getUserId = (vote: any): string => {
+      const getUserId = (vote: VoteEntry): string => {
+        if (!vote.user) return ''
         if (typeof vote.user === 'string') return vote.user
-        return vote.user?.id || vote.user
+        return vote.user.id || ''
       }
 
       // Check if user already voted
       const hasVotedHelpful = helpfulVotes.some((v) => getUserId(v) === userId)
       const hasVotedNotHelpful = notHelpfulVotes.some((v) => getUserId(v) === userId)
 
-      let newHelpfulVotes: Array<{ user: any; votedAt?: string; id?: string }> = [...helpfulVotes]
-      let newNotHelpfulVotes: Array<{ user: any; votedAt?: string; id?: string }> = [
-        ...notHelpfulVotes,
-      ]
+      let newHelpfulVotes: VoteEntry[] = [...helpfulVotes]
+      let newNotHelpfulVotes: VoteEntry[] = [...notHelpfulVotes]
 
       if (helpful) {
         // User wants to mark as helpful

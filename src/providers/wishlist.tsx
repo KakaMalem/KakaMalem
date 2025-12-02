@@ -17,7 +17,7 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [wishlist, setWishlist] = useState<string[]>([])
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set())
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [_isInitialized, setIsInitialized] = useState(false)
 
   // Fetch wishlist on mount
   useEffect(() => {
@@ -76,7 +76,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         typeof item === 'string' ? item : item.id,
       )
       setWishlist(wishlistIds)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding to wishlist:', error)
       throw error
     } finally {
@@ -110,7 +110,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         typeof item === 'string' ? item : item.id,
       )
       setWishlist(wishlistIds)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error removing from wishlist:', error)
       throw error
     } finally {

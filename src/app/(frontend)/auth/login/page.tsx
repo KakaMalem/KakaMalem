@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Logo from '../../components/Logo'
 import { getRedirectUrl, safeRedirect } from '@/utilities/redirect'
-import ReactIsCapsLockActive from '@matsun/reactiscapslockactive'
+import { CapsLockDetector } from '../../components/CapsLockDetector'
 import { signInWithGoogle } from '../actions'
 import ClearInvalidToken from '../components/ClearInvalidToken'
 
@@ -54,8 +54,9 @@ export default function LoginPage() {
       const redirectUrl = getRedirectUrl(searchParams)
       const safeUrl = safeRedirect(redirectUrl, '/')
       window.location.href = safeUrl
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during login')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -125,7 +126,7 @@ export default function LoginPage() {
               <label className="label">
                 <span className="label-text font-medium">Password</span>
               </label>
-              <ReactIsCapsLockActive>
+              <CapsLockDetector>
                 {(active: boolean) => (
                   <>
                     <label className="input w-full input-bordered flex items-center gap-2">
@@ -173,7 +174,7 @@ export default function LoginPage() {
                     )}
                   </>
                 )}
-              </ReactIsCapsLockActive>
+              </CapsLockDetector>
             </div>
 
             {/* Remember Me & Forgot Password */}
@@ -211,7 +212,7 @@ export default function LoginPage() {
           {/* Social Login */}
           <div className="space-y-3">
             <form
-              action={(formData) => {
+              action={(_formData) => {
                 const redirectUrl = getRedirectUrl(searchParams)
                 return signInWithGoogle(redirectUrl || undefined)
               }}
@@ -251,7 +252,7 @@ export default function LoginPage() {
 
           {/* Sign Up Link */}
           <p className="text-center mt-8 text-base-content/70">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/register" className="link link-primary font-semibold">
               Sign up
             </Link>

@@ -48,7 +48,7 @@ export const addToCart: Endpoint = {
           collection: 'products',
           id: productId,
         })
-      } catch (error) {
+      } catch (_error) {
         return Response.json(
           {
             success: false,
@@ -58,7 +58,8 @@ export const addToCart: Endpoint = {
         )
       }
 
-      if (!product || product.status !== 'published') {
+      // Check if product is published (or has no _status for legacy products)
+      if (!product || (product._status && product._status !== 'published')) {
         return Response.json(
           {
             success: false,
@@ -84,7 +85,7 @@ export const addToCart: Endpoint = {
       const items: CartItem[] = currentCart.items || []
 
       // Check if item already exists in cart
-      const itemKey = variantId ? `${productId}-${variantId}` : productId
+      // const itemKey = variantId ? `${productId}-${variantId}` : productId
       const existingItemIndex = items.findIndex(
         (item: CartItem) =>
           item.productId === productId &&

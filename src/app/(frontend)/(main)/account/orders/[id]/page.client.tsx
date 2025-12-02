@@ -12,7 +12,15 @@ import {
   Clock,
   XCircle,
 } from 'lucide-react'
-import type { Order, User } from '@/payload-types'
+import type { Order, User, Product } from '@/payload-types'
+import Image from 'next/image'
+
+interface OrderItem {
+  product: string | Product
+  quantity: number
+  price?: number
+  total?: number
+}
 
 interface OrderDetailsClientProps {
   order: Order
@@ -20,7 +28,7 @@ interface OrderDetailsClientProps {
 }
 
 export default function OrderDetailsClient({ order, user }: OrderDetailsClientProps) {
-  const currency = order.currency || user.preferences?.currency || 'USD'
+  const currency = order.currency || user.preferences?.currency || 'AFN'
 
   // Status badge styling
   const getStatusBadge = (status: string) => {
@@ -105,8 +113,8 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                 </h2>
 
                 <div className="space-y-4">
-                  {order.items.map((item: any, index: number) => {
-                    const product = item.product
+                  {(order.items as OrderItem[]).map((item, index: number) => {
+                    const product = typeof item.product === 'object' ? item.product : null
                     const imageUrl =
                       typeof product?.images?.[0] === 'object'
                         ? product.images[0]?.url
@@ -116,7 +124,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                       <div key={index} className="flex gap-4 p-4 bg-base-100 rounded-lg">
                         <div className="avatar">
                           <div className="w-20 h-20 rounded-lg">
-                            <img
+                            <Image
                               src={imageUrl || '/placeholder.jpg'}
                               alt={product?.name || 'Product'}
                               className="object-cover"
@@ -183,17 +191,32 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                   <div className="font-semibold">
                     {order.shippingAddress.firstName} {order.shippingAddress.lastName}
                   </div>
-                  <div>{order.shippingAddress.address1}</div>
-                  {order.shippingAddress.address2 && <div>{order.shippingAddress.address2}</div>}
-                  <div>
-                    {order.shippingAddress.city}, {order.shippingAddress.postalCode}
-                  </div>
+                  {order.shippingAddress.state && <div>{order.shippingAddress.state}</div>}
                   <div>{order.shippingAddress.country}</div>
+                  {order.shippingAddress.nearbyLandmark && (
+                    <div className="mt-2">
+                      <span className="opacity-70">Nearby Landmark:</span>{' '}
+                      {order.shippingAddress.nearbyLandmark}
+                    </div>
+                  )}
+                  {order.shippingAddress.detailedDirections && (
+                    <div className="mt-2">
+                      <span className="opacity-70">Directions:</span>{' '}
+                      {order.shippingAddress.detailedDirections}
+                    </div>
+                  )}
                   {order.shippingAddress.phone && (
                     <div className="mt-2">
                       <span className="opacity-70">Phone:</span> {order.shippingAddress.phone}
                     </div>
                   )}
+                  {order.shippingAddress.coordinates?.latitude &&
+                    order.shippingAddress.coordinates?.longitude && (
+                      <div className="mt-2 text-xs opacity-70">
+                        <span>Coordinates:</span> {order.shippingAddress.coordinates.latitude},{' '}
+                        {order.shippingAddress.coordinates.longitude}
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
@@ -309,7 +332,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
               <div className="card-body">
                 <h2 className="card-title text-lg mb-2">Need Help?</h2>
                 <p className="text-sm opacity-70 mb-4">
-                  Have questions about your order? We're here to help!
+                  Have questions about your order? We&apos;re here to help!
                 </p>
                 <Link href="/contact" className="btn btn-outline btn-sm">
                   Contact Support
