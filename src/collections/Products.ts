@@ -4,6 +4,7 @@ import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
 import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
 import { createIsAdminOrSellerOwner } from '../access/isAdminOrSellerOwner'
 import { nobody } from '../access/nobody'
+import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
 import { slugField } from '../fields/slug'
 import { populatePublishedAt } from '../hooks/populatePublishedAt'
 
@@ -82,6 +83,114 @@ export const Products: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [
+      async ({ doc, req, operation, previousDoc }) => {
+        // Auto-generate variants when variant options are defined or changed
+        if (doc.hasVariants && doc.variantOptions && doc.variantOptions.length > 0) {
+          // Only generate on create or when variant options change
+          const shouldGenerate =
+            operation === 'create' ||
+            JSON.stringify(previousDoc?.variantOptions) !== JSON.stringify(doc.variantOptions)
+
+          if (shouldGenerate) {
+            try {
+              // Get all existing variants for this product
+              const existingVariants = await req.payload.find({
+                collection: 'product-variants',
+                where: {
+                  product: {
+                    equals: doc.id,
+                  },
+                },
+                limit: 1000,
+              })
+
+              // Generate all possible combinations
+              type VariantOption = { name: string; value: string }
+              type VariantCombination = VariantOption[]
+
+              const generateCombinations = (
+                options: Array<{ name: string; values: Array<{ value: string }> }>,
+              ): VariantCombination[] => {
+                if (options.length === 0) return [[]]
+                if (options.length === 1) {
+                  return options[0].values.map((v) => [{ name: options[0].name, value: v.value }])
+                }
+
+                const [first, ...rest] = options
+                const restCombinations = generateCombinations(rest)
+                const combinations: VariantCombination[] = []
+
+                for (const value of first.values) {
+                  for (const restCombo of restCombinations) {
+                    combinations.push([{ name: first.name, value: value.value }, ...restCombo])
+                  }
+                }
+
+                return combinations
+              }
+
+              const combinations = generateCombinations(doc.variantOptions)
+
+              // Create variants for new combinations
+              let createdCount = 0
+              for (const combo of combinations) {
+                // Check if this combination already exists
+                const exists = existingVariants.docs.some((v) => {
+                  return (
+                    combo.every((opt) =>
+                      v.options?.some((vOpt) => vOpt.name === opt.name && vOpt.value === opt.value),
+                    ) && v.options?.length === combo.length
+                  )
+                })
+
+                if (!exists) {
+                  // Generate SKU from product name and options
+                  const skuParts = [
+                    doc.name
+                      .substring(0, 10)
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, ''),
+                  ]
+                  combo.forEach((opt) => {
+                    skuParts.push(opt.value.substring(0, 3).toUpperCase())
+                  })
+                  const sku = skuParts.join('-')
+
+                  // Inherit images from product (so you can customize per variant later)
+                  const variantImages = doc.images || []
+
+                  await req.payload.create({
+                    collection: 'product-variants',
+                    data: {
+                      product: doc.id,
+                      sku: `${sku}-${Date.now()}`, // Add timestamp to ensure uniqueness
+                      options: combo,
+                      isDefault: createdCount === 0, // First variant is default
+                      trackQuantity: doc.trackQuantity || false,
+                      quantity: doc.quantity || 0,
+                      lowStockThreshold: doc.lowStockThreshold || 5,
+                      stockStatus: doc.stockStatus || 'in_stock',
+                      allowBackorders: doc.allowBackorders || false,
+                      images: variantImages, // Inherit product images by default
+                    },
+                  })
+                  createdCount++
+                }
+              }
+
+              if (createdCount > 0) {
+                req.payload.logger.info(
+                  `Auto-generated ${createdCount} variants for product ${doc.name}`,
+                )
+              }
+            } catch (error) {
+              req.payload.logger.error(`Failed to auto-generate variants: ${error}`)
+            }
+          }
+        }
+      },
+    ],
   },
   fields: [
     {
@@ -129,6 +238,7 @@ export const Products: CollectionConfig = {
         readOnly: true,
         position: 'sidebar',
         description: 'Total number of units sold',
+        condition: (data, siblingData, { user }) => isSuperAdminOrDeveloper(user),
       },
     },
     {
@@ -140,6 +250,7 @@ export const Products: CollectionConfig = {
       },
       admin: {
         description: 'Product performance analytics (system-managed)',
+        condition: (data, siblingData, { user }) => isSuperAdminOrDeveloper(user),
       },
       fields: [
         {
@@ -238,6 +349,74 @@ export const Products: CollectionConfig = {
       },
     },
     {
+      name: 'hasVariants',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: 'Enable if product has variants (size, color, etc.)',
+      },
+    },
+    {
+      name: 'variantOptions',
+      type: 'array',
+      admin: {
+        description:
+          '✨ Define options here (e.g., Size: S/M/L, Color: Red/Blue). Variants will be AUTO-GENERATED when you save!',
+        condition: (data) => data?.hasVariants === true,
+      },
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: true,
+          admin: {
+            description: 'Option name (e.g., "Size", "Color")',
+          },
+        },
+        {
+          name: 'values',
+          type: 'array',
+          required: true,
+          minRows: 1,
+          admin: {
+            description: 'Available values for this option',
+          },
+          fields: [
+            {
+              name: 'value',
+              type: 'text',
+              required: true,
+              admin: {
+                description: 'Option value (e.g., "Small", "Red")',
+                width: '50%',
+              },
+            },
+            {
+              name: 'image',
+              type: 'upload',
+              relationTo: 'media',
+              admin: {
+                description:
+                  'Optional: Image for this option (e.g., color swatch, product thumbnail)',
+                width: '50%',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'variantManager',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/fields/variantManager',
+        },
+        condition: (data) => data?.hasVariants === true,
+      },
+    },
+    {
       type: 'row',
       fields: [
         {
@@ -331,8 +510,11 @@ export const Products: CollectionConfig = {
       name: 'images',
       type: 'upload',
       relationTo: 'media',
-      required: true,
+      required: false,
       hasMany: true,
+      admin: {
+        description: 'Product images. Optional if product has variants with their own images.',
+      },
     },
     {
       name: 'categories',

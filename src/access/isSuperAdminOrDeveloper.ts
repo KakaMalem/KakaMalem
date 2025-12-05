@@ -1,5 +1,5 @@
 import type { User } from '@/payload-types'
-import type { ClientUser } from 'payload'
+import type { ClientUser, FieldAccess } from 'payload'
 
 /**
  * Check if user is superadmin or developer (for seeing hidden fields)
@@ -8,4 +8,11 @@ import type { ClientUser } from 'payload'
  */
 export const isSuperAdminOrDeveloper = (user: User | ClientUser | null | undefined) => {
   return !!(user?.roles?.includes('superadmin') || user?.roles?.includes('developer'))
+}
+
+/**
+ * Field-level access control for superadmins and developers only
+ */
+export const isSuperAdminOrDeveloperField: FieldAccess = ({ req: { user } }) => {
+  return isSuperAdminOrDeveloper(user)
 }

@@ -12,12 +12,13 @@ import {
   ShoppingBag,
   FileText,
 } from 'lucide-react'
-import type { Order, Product } from '@/payload-types'
+import type { Order, Product, ProductVariant, Media } from '@/payload-types'
 import confetti from 'canvas-confetti'
 import Image from 'next/image'
 
 interface OrderItem {
   product: string | Product
+  variant?: string | ProductVariant | null
   quantity: number
   price?: number
   total?: number
@@ -126,10 +127,45 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
               <div className="space-y-3 mb-4">
                 {(order.items as OrderItem[]).map((item, index: number) => {
                   const product = typeof item.product === 'object' ? item.product : null
-                  const imageUrl =
-                    typeof product?.images?.[0] === 'object'
-                      ? product.images[0]?.url
-                      : product?.images?.[0]
+                  const variant = typeof item.variant === 'object' ? item.variant : null
+
+                  // Get the appropriate image - variant image first, then product image
+                  const getImageUrl = (): string | null => {
+                    // Try variant images first
+                    if (
+                      variant?.images &&
+                      Array.isArray(variant.images) &&
+                      variant.images.length > 0
+                    ) {
+                      const firstImage = variant.images[0]
+                      if (typeof firstImage === 'string') return firstImage
+                      if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
+                        return (firstImage as Media).url ?? null
+                      }
+                    }
+
+                    // Fall back to product images
+                    if (
+                      product?.images &&
+                      Array.isArray(product.images) &&
+                      product.images.length > 0
+                    ) {
+                      const firstImage = product.images[0]
+                      if (typeof firstImage === 'string') return firstImage
+                      if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
+                        return (firstImage as Media).url ?? null
+                      }
+                    }
+
+                    return null
+                  }
+
+                  const imageUrl = getImageUrl()
+
+                  // Get variant label for display
+                  const variantLabel = variant?.options
+                    ?.map((opt) => `${opt.name}: ${opt.value}`)
+                    .join(', ')
 
                   return (
                     <div key={index} className="flex gap-3 p-3 bg-base-100 rounded-lg">
@@ -146,6 +182,9 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium line-clamp-2">{product?.name || 'Product'}</div>
+                        {variantLabel && (
+                          <div className="text-xs text-base-content/60 mt-0.5">{variantLabel}</div>
+                        )}
                         <div className="text-sm opacity-70">Qty: {item.quantity}</div>
                       </div>
                       <div className="text-right">

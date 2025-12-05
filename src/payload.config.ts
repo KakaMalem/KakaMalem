@@ -11,6 +11,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Categories } from './collections/Categories'
 import { Products } from './collections/Products'
+import { ProductVariants } from './collections/ProductVariants'
 import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
 import { Terms } from './globals/Terms'
@@ -40,6 +41,7 @@ import { removeFromWishlist } from './endpoints/wishlist/removeFromWishlist'
 import { createOrder } from './endpoints/orders/createOrder'
 import { getUserOrders } from './endpoints/orders/getUserOrders'
 import { getOrderConfirmation } from './endpoints/orders/getOrderConfirmation'
+import { getProductVariants } from './endpoints/variants'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -51,7 +53,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Products, Orders, Reviews],
+  collections: [Users, Media, Categories, Products, ProductVariants, Orders, Reviews],
   globals: [Terms, PrivacyPolicy],
   endpoints: [
     registerUser,
@@ -62,6 +64,7 @@ export default buildConfig({
     getRecentlyViewed,
     mergeRecentlyViewed,
     getProductAnalytics,
+    getProductVariants,
     addToCart,
     getCart,
     updateCart,

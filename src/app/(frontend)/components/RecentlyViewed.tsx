@@ -69,11 +69,34 @@ export const RecentlyViewed: React.FC = () => {
       <h2 className="text-2xl font-bold">Recently Viewed</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {productsToShow.map((product) => {
-          // Get first image
-          const firstImage = product.images && product.images.length > 0 ? product.images[0] : null
+          const productWithVariant = product as Product & {
+            hasVariants?: boolean
+            defaultVariantImages?: Array<string | { url?: string }>
+            defaultVariantPrice?: number
+            defaultVariantCompareAtPrice?: number
+          }
 
+          // Get first image - prioritize variant images if product has variants
           let image: string | null = null
-          if (firstImage) {
+
+          if (
+            productWithVariant.hasVariants &&
+            productWithVariant.defaultVariantImages &&
+            Array.isArray(productWithVariant.defaultVariantImages) &&
+            productWithVariant.defaultVariantImages.length > 0
+          ) {
+            const firstVariantImage = productWithVariant.defaultVariantImages[0]
+            if (typeof firstVariantImage === 'string') {
+              image = firstVariantImage
+            } else if (
+              typeof firstVariantImage === 'object' &&
+              firstVariantImage &&
+              'url' in firstVariantImage
+            ) {
+              image = firstVariantImage.url || null
+            }
+          } else if (product.images && product.images.length > 0) {
+            const firstImage = product.images[0]
             if (typeof firstImage === 'string') {
               image = firstImage
             } else if (typeof firstImage === 'object' && 'url' in firstImage) {
@@ -81,7 +104,34 @@ export const RecentlyViewed: React.FC = () => {
             }
           }
 
-          const displayPrice = product.salePrice || product.price
+          // Calculate display price - use variant price if available
+          const basePrice: number =
+            productWithVariant.hasVariants && productWithVariant.defaultVariantPrice !== undefined
+              ? productWithVariant.defaultVariantPrice
+              : typeof product.price === 'number'
+                ? product.price
+                : 0
+
+          const comparePrice: number | undefined =
+            productWithVariant.hasVariants &&
+            productWithVariant.defaultVariantCompareAtPrice !== undefined
+              ? productWithVariant.defaultVariantCompareAtPrice
+              : typeof product.salePrice === 'number'
+                ? product.salePrice
+                : undefined
+
+          let displayPrice: number
+          let originalPrice: number | undefined
+
+          if (productWithVariant.hasVariants && comparePrice !== undefined) {
+            displayPrice = basePrice
+            originalPrice = comparePrice
+          } else if (!productWithVariant.hasVariants && comparePrice !== undefined) {
+            displayPrice = comparePrice
+            originalPrice = basePrice
+          } else {
+            displayPrice = basePrice
+          }
 
           return (
             <Link
@@ -132,9 +182,9 @@ export const RecentlyViewed: React.FC = () => {
                   <div className="font-bold text-primary">
                     {formatPrice(displayPrice, product.currency)}
                   </div>
-                  {product.salePrice && (
+                  {originalPrice && displayPrice < originalPrice && (
                     <div className="text-xs line-through opacity-50">
-                      {formatPrice(product.price, product.currency)}
+                      {formatPrice(originalPrice, product.currency)}
                     </div>
                   )}
                 </div>

@@ -12,13 +12,13 @@ interface HomeData {
 // Fetch real data from API
 async function fetchHomeData(): Promise<HomeData> {
   try {
-    // Fetch products - increased limit to get more featured products
+    // Fetch products with variant data - increased limit to get more featured products
     const productsRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'}/api/products?limit=50&depth=1`,
+      `${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'}/api/search-products?limit=50`,
       { next: { revalidate: 60 } }, // Revalidate every minute
     )
     const productsData = await productsRes.json()
-    const allProducts: Product[] = productsData.docs || []
+    const allProducts: Product[] = productsData.products || []
 
     // Fetch categories with depth=2 to get the image URLs
     const categoriesRes = await fetch(

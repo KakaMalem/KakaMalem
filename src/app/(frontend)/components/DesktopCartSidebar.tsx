@@ -174,12 +174,43 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                     .map((item) => {
                       if (!item.product) return null
 
-                      const imageUrl =
-                        typeof item.product.images?.[0] === 'string'
-                          ? item.product.images[0]
-                          : item.product.images?.[0]?.url || '/placeholder.jpg'
+                      // Get the appropriate image - variant image first, then product image
+                      const getImageUrl = (): string => {
+                        // Try variant images first
+                        if (
+                          item.variant?.images &&
+                          Array.isArray(item.variant.images) &&
+                          item.variant.images.length > 0
+                        ) {
+                          const firstImage = item.variant.images[0]
+                          if (typeof firstImage === 'string') return firstImage
+                          if (typeof firstImage === 'object' && firstImage?.url) {
+                            return firstImage.url
+                          }
+                        }
 
-                      const price = item.product.salePrice || item.product.price || 0
+                        // Fall back to product images
+                        if (
+                          item.product &&
+                          item.product.images &&
+                          Array.isArray(item.product.images) &&
+                          item.product.images.length > 0
+                        ) {
+                          const firstImage = item.product.images[0]
+                          if (typeof firstImage === 'string') return firstImage
+                          if (typeof firstImage === 'object' && firstImage?.url) {
+                            return firstImage.url
+                          }
+                        }
+
+                        return '/placeholder.jpg'
+                      }
+
+                      const imageUrl = getImageUrl()
+
+                      // Use variant price if available, otherwise product price
+                      const price =
+                        item.variant?.price ?? item.product.salePrice ?? item.product.price ?? 0
 
                       return (
                         <div
@@ -221,6 +252,22 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
+
+                            {/* Variant Details */}
+                            {item.variant &&
+                              item.variant.options &&
+                              item.variant.options.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                  {item.variant.options.map((opt, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-xs bg-base-200 px-2 py-1 rounded-md text-base-content/70"
+                                    >
+                                      {opt.name}: <span className="font-medium">{opt.value}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
 
                             {/* Price */}
                             <div className="text-lg font-bold text-primary mb-2">

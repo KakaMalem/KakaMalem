@@ -147,11 +147,56 @@ export const getProducts: Endpoint = {
         depth: 2, // Include categories and images
       })
 
+      // For products with variants, fetch default variant images
+      const productsWithDefaultVariants = await Promise.all(
+        results.docs.map(async (product) => {
+          if (product.hasVariants) {
+            try {
+              // Fetch default variant for this product
+              const defaultVariantResult = await payload.find({
+                collection: 'product-variants',
+                where: {
+                  and: [{ product: { equals: product.id } }, { isDefault: { equals: true } }],
+                },
+                limit: 1,
+                depth: 1, // Include images
+              })
+
+              if (defaultVariantResult.docs.length > 0) {
+                const defaultVariant = defaultVariantResult.docs[0]
+                const hasVariantImages =
+                  defaultVariant.images &&
+                  Array.isArray(defaultVariant.images) &&
+                  defaultVariant.images.length > 0
+
+                // Add default variant data to product
+                return {
+                  ...product,
+                  ...(hasVariantImages && { defaultVariantImages: defaultVariant.images }),
+                  ...(defaultVariant.price !== undefined &&
+                    defaultVariant.price !== null && { defaultVariantPrice: defaultVariant.price }),
+                  ...(defaultVariant.compareAtPrice !== undefined &&
+                    defaultVariant.compareAtPrice !== null && {
+                      defaultVariantCompareAtPrice: defaultVariant.compareAtPrice,
+                    }),
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching default variant for product ${product.id}:`,
+                error,
+              )
+            }
+          }
+          return product
+        }),
+      )
+
       // Return results
       return Response.json(
         {
           success: true,
-          products: results.docs,
+          products: productsWithDefaultVariants,
           pagination: {
             page: results.page,
             limit: results.limit,

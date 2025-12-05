@@ -1,15 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Product, Media } from '@/payload-types'
-import { Star, Plus, Minus, AlertCircle, Check, X, Heart } from 'lucide-react'
+import { Product, Media, ProductVariant } from '@/payload-types'
+import { Star, Plus, Minus, AlertCircle, Check, X } from 'lucide-react'
 import { useCart } from '@/providers/cart'
-import { useWishlist } from '@/providers/wishlist'
 import { useRecentlyViewed } from '@/providers/recentlyViewed'
 import { ReviewsSection } from '@/app/(frontend)/components/ReviewsSection'
-import { useRouter } from 'next/navigation'
+import { HybridProductGallery } from '@/app/(frontend)/components/HybridProductGallery'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { formatPrice } from '@/utilities/currency'
+import Image from 'next/image'
 
 type Props = {
   product: Product
@@ -22,8 +23,8 @@ interface ErrorWithMessage {
 
 export default function ProductDetailsClient({ product, descriptionHtml }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { addItem, loading: cartLoading, cart } = useCart()
-  const { isInWishlist, toggleWishlist, loadingItems } = useWishlist()
   const { trackView } = useRecentlyViewed()
 
   // Client-side authentication check
@@ -53,44 +54,178 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
     trackView(product.id)
   }, [product.id, trackView])
 
+  // Fetch variants if product has variants
+  useEffect(() => {
+    const fetchVariants = async () => {
+      if (!product.hasVariants) {
+        console.log('Product does not have variants enabled')
+        return
+      }
+
+      console.log('Fetching variants for product:', product.id, 'hasVariants:', product.hasVariants)
+      setVariantsLoading(true)
+      try {
+        const response = await fetch(`/api/variants/product/${product.id}`)
+        console.log('Variants response status:', response.status)
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Variants data received:', data)
+          const fetchedVariants = data.data || []
+          console.log(
+            'Fetched variants count:',
+            fetchedVariants.length,
+            'Variants:',
+            fetchedVariants,
+          )
+          setVariants(fetchedVariants)
+
+          // Check URL for variant ID, otherwise use default variant
+          const urlVariantId = searchParams.get('variant')
+          let variantToSelect: ProductVariant | null = null
+
+          if (urlVariantId) {
+            // Try to find variant from URL
+            variantToSelect = fetchedVariants.find((v: ProductVariant) => v.id === urlVariantId)
+            console.log('Variant from URL:', variantToSelect)
+          }
+
+          // If no variant from URL or not found, use default or first variant
+          if (!variantToSelect) {
+            variantToSelect =
+              fetchedVariants.find((v: ProductVariant) => v.isDefault) || fetchedVariants[0]
+            console.log('Default variant:', variantToSelect)
+          }
+
+          if (variantToSelect) {
+            setSelectedVariant(variantToSelect)
+            // Build selected options from variant
+            const options: Record<string, string> = {}
+            variantToSelect.options?.forEach((opt: { name: string; value: string }) => {
+              options[opt.name] = opt.value
+            })
+            console.log('Selected options:', options)
+            setSelectedOptions(options)
+
+            // Update URL with variant ID if not already set
+            if (!urlVariantId || urlVariantId !== variantToSelect.id) {
+              const url = new URL(window.location.href)
+              url.searchParams.set('variant', variantToSelect.id)
+              router.replace(url.pathname + url.search, { scroll: false })
+            }
+
+            // Update images if variant has specific images
+            if (
+              variantToSelect.images &&
+              Array.isArray(variantToSelect.images) &&
+              variantToSelect.images.length > 0
+            ) {
+              const variantImages = variantToSelect.images
+                .map((img: string | Media) => {
+                  if (typeof img === 'string') return img
+                  if (typeof img === 'object' && img?.url) return img.url
+                  return null
+                })
+                .filter(Boolean) as string[]
+              if (variantImages.length > 0) {
+                setSelected(0) // Reset to first image
+              }
+            }
+          }
+        } else {
+          console.error('Failed to fetch variants, status:', response.status)
+          const errorData = await response.json()
+          console.error('Error data:', errorData)
+        }
+      } catch (error) {
+        console.error('Error fetching variants:', error)
+        toast.error('Failed to load product variants')
+      } finally {
+        setVariantsLoading(false)
+      }
+    }
+
+    fetchVariants()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id, product.hasVariants, searchParams])
+
   // Check if product is already in cart
   const cartItem = cart?.items?.find((item) => item.productId === product.id)
   const quantityInCart = cartItem?.quantity || 0
 
-  const inWishlist = isInWishlist(product.id)
-  const isWishlistLoading = loadingItems.has(product.id)
-
-  // Handle images - they can be Media objects or string IDs
-  const images = (product.images ?? [])
-    .map((i: string | Media) => {
-      if (typeof i === 'string') return i
-      if (typeof i === 'object' && i?.url) return i.url
-      return null
-    })
-    .filter(Boolean) as string[]
-
-  const [selected, setSelected] = useState(0)
+  // State declarations - must be before any usage
+  const [_selected, setSelected] = useState(0)
   const [qty, setQty] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
-  const [buyNowLoading, setBuyNowLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Stock availability helpers
+  // Variant state
+  const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
+  const [variantsLoading, setVariantsLoading] = useState(false)
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
+
+  // Handle images - use variant images if available, never product images if default variant has images
+  const getImages = () => {
+    // Check if there's a default variant with images
+    const defaultVariant = variants.find((v) => v.isDefault)
+    const defaultHasImages =
+      defaultVariant?.images &&
+      Array.isArray(defaultVariant.images) &&
+      defaultVariant.images.length > 0
+
+    // If variant is selected and has images, use those
+    if (
+      selectedVariant?.images &&
+      Array.isArray(selectedVariant.images) &&
+      selectedVariant.images.length > 0
+    ) {
+      return selectedVariant.images
+        .map((i: string | Media) => {
+          if (typeof i === 'string') return i
+          if (typeof i === 'object' && i?.url) return i.url
+          return null
+        })
+        .filter(Boolean) as string[]
+    }
+
+    // If there's a default variant with images, NEVER show product images
+    // This ensures variant images take precedence completely
+    if (product.hasVariants && defaultHasImages) {
+      return []
+    }
+
+    // Otherwise use product images (only if no default variant with images exists)
+    return (product.images ?? [])
+      .map((i: string | Media) => {
+        if (typeof i === 'string') return i
+        if (typeof i === 'object' && i?.url) return i.url
+        return null
+      })
+      .filter(Boolean) as string[]
+  }
+
+  const images = getImages()
+
+  // Stock availability helpers - use variant stock if selected, otherwise product stock
+  const stockSource = selectedVariant || product
   const isOutOfStock = !!(
-    product.trackQuantity &&
-    (product.quantity === 0 || product.quantity === null || product.quantity === undefined) &&
-    !product.allowBackorders
+    stockSource.trackQuantity &&
+    (stockSource.quantity === 0 ||
+      stockSource.quantity === null ||
+      stockSource.quantity === undefined) &&
+    !stockSource.allowBackorders
   )
   const isLowStock = !!(
-    product.trackQuantity &&
-    !product.allowBackorders &&
-    product.quantity &&
-    product.quantity <= 5 &&
-    product.quantity > 0
+    stockSource.trackQuantity &&
+    !stockSource.allowBackorders &&
+    stockSource.quantity &&
+    stockSource.quantity <= 5 &&
+    stockSource.quantity > 0
   )
   const maxQuantity =
-    product.trackQuantity && product.quantity && !product.allowBackorders
-      ? Math.min(99, Math.max(0, product.quantity - quantityInCart))
+    stockSource.trackQuantity && stockSource.quantity && !stockSource.allowBackorders
+      ? Math.min(99, Math.max(0, stockSource.quantity - quantityInCart))
       : 99
 
   const increase = () => setQty((q) => Math.min(maxQuantity, q + 1))
@@ -167,12 +302,18 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
   }
 
   const addToCart = async () => {
-    if (justAdded || cartLoading || buyNowLoading) return
+    if (justAdded || cartLoading) return
+
+    // Check if variant is required but not selected
+    if (product.hasVariants && !selectedVariant) {
+      toast.error('Please select all product options')
+      return
+    }
 
     setError(null)
 
     try {
-      await addItem(product.id, qty)
+      await addItem(product.id, qty, selectedVariant?.id)
 
       // Success feedback
       setJustAdded(true)
@@ -194,188 +335,51 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
     }
   }
 
-  const buyNow = async () => {
-    if (cartLoading || buyNowLoading) return
-
-    setError(null)
-    setBuyNowLoading(true)
-
-    try {
-      await addItem(product.id, qty)
-
-      // Brief success feedback before redirect
-      toast.success('Redirecting to checkout...')
-
-      // Small delay to ensure cart state is updated
-      setTimeout(() => {
-        router.push('/checkout')
-      }, 300)
-    } catch (e: unknown) {
-      handleError(e, 'process your purchase')
-      setBuyNowLoading(false)
-      // Reset quantity to available amount if stock error
-      const error = e as ErrorWithMessage
-      if (error?.message?.includes('available in stock')) {
-        setQty(1)
-      }
-    }
-  }
-
-  const handleWishlistToggle = async () => {
-    try {
-      await toggleWishlist(product.id)
-      toast.success(inWishlist ? 'Removed from wishlist' : 'Added to wishlist')
-    } catch (error: unknown) {
-      console.error('Error toggling wishlist:', error)
-      const err = error as ErrorWithMessage
-      if (err.message?.includes('Unauthorized')) {
-        toast.error('Please login to add to wishlist')
-        window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`
-      } else {
-        toast.error(err.message || 'Failed to update wishlist')
-      }
-    }
-  }
-
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left: Images (lg: span 7) */}
-        <div className="lg:col-span-7">
-          <div className="bg-base-200 rounded-md p-4 transition-all duration-300 hover:shadow-2xl">
-            {/* Main image */}
-            <div className="w-full aspect-[4/3] rounded-md overflow-hidden flex items-center justify-center">
-              {images[selected] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={images[selected]}
-                  alt={
-                    typeof product.images?.[selected] === 'object' &&
-                    product.images?.[selected]?.alt
-                      ? product.images[selected].alt
-                      : product.name
-                  }
-                  className="object-contain w-full h-full hover:scale-105 transition-transform duration-500"
-                />
-              ) : (
-                <div className="text-center text-sm text-base-content/50">No image available</div>
-              )}
-            </div>
+      {/* Product Name - Above everything (mobile only) */}
+      <div className="mb-3 lg:hidden">
+        <h1 className="text-xl font-normal">{product.name}</h1>
+      </div>
 
-            {/* Thumbnails */}
-            {images.length > 1 && (
-              <div className="mt-4 flex gap-2 overflow-x-auto">
-                {images.map((src, i) => (
-                  <button
-                    key={String(i)}
-                    onClick={() => setSelected(i)}
-                    className={`shrink-0 w-20 h-20 rounded-md overflow-hidden border transition-all duration-300 hover:scale-105 ${
-                      selected === i ? 'border-primary' : 'border-base-200'
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt={`${product.name} ${i}`}
-                      className="object-cover w-full h-full hover:scale-110 transition-transform duration-500"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Rating summary - Mobile only, right below title */}
+      <div className="flex items-center gap-2 mb-4 lg:hidden">
+        <div className="flex items-center gap-1 text-orange-400">
+          <Star size={16} fill="currentColor" />
+          <span className="font-semibold text-base-content text-sm">
+            {product.averageRating ? product.averageRating.toFixed(1) : 'No ratings'}
+          </span>
+        </div>
+        {product.reviewCount && product.reviewCount > 0 && (
+          <>
+            <span className="text-base-content/40 text-sm">•</span>
+            <a
+              href="#reviews"
+              className="text-xs text-base-content/70 hover:text-primary transition-colors"
+            >
+              {product.reviewCount} {product.reviewCount === 1 ? 'review' : 'reviews'}
+            </a>
+          </>
+        )}
+      </div>
 
-          {/* Product Description */}
-          {descriptionHtml && (
-            <div className="mt-6">
-              <div className="prose prose-lg max-w-none">
-                <h3 className="text-xl font-bold mb-4">Description</h3>
-                <div
-                  className="text-base-content/80 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Product Specifications */}
-          <div className="mt-6">
-            <div className="prose max-w-none">
-              <h3 className="text-xl font-bold mb-4">Specifications</h3>
-              <div className="bg-base-200 rounded-lg overflow-hidden">
-                <table className="table table-zebra w-full">
-                  <tbody>
-                    {product.sku && (
-                      <tr>
-                        <td className="font-medium">SKU</td>
-                        <td>{product.sku}</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="font-medium">Availability</td>
-                      <td>
-                        <span
-                          className={`badge badge-sm ${
-                            product.stockStatus === 'in_stock'
-                              ? 'badge-success'
-                              : product.stockStatus === 'low_stock'
-                                ? 'badge-warning'
-                                : product.stockStatus === 'on_backorder'
-                                  ? 'badge-info'
-                                  : 'badge-error'
-                          }`}
-                        >
-                          {product.stockStatus === 'in_stock'
-                            ? 'In Stock'
-                            : product.stockStatus === 'out_of_stock'
-                              ? 'Out of Stock'
-                              : product.stockStatus === 'low_stock'
-                                ? 'Low Stock'
-                                : product.stockStatus === 'on_backorder'
-                                  ? 'On Backorder'
-                                  : product.stockStatus === 'discontinued'
-                                    ? 'Discontinued'
-                                    : 'N/A'}
-                        </span>
-                      </td>
-                    </tr>
-                    {product.trackQuantity &&
-                      product.quantity !== null &&
-                      product.quantity !== undefined &&
-                      product.quantity > 0 && (
-                        <tr>
-                          <td className="font-medium">Stock Quantity</td>
-                          <td>{product.quantity} units available</td>
-                        </tr>
-                      )}
-                    <tr>
-                      <td className="font-medium">Shipping</td>
-                      <td>
-                        {product.requiresShipping
-                          ? 'Physical product - shipping required'
-                          : 'Digital product - no shipping'}
-                      </td>
-                    </tr>
-                    {product.allowBackorders && (
-                      <tr>
-                        <td className="font-medium">Backorders</td>
-                        <td>Accepted - order now, ship when available</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 xl:gap-12">
+        {/* Left: Images */}
+        <div>
+          <HybridProductGallery
+            images={images.length > 0 ? images : ['/placeholder.jpg']}
+            productName={product.name}
+          />
         </div>
 
-        {/* Right: Details + actions (lg: span 5) */}
-        <aside className="lg:col-span-5">
-          <div className="space-y-4 sticky top-24">
+        {/* Right: Details + actions */}
+        <aside>
+          <div className="space-y-3 sm:space-y-4 lg:sticky lg:top-24">
             <div>
-              <h1 className="text-3xl font-bold">{product.name}</h1>
-              {/* Rating summary */}
-              <div className="flex items-center gap-3 mt-2">
+              {/* Product Name (desktop only) */}
+              <h1 className="hidden lg:block text-2xl font-normal mb-2">{product.name}</h1>
+              {/* Rating summary - Desktop only */}
+              <div className="hidden lg:flex items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-1 text-orange-400">
                   <Star size={18} fill="currentColor" />
                   <span className="font-semibold text-base-content">
@@ -395,41 +399,205 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
                 )}
               </div>
               {product.shortDescription && (
-                <p className="text-base-content/70 mt-3 leading-relaxed">
+                <p className="hidden lg:block text-base-content/70 mt-3 leading-relaxed">
                   {product.shortDescription}
                 </p>
               )}
             </div>
 
-            <div className="flex items-baseline gap-4">
-              {product.salePrice ? (
-                <>
-                  <div className="text-2xl font-bold">
-                    {formatPrice(product.salePrice, product.currency)}
-                  </div>
-                  <div className="text-sm line-through text-base-content/50">
-                    {formatPrice(product.price, product.currency)}
-                  </div>
-                  <div className="text-sm text-success font-medium">
-                    Save{' '}
-                    {formatPrice(
-                      Number(product.price) - Number(product.salePrice),
-                      product.currency,
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-2xl font-bold">
-                  {formatPrice(product.price, product.currency)}
-                </div>
-              )}
+            {/* Price - Desktop only (shown here) */}
+            <div className="hidden lg:flex items-baseline gap-4">
+              {(() => {
+                if (selectedVariant?.price) {
+                  // Variant has custom price
+                  return selectedVariant.compareAtPrice ? (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {formatPrice(selectedVariant.price, product.currency)}
+                      </div>
+                      <div className="text-sm line-through text-base-content/50">
+                        {formatPrice(selectedVariant.compareAtPrice, product.currency)}
+                      </div>
+                      <div className="text-sm text-success font-medium">
+                        Save{' '}
+                        {formatPrice(
+                          Number(selectedVariant.compareAtPrice) - Number(selectedVariant.price),
+                          product.currency,
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-2xl font-bold">
+                      {formatPrice(selectedVariant.price, product.currency)}
+                    </div>
+                  )
+                } else if (product.salePrice) {
+                  // Product sale price
+                  return (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {formatPrice(product.salePrice, product.currency)}
+                      </div>
+                      <div className="text-sm line-through text-base-content/50">
+                        {formatPrice(product.price, product.currency)}
+                      </div>
+                      <div className="text-sm text-success font-medium">
+                        Save{' '}
+                        {formatPrice(
+                          Number(product.price) - Number(product.salePrice),
+                          product.currency,
+                        )}
+                      </div>
+                    </>
+                  )
+                } else {
+                  // Regular product price
+                  return (
+                    <div className="text-2xl font-bold">
+                      {formatPrice(product.price, product.currency)}
+                    </div>
+                  )
+                }
+              })()}
             </div>
+
+            {/* Variant Selector - Moved up for better mobile UX */}
+            {(() => {
+              const shouldShow =
+                product.hasVariants &&
+                product.variantOptions &&
+                product.variantOptions.length > 0 &&
+                variants.length > 0
+              return shouldShow
+            })() && (
+              <div className="space-y-3 sm:space-y-4 border-t border-b border-base-300 py-3 sm:py-4">
+                {variantsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <span className="loading loading-spinner loading-sm"></span>
+                    <span className="text-sm text-base-content/70">Loading options...</span>
+                  </div>
+                ) : (
+                  product.variantOptions?.map((option) => (
+                    <div key={option.name} className="space-y-2">
+                      <label className="text-sm font-medium text-base-content">
+                        {option.name}:
+                        {selectedOptions[option.name] && (
+                          <span className="ml-2 text-primary">{selectedOptions[option.name]}</span>
+                        )}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {option.values?.map((val) => {
+                          const isSelected = selectedOptions[option.name] === val.value
+
+                          // Check if this option value is available
+                          const isAvailable =
+                            variants.length === 0 ||
+                            variants.some((v) => {
+                              // Check if this option value exists in this variant
+                              const hasOption = v.options?.some(
+                                (opt) => opt.name === option.name && opt.value === val.value,
+                              )
+                              if (!hasOption) return false
+
+                              // Get other selected options (excluding current option)
+                              const otherSelectedOptions = Object.entries(selectedOptions).filter(
+                                ([key]) => key !== option.name,
+                              )
+
+                              // If no other options are selected yet, this option is available
+                              if (otherSelectedOptions.length === 0) return true
+
+                              // Check if all other selected options match this variant
+                              return otherSelectedOptions.every(([key, value]) => {
+                                return v.options?.some(
+                                  (opt) => opt.name === key && opt.value === value,
+                                )
+                              })
+                            })
+
+                          {
+                            // Get image URL if exists
+                            const imageUrl =
+                              val.image && typeof val.image === 'object' && 'url' in val.image
+                                ? val.image.url
+                                : null
+
+                            return (
+                              <button
+                                key={val.value}
+                                onClick={() => {
+                                  const newOptions = {
+                                    ...selectedOptions,
+                                    [option.name]: val.value,
+                                  }
+                                  setSelectedOptions(newOptions)
+
+                                  // Find matching variant
+                                  const matchingVariant = variants.find((v) => {
+                                    return Object.entries(newOptions).every(([key, value]) => {
+                                      return v.options?.some(
+                                        (opt) => opt.name === key && opt.value === value,
+                                      )
+                                    })
+                                  })
+
+                                  setSelectedVariant(matchingVariant || null)
+                                  // Reset to first image when variant changes (images will update via getImages)
+                                  setSelected(0)
+
+                                  // Update URL with variant ID to persist selection
+                                  if (matchingVariant) {
+                                    const url = new URL(window.location.href)
+                                    url.searchParams.set('variant', matchingVariant.id)
+                                    router.replace(url.pathname + url.search, { scroll: false })
+                                  }
+                                }}
+                                disabled={!isAvailable}
+                                className={`
+                                  ${imageUrl ? 'p-0 overflow-hidden' : 'btn btn-sm'}
+                                  transition-all relative
+                                  ${
+                                    isSelected
+                                      ? imageUrl
+                                        ? 'ring-2 ring-primary ring-offset-2'
+                                        : 'btn-primary'
+                                      : isAvailable
+                                        ? imageUrl
+                                          ? 'ring-1 ring-base-300 hover:ring-2 hover:ring-primary/50'
+                                          : 'btn-outline'
+                                        : 'opacity-30 cursor-not-allowed'
+                                  }
+                                  ${imageUrl ? 'w-16 h-16 sm:w-20 sm:h-20 rounded-lg' : ''}
+                                `}
+                                title={val.value}
+                              >
+                                {imageUrl ? (
+                                  <Image
+                                    src={imageUrl}
+                                    alt={val.value}
+                                    fill
+                                    className="object-cover"
+                                    sizes="80px"
+                                  />
+                                ) : (
+                                  <span>{val.value}</span>
+                                )}
+                              </button>
+                            )
+                          }
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
             {/* Stock warnings */}
             {isLowStock && (
               <div className="text-sm text-warning flex items-center gap-1">
                 <AlertCircle className="w-4 h-4" />
-                Only {product.quantity} left in stock
+                Only {stockSource.quantity} left in stock
               </div>
             )}
             {isOutOfStock && (
@@ -438,107 +606,138 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
                 Out of stock
               </div>
             )}
-            {product.trackQuantity && product.quantity === 0 && product.allowBackorders && (
-              <div className="text-sm text-info flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" />
-                Currently out of stock - available for back order
-              </div>
-            )}
-            {product.trackQuantity &&
-              product.allowBackorders &&
-              product.quantity &&
-              product.quantity > 0 &&
-              product.quantity <= 5 && (
+            {stockSource.trackQuantity &&
+              stockSource.quantity === 0 &&
+              stockSource.allowBackorders && (
                 <div className="text-sm text-info flex items-center gap-1">
                   <AlertCircle className="w-4 h-4" />
-                  Only {product.quantity} in stock - back orders available
+                  Currently out of stock - available for back order
+                </div>
+              )}
+            {stockSource.trackQuantity &&
+              stockSource.allowBackorders &&
+              stockSource.quantity &&
+              stockSource.quantity > 0 &&
+              stockSource.quantity <= 5 && (
+                <div className="text-sm text-info flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  Only {stockSource.quantity} in stock - back orders available
                 </div>
               )}
 
+            {/* Price - Mobile only (shown right above quantity controls) */}
+            <div className="flex lg:hidden items-baseline gap-3">
+              {(() => {
+                if (selectedVariant?.price) {
+                  // Variant has custom price
+                  return selectedVariant.compareAtPrice ? (
+                    <>
+                      <div className="text-xl font-bold">
+                        {formatPrice(selectedVariant.price, product.currency)}
+                      </div>
+                      <div className="text-sm line-through text-base-content/50">
+                        {formatPrice(selectedVariant.compareAtPrice, product.currency)}
+                      </div>
+                      <div className="text-xs text-success font-medium">
+                        Save{' '}
+                        {formatPrice(
+                          Number(selectedVariant.compareAtPrice) - Number(selectedVariant.price),
+                          product.currency,
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xl font-bold">
+                      {formatPrice(selectedVariant.price, product.currency)}
+                    </div>
+                  )
+                } else if (product.salePrice) {
+                  // Product sale price
+                  return (
+                    <>
+                      <div className="text-xl font-bold">
+                        {formatPrice(product.salePrice, product.currency)}
+                      </div>
+                      <div className="text-sm line-through text-base-content/50">
+                        {formatPrice(product.price, product.currency)}
+                      </div>
+                      <div className="text-xs text-success font-medium">
+                        Save{' '}
+                        {formatPrice(
+                          Number(product.price) - Number(product.salePrice),
+                          product.currency,
+                        )}
+                      </div>
+                    </>
+                  )
+                } else {
+                  // Regular product price
+                  return (
+                    <div className="text-xl font-bold">
+                      {formatPrice(product.price, product.currency)}
+                    </div>
+                  )
+                }
+              })()}
+            </div>
+
             {/* Quantity selector and action buttons */}
             <div className="space-y-3">
-              <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                 <div className="join border border-base-300 rounded-lg">
                   <button
                     onClick={decrease}
                     className="btn btn-sm join-item border-none"
-                    disabled={qty <= 1 || isOutOfStock || buyNowLoading || cartLoading}
+                    disabled={qty <= 1 || isOutOfStock || cartLoading}
                     aria-label="Decrease quantity"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
-                  <div className="join-item flex items-center justify-center min-w-[50px] px-3 font-semibold text-base">
+                  <div className="join-item flex items-center justify-center min-w-[40px] sm:min-w-[50px] px-2 sm:px-3 font-semibold text-sm sm:text-base">
                     {qty}
                   </div>
                   <button
                     onClick={increase}
                     className="btn btn-sm join-item border-none"
-                    disabled={qty >= maxQuantity || isOutOfStock || buyNowLoading || cartLoading}
+                    disabled={qty >= maxQuantity || isOutOfStock || cartLoading}
                     aria-label="Increase quantity"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                 </div>
 
                 <button
                   onClick={addToCart}
-                  className={`btn ${
+                  className={`btn btn-sm sm:btn-md ${
                     justAdded ? 'btn-success' : 'btn-primary'
-                  } px-6 transition-all duration-300`}
-                  disabled={cartLoading || buyNowLoading || justAdded || isOutOfStock}
+                  } px-4 sm:px-6 transition-all duration-300 flex-1 sm:flex-initial`}
+                  disabled={cartLoading || justAdded || isOutOfStock}
                   aria-label={justAdded ? 'Added to cart' : 'Add to cart'}
                 >
                   {cartLoading ? (
                     <span className="loading loading-spinner loading-sm"></span>
                   ) : justAdded ? (
                     <>
-                      <Check className="w-5 h-5" />
-                      <span>Added!</span>
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm sm:text-base">Added!</span>
                     </>
                   ) : isOutOfStock ? (
-                    'Out of Stock'
+                    <span className="text-sm sm:text-base">Out of Stock</span>
                   ) : (
-                    'Add to cart'
-                  )}
-                </button>
-
-                <button
-                  onClick={buyNow}
-                  className="btn btn-outline px-4 transition-all duration-300"
-                  disabled={cartLoading || buyNowLoading || isOutOfStock}
-                >
-                  {buyNowLoading ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      Processing...
-                    </>
-                  ) : (
-                    'Buy now'
+                    <span className="text-sm sm:text-base">Add to cart</span>
                   )}
                 </button>
               </div>
 
-              {/* Wishlist button */}
-              <button
-                onClick={handleWishlistToggle}
-                disabled={isWishlistLoading}
-                className={`btn btn-outline w-full ${
-                  inWishlist ? 'btn-error' : ''
-                } transition-all duration-300`}
-                aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-              >
-                {isWishlistLoading ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : (
-                  <>
-                    <Heart
-                      className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`}
-                      strokeWidth={inWishlist ? 0 : 2}
-                    />
-                    <span>{inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}</span>
-                  </>
-                )}
-              </button>
+              {/* Checkout button - only show if item is in cart */}
+              {quantityInCart > 0 && (
+                <button
+                  onClick={() => router.push('/checkout')}
+                  className="btn btn-sm sm:btn-md btn-accent w-full transition-all duration-300"
+                >
+                  <span className="text-sm sm:text-base">Go to Checkout</span>
+                </button>
+              )}
             </div>
 
             {/* Error message alert */}
@@ -562,7 +761,7 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
             )}
 
             {/* Key Information */}
-            <div className="bg-base-200/50 rounded-lg p-4 space-y-3 text-sm border border-base-300">
+            <div className="bg-base-200/50 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3 text-xs sm:text-sm border border-base-300">
               {product.requiresShipping && (
                 <div className="flex items-start gap-3">
                   <svg
@@ -636,6 +835,22 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
             </div>
           </div>
         </aside>
+      </div>
+
+      {/* Product Description & Specifications - Full Width */}
+      <div className="mt-8 sm:mt-12 space-y-6 sm:space-y-8">
+        {/* Product Description */}
+        {descriptionHtml && (
+          <div>
+            <div className="prose prose-sm sm:prose-lg max-w-none">
+              <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Description</h3>
+              <div
+                className="text-sm sm:text-base text-base-content/80 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reviews Section */}

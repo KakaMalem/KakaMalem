@@ -2,7 +2,7 @@ import type { Endpoint } from 'payload'
 
 /**
  * Get product analytics
- * Restricted to admins, developers, and the product's seller
+ * Restricted to superadmins and developers only
  */
 export const getProductAnalytics: Endpoint = {
   path: '/products/:id/analytics',
@@ -12,6 +12,16 @@ export const getProductAnalytics: Endpoint = {
 
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check access: only superadmins and developers
+    const isAuthorized = user.roles?.includes('superadmin') || user.roles?.includes('developer')
+
+    if (!isAuthorized) {
+      return Response.json(
+        { error: 'Only superadmins and developers can view analytics' },
+        { status: 403 },
+      )
     }
 
     // Get product ID from URL params
@@ -27,22 +37,6 @@ export const getProductAnalytics: Endpoint = {
         collection: 'products',
         id: productId,
       })
-
-      // Check access: admins, developers, superadmins, or the product's seller
-      const isAuthorized =
-        user.roles?.includes('admin') ||
-        user.roles?.includes('superadmin') ||
-        user.roles?.includes('developer') ||
-        (user.roles?.includes('seller') &&
-          typeof product.seller === 'string' &&
-          product.seller === user.id)
-
-      if (!isAuthorized) {
-        return Response.json(
-          { error: 'You do not have permission to view analytics for this product' },
-          { status: 403 },
-        )
-      }
 
       const analytics = product.analytics || {}
 

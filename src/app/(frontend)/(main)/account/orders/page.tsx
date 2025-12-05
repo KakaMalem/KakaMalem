@@ -2,32 +2,38 @@ import React from 'react'
 import { getMeUser } from '@/utilities/getMeUser'
 import type { Order } from '@/payload-types'
 import OrdersClient from './page.client'
-import { getServerSideURL } from '@/utilities/getURL'
+import { getPayload } from 'payload'
+import config from '@/payload.config'
 
 // Force dynamic rendering since we use authentication (cookies)
 export const dynamic = 'force-dynamic'
 
 export default async function OrdersPage() {
-  const { user: _user } = await getMeUser({
+  const { user } = await getMeUser({
     nullUserRedirect: '/auth/login?redirect=/account/orders',
   })
 
-  // Fetch user's orders via API endpoint
+  // Fetch user's orders using Payload local API
   let orders: Order[] = []
   try {
-    const baseURL = getServerSideURL()
+    const payload = await getPayload({ config })
 
-    const response = await fetch(`${baseURL}/api/user-orders?limit=100&depth=2`, {
-      credentials: 'include',
-      cache: 'no-store',
+    const result = await payload.find({
+      collection: 'orders',
+      where: {
+        customer: {
+          equals: user?.id,
+        },
+      },
+      limit: 100,
+      depth: 2,
+      sort: '-createdAt',
     })
 
-    if (response.ok) {
-      const data = await response.json()
-      orders = data.docs || []
-    }
+    orders = result.docs
+    console.log(`[Orders Page] Fetched ${orders.length} orders for user ${user?.id}`)
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    console.error('[Orders Page] Error fetching orders:', error)
   }
 
   return <OrdersClient orders={orders} />

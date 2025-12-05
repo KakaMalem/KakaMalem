@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Truck, MapPin, CreditCard } from 'lucide-react'
-import type { User } from '@/payload-types'
+import type { User, Media } from '@/payload-types'
 import type { CartItem } from '@/providers/cart/types'
 import Image from 'next/image'
 
@@ -115,14 +115,48 @@ export function ReviewStep({
               const product = item.product
               if (!product) return null
 
-              const price = product.salePrice || product.price
-              const imageUrl =
-                typeof product.images?.[0] === 'object'
-                  ? product.images[0]?.url
-                  : product.images?.[0]
+              // Get the appropriate price - variant price first, then product price
+              const price = item.variant?.price || product.salePrice || product.price
+
+              // Get the appropriate image - variant image first, then product image
+              const getImageUrl = (): string | null => {
+                // Try variant images first
+                if (
+                  item.variant?.images &&
+                  Array.isArray(item.variant.images) &&
+                  item.variant.images.length > 0
+                ) {
+                  const firstImage = item.variant.images[0]
+                  if (typeof firstImage === 'string') return firstImage
+                  if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
+                    return (firstImage as Media).url ?? null
+                  }
+                }
+
+                // Fall back to product images
+                if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+                  const firstImage = product.images[0]
+                  if (typeof firstImage === 'string') return firstImage
+                  if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
+                    return (firstImage as Media).url ?? null
+                  }
+                }
+
+                return null
+              }
+
+              const imageUrl = getImageUrl()
+
+              // Get variant label for display
+              const variantLabel = item.variant?.options
+                ?.map((opt) => `${opt.name}: ${opt.value}`)
+                .join(', ')
 
               return (
-                <div key={item.productId} className="flex gap-3">
+                <div
+                  key={`${item.productId}-${item.variantId || 'no-variant'}`}
+                  className="flex gap-3"
+                >
                   <div className="avatar">
                     <div className="w-16 h-16 rounded-lg">
                       <Image
@@ -136,6 +170,9 @@ export function ReviewStep({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium line-clamp-2">{product.name}</div>
+                    {variantLabel && (
+                      <div className="text-xs text-base-content/60 mt-0.5">{variantLabel}</div>
+                    )}
                     <div className="text-sm opacity-70">Qty: {item.quantity}</div>
                   </div>
                   <div className="font-bold">

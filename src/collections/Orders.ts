@@ -249,12 +249,21 @@ export const Orders: CollectionConfig = {
               },
             },
             {
+              name: 'variant',
+              type: 'relationship',
+              relationTo: 'product-variants',
+              admin: {
+                width: '30%',
+                description: 'Product variant (if applicable)',
+              },
+            },
+            {
               name: 'quantity',
               type: 'number',
               required: true,
               min: 1,
               admin: {
-                width: '20%',
+                width: '10%',
               },
             },
             {
@@ -262,7 +271,7 @@ export const Orders: CollectionConfig = {
               type: 'number',
               required: true,
               admin: {
-                width: '20%',
+                width: '10%',
               },
             },
             {
@@ -270,10 +279,18 @@ export const Orders: CollectionConfig = {
               type: 'number',
               required: true,
               admin: {
-                width: '20%',
+                width: '10%',
               },
             },
           ],
+        },
+        {
+          name: 'variantDetails',
+          type: 'json',
+          admin: {
+            readOnly: true,
+            description: 'Snapshot of variant details at time of order (for historical record)',
+          },
         },
         {
           name: 'productSeller',

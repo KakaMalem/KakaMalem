@@ -1,4 +1,4 @@
-import type { Product } from '@/payload-types'
+import type { Product, ProductVariant } from '@/payload-types'
 
 export interface CartItem {
   productId: string
@@ -6,6 +6,7 @@ export interface CartItem {
   variantId?: string
   addedAt?: string
   product?: Product
+  variant?: ProductVariant | null
   isInStock?: boolean
   availableQuantity?: number | null
 }

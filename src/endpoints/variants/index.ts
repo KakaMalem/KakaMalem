@@ -1,0 +1,1 @@
+export { getProductVariants } from './getProductVariants'

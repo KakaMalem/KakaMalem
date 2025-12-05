@@ -69,6 +69,102 @@ export const addToCart: Endpoint = {
         )
       }
 
+      // If variantId provided, verify it exists and belongs to this product
+      let variant = null
+      let finalVariantId = variantId
+
+      if (variantId) {
+        try {
+          variant = await req.payload.findByID({
+            collection: 'product-variants',
+            id: variantId,
+          })
+
+          // Check variant belongs to this product
+          const variantProductId =
+            typeof variant.product === 'string' ? variant.product : variant.product.id
+          if (variantProductId !== productId) {
+            return Response.json(
+              {
+                success: false,
+                error: 'Variant does not belong to this product',
+              },
+              { status: 400 },
+            )
+          }
+        } catch (_error) {
+          return Response.json(
+            {
+              success: false,
+              error: 'Variant not found',
+            },
+            { status: 404 },
+          )
+        }
+      }
+
+      // For products with variants, automatically select default variant if none provided
+      if (product.hasVariants && !finalVariantId) {
+        try {
+          const defaultVariants = await req.payload.find({
+            collection: 'product-variants',
+            where: {
+              and: [
+                {
+                  product: {
+                    equals: productId,
+                  },
+                },
+                {
+                  isDefault: {
+                    equals: true,
+                  },
+                },
+              ],
+            },
+            limit: 1,
+          })
+
+          if (defaultVariants.docs && defaultVariants.docs.length > 0) {
+            variant = defaultVariants.docs[0]
+            finalVariantId = variant.id
+          } else {
+            // If no default variant found, try to get the first variant
+            const firstVariant = await req.payload.find({
+              collection: 'product-variants',
+              where: {
+                product: {
+                  equals: productId,
+                },
+              },
+              limit: 1,
+              sort: 'createdAt',
+            })
+
+            if (firstVariant.docs && firstVariant.docs.length > 0) {
+              variant = firstVariant.docs[0]
+              finalVariantId = variant.id
+            } else {
+              return Response.json(
+                {
+                  success: false,
+                  error: 'No variants available for this product',
+                },
+                { status: 400 },
+              )
+            }
+          }
+        } catch (_error) {
+          return Response.json(
+            {
+              success: false,
+              error: 'Failed to find product variant',
+            },
+            { status: 500 },
+          )
+        }
+      }
+
       // Get current cart (from user or session)
       const user = req.user
       let currentCart: CartData = { items: [] }
@@ -85,11 +181,11 @@ export const addToCart: Endpoint = {
       const items: CartItem[] = currentCart.items || []
 
       // Check if item already exists in cart
-      // const itemKey = variantId ? `${productId}-${variantId}` : productId
+      // const itemKey = finalVariantId ? `${productId}-${finalVariantId}` : productId
       const existingItemIndex = items.findIndex(
         (item: CartItem) =>
           item.productId === productId &&
-          (variantId ? item.variantId === variantId : !item.variantId),
+          (finalVariantId ? item.variantId === finalVariantId : !item.variantId),
       )
 
       let updatedItems: CartItem[]
@@ -100,15 +196,16 @@ export const addToCart: Endpoint = {
         const currentInCart = items[existingItemIndex].quantity
         newQuantity = currentInCart + quantity
 
-        // Stock validation (only if tracking inventory and not allowing back orders)
-        if (product.trackQuantity === true && !product.allowBackorders) {
-          if (newQuantity > (product.quantity || 0)) {
-            const availableToAdd = Math.max(0, (product.quantity || 0) - currentInCart)
+        // Stock validation - use variant stock if variant selected, otherwise product stock
+        const stockSource = variant || product
+        if (stockSource.trackQuantity === true && !stockSource.allowBackorders) {
+          if (newQuantity > (stockSource.quantity || 0)) {
+            const availableToAdd = Math.max(0, (stockSource.quantity || 0) - currentInCart)
             return Response.json(
               {
                 success: false,
-                error: `Cannot add ${quantity} more. You already have ${currentInCart} in your cart. Only ${product.quantity} available in stock (you can add ${availableToAdd} more)`,
-                availableQuantity: product.quantity,
+                error: `Cannot add ${quantity} more. You already have ${currentInCart} in your cart. Only ${stockSource.quantity} available in stock (you can add ${availableToAdd} more)`,
+                availableQuantity: stockSource.quantity,
                 currentInCart: currentInCart,
                 availableToAdd: availableToAdd,
               },
@@ -124,13 +221,18 @@ export const addToCart: Endpoint = {
         )
       } else {
         // Add new item
-        // Stock validation (only if tracking inventory and not allowing back orders)
-        if (product.trackQuantity === true && !product.allowBackorders && quantity > (product.quantity || 0)) {
+        // Stock validation - use variant stock if variant selected, otherwise product stock
+        const stockSource = variant || product
+        if (
+          stockSource.trackQuantity === true &&
+          !stockSource.allowBackorders &&
+          quantity > (stockSource.quantity || 0)
+        ) {
           return Response.json(
             {
               success: false,
-              error: `Only ${product.quantity} items available in stock`,
-              availableQuantity: product.quantity,
+              error: `Only ${stockSource.quantity} items available in stock`,
+              availableQuantity: stockSource.quantity,
             },
             { status: 400 },
           )
@@ -139,7 +241,7 @@ export const addToCart: Endpoint = {
         const newItem: CartItem = {
           productId,
           quantity,
-          ...(variantId && { variantId }),
+          ...(finalVariantId && { variantId: finalVariantId }),
           addedAt: new Date().toISOString(),
         }
 

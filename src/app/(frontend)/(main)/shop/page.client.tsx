@@ -136,11 +136,11 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Search Query Display */}
       {query && (
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-base-content">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-base-content">
             Search results for &quot;{query}&quot;
           </h1>
           <p className="text-sm text-base-content/60 mt-1">
@@ -150,7 +150,7 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
       )}
 
       {/* Products Grid */}
-      <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 md:gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {products.map((product) => (
           <div key={product.id} className="w-full h-full">
             <ProductCard product={product} />
@@ -158,17 +158,22 @@ export default function ShopClient({ initialData, initialPage = 1, searchQuery =
         ))}
       </div>
 
-      {/* Infinite Scroll Sentinel */}
+      {/* Infinite Scroll Sentinel - Only show when there's more to load */}
       {hasMore && (
-        <div ref={ref} className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
+        <div ref={ref} className="flex justify-center py-6 sm:py-8 min-h-[80px]">
+          {loading && (
+            <div className="flex flex-col items-center gap-2">
+              <span className="loading loading-spinner loading-md sm:loading-lg text-primary"></span>
+              <span className="text-xs sm:text-sm text-base-content/60">Loading more...</span>
+            </div>
+          )}
         </div>
       )}
 
       {/* End of Results Message */}
       {!hasMore && products.length > 0 && (
-        <div className="text-center py-8">
-          <p className="text-sm text-base-content/60">
+        <div className="text-center py-6 sm:py-8">
+          <p className="text-xs sm:text-sm text-base-content/60">
             You&apos;ve reached the end. Showing all {totalProducts} products.
           </p>
         </div>

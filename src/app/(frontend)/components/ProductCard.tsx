@@ -38,10 +38,28 @@ interface ImageWithAlt {
 
 interface ProductWithImageField extends Product {
   image?: Array<MediaObject & { alt?: string }>
+  defaultVariantImages?: Array<string | MediaObject>
+  defaultVariantPrice?: number
+  defaultVariantCompareAtPrice?: number
 }
 
 const getProductImage = (product: Product): { url: string; alt: string } => {
   const productWithImage = product as ProductWithImageField
+
+  // If product has variants and default variant has images, use those ONLY
+  if (
+    productWithImage.hasVariants &&
+    productWithImage.defaultVariantImages &&
+    Array.isArray(productWithImage.defaultVariantImages) &&
+    productWithImage.defaultVariantImages.length > 0
+  ) {
+    const firstVariantImage = productWithImage.defaultVariantImages[0]
+    return {
+      url: getMediaUrl(firstVariantImage as string | MediaObject),
+      alt: product.name || 'Product image',
+    }
+  }
+
   const imageField = productWithImage.image
 
   if (Array.isArray(imageField) && imageField.length > 0) {
@@ -73,9 +91,42 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size: _size =
   const [justAdded, setJustAdded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const price: number = typeof product.price === 'number' ? product.price : 0
-  const salePrice: number | undefined =
-    typeof product.salePrice === 'number' ? product.salePrice : undefined
+  const productWithVariant = product as ProductWithImageField
+
+  // Use default variant price if product has variants, otherwise use product price
+  const basePrice: number =
+    product.hasVariants && productWithVariant.defaultVariantPrice !== undefined
+      ? productWithVariant.defaultVariantPrice
+      : typeof product.price === 'number'
+        ? product.price
+        : 0
+
+  const comparePrice: number | undefined =
+    product.hasVariants && productWithVariant.defaultVariantCompareAtPrice !== undefined
+      ? productWithVariant.defaultVariantCompareAtPrice
+      : typeof product.salePrice === 'number'
+        ? product.salePrice
+        : undefined
+
+  // For variant products: if compareAtPrice exists, that's the original price, and basePrice is the sale price
+  // For regular products: salePrice is the discounted price
+  let price: number
+  let salePrice: number | undefined
+
+  if (product.hasVariants && comparePrice !== undefined) {
+    // Variant product with compareAtPrice
+    price = comparePrice // Original price
+    salePrice = basePrice // Sale price
+  } else if (!product.hasVariants && comparePrice !== undefined) {
+    // Regular product with salePrice
+    price = typeof product.price === 'number' ? product.price : 0
+    salePrice = comparePrice
+  } else {
+    // No discount
+    price = basePrice
+    salePrice = undefined
+  }
+
   const hasDiscount = typeof salePrice === 'number' && salePrice < price && price > 0
   const discount = hasDiscount ? Math.round(((price - (salePrice as number)) / price) * 100) : 0
 
@@ -182,7 +233,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, size: _size =
 
         <div className="card-body p-3 md:p-4 flex flex-col">
           <h3 className="card-title text-sm md:text-base group-hover:text-primary transition-colors line-clamp-2 min-h-[2.5rem] md:min-h-[3rem]">
-            {product.name}
+            {product.name.length > 20 ? `${product.name.slice(0, 20)}...` : product.name}
           </h3>
 
           <div className="flex items-center justify-between gap-1 md:gap-2 mt-1">

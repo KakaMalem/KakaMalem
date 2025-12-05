@@ -122,16 +122,45 @@ export const createOrder: Endpoint = {
           return Response.json({ error: `Product ${cartItem.product} not found` }, { status: 400 })
         }
 
-        // Check stock availability (only if tracking inventory)
-        if (
-          product.trackQuantity === true &&
-          !product.allowBackorders &&
-          (product.quantity || 0) < cartItem.quantity
-        ) {
-          return Response.json({ error: `Insufficient stock for ${product.name}` }, { status: 400 })
+        // Fetch variant if specified
+        let variant = null
+        let variantDetails = null
+        if (cartItem.variantId) {
+          try {
+            variant = await payload.findByID({
+              collection: 'product-variants',
+              id: cartItem.variantId,
+            })
+            // Store variant details snapshot for historical record
+            variantDetails = {
+              sku: variant.sku,
+              options: variant.options,
+              price: variant.price,
+            }
+          } catch (_error) {
+            return Response.json(
+              { error: `Variant ${cartItem.variantId} not found` },
+              { status: 400 },
+            )
+          }
         }
 
-        const price = product.salePrice || product.price
+        // Check stock availability - use variant stock if available, otherwise product stock
+        const stockSource = variant || product
+        if (
+          stockSource.trackQuantity === true &&
+          !stockSource.allowBackorders &&
+          (stockSource.quantity || 0) < cartItem.quantity
+        ) {
+          const itemName = variant ? `${product.name} (${variant.sku})` : product.name
+          return Response.json({ error: `Insufficient stock for ${itemName}` }, { status: 400 })
+        }
+
+        // Use variant price if available, otherwise product price
+        let price = product.salePrice || product.price
+        if (variant && variant.price) {
+          price = variant.price
+        }
         const itemTotal = price * cartItem.quantity
 
         subtotal += itemTotal
@@ -141,9 +170,11 @@ export const createOrder: Endpoint = {
           quantity: cartItem.quantity,
           price,
           total: itemTotal,
+          ...(cartItem.variantId && { variant: cartItem.variantId }),
+          ...(variantDetails && { variantDetails }),
         })
 
-        // Update product inventory and analytics
+        // Update product inventory and analytics (always)
         const analytics = product.analytics || {}
         const viewCount = analytics.viewCount || 0
         const addToCartCount = analytics.addToCartCount || 0
@@ -153,15 +184,17 @@ export const createOrder: Endpoint = {
         const conversionRate = viewCount > 0 ? (newTotalSold / viewCount) * 100 : 0
         const cartConversionRate = addToCartCount > 0 ? (newTotalSold / addToCartCount) * 100 : 0
 
-        // Build update data - only include quantity if tracking inventory
-        const updateData: {
+        // Build update data for product - only include quantity if tracking inventory
+        const productUpdateData: {
           quantity?: number
+          totalSold: number
           analytics: {
             conversionRate: number
             cartConversionRate: number
             [key: string]: unknown
           }
         } = {
+          totalSold: newTotalSold,
           analytics: {
             ...analytics,
             conversionRate: parseFloat(conversionRate.toFixed(2)),
@@ -169,15 +202,35 @@ export const createOrder: Endpoint = {
           },
         }
 
-        if (product.trackQuantity === true) {
-          updateData.quantity = Math.max(0, (product.quantity || 0) - cartItem.quantity)
+        if (product.trackQuantity === true && !variant) {
+          productUpdateData.quantity = Math.max(0, (product.quantity || 0) - cartItem.quantity)
         }
 
         await payload.update({
           collection: 'products',
           id: product.id,
-          data: updateData,
+          data: productUpdateData,
         })
+
+        // Update variant inventory if variant was used
+        if (variant) {
+          const variantUpdateData: {
+            quantity?: number
+            totalSold: number
+          } = {
+            totalSold: (variant.totalSold || 0) + cartItem.quantity,
+          }
+
+          if (variant.trackQuantity === true) {
+            variantUpdateData.quantity = Math.max(0, (variant.quantity || 0) - cartItem.quantity)
+          }
+
+          await payload.update({
+            collection: 'product-variants',
+            id: variant.id,
+            data: variantUpdateData,
+          })
+        }
       }
 
       // Calculate shipping

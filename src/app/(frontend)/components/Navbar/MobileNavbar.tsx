@@ -34,7 +34,7 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
     : false
 
   // Estimate mobile top bar height (Logo row + Search row)
-  const MOBILE_TOP_BAR_HEIGHT = '130px'
+  const MOBILE_TOP_BAR_HEIGHT = '110px'
 
   return (
     <div className="lg:hidden relative">

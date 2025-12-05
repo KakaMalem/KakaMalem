@@ -32,23 +32,45 @@ export const getCart: Endpoint = {
               return null // Product no longer available
             }
 
-            // Check stock availability
+            // Fetch variant if specified
+            let variant = null
+            if (item.variantId) {
+              try {
+                variant = await req.payload.findByID({
+                  collection: 'product-variants',
+                  id: item.variantId,
+                  depth: 1,
+                })
+              } catch (error) {
+                console.error(`Variant ${item.variantId} not found:`, error)
+                // Variant no longer available - item becomes invalid
+                return null
+              }
+            }
+
+            // Check stock availability - use variant stock if available, otherwise product stock
+            const stockSource = variant || product
             let isInStock = true
             let availableQuantity = null
 
-            if (product.trackQuantity && product.quantity !== null && product.quantity !== undefined) {
-              isInStock = item.quantity <= product.quantity
-              availableQuantity = product.quantity
+            if (
+              stockSource.trackQuantity &&
+              stockSource.quantity !== null &&
+              stockSource.quantity !== undefined
+            ) {
+              isInStock = item.quantity <= stockSource.quantity
+              availableQuantity = stockSource.quantity
 
               // Adjust quantity if it exceeds available stock (only if backorders not allowed)
-              if (!product.allowBackorders && item.quantity > product.quantity) {
-                item.quantity = product.quantity
+              if (!stockSource.allowBackorders && item.quantity > stockSource.quantity) {
+                item.quantity = stockSource.quantity
               }
             }
 
             return {
               ...item,
               product,
+              variant,
               isInStock,
               availableQuantity,
             }
@@ -64,7 +86,11 @@ export const getCart: Endpoint = {
 
       // Calculate totals
       const subtotal = validItems.reduce((sum: number, item: PopulatedCartItem) => {
-        const price = item.product.salePrice || item.product.price || 0
+        // Use variant price if available, otherwise product price
+        let price = item.product.salePrice || item.product.price || 0
+        if (item.variant && item.variant.price) {
+          price = item.variant.price
+        }
         return sum + price * item.quantity
       }, 0)
 

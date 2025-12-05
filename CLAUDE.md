@@ -68,7 +68,12 @@ The app follows **Next.js 15 App Router** with route groups:
   - Auto-assign seller field when created by seller role
   - Comprehensive analytics tracking: viewCount, uniqueViewCount, addToCartCount, wishlistCount, conversion rates
   - Analytics are system-managed (read-only) and automatically updated via endpoints
+  - **Variant auto-generation**: When `hasVariants` is enabled and `variantOptions` are defined, all variant combinations are automatically created in the ProductVariants collection via `afterChange` hook
 - `Categories` - Product organization with slugs used in routing
+- `ProductVariants` - Product variant combinations (sizes, colors, etc.)
+  - **Auto-generated** from product's `variantOptions` - no manual creation needed!
+  - Each variant has independent pricing, stock, and images
+  - First variant auto-marked as default
 - `Orders` - Transaction records with automated `totalSold` updates
   - Complex access control: admins see all, sellers see only their product orders, customers see only their own
 - `Reviews` - Product reviews with verification of purchases
@@ -109,7 +114,7 @@ Custom endpoints defined in `src/endpoints/`:
 - `POST /api/products/track-view` - Track product view (increments viewCount and uniqueViewCount)
 - `GET /api/products/recently-viewed` - Get recently viewed products
 - `POST /api/products/merge-recently-viewed` - Merge guest recently viewed on login
-- `GET /api/products/:id/analytics` - Get product analytics (admin/seller only)
+- `GET /api/products/:id/analytics` - Get product analytics (superadmin/developer only)
 
 **Cart:**
 
@@ -205,6 +210,9 @@ Custom endpoints defined in `src/endpoints/`:
 - `src/globals/` - Global content types
 - `src/access/` - Role-based access control functions
 - `src/utilities/` - Shared utilities (includes `getMeUser` function)
+- `src/fields/` - Custom field components for admin UI
+  - `src/fields/slug/` - Slug field utilities
+  - `src/fields/variantManager/` - Product variant manager UI component (see VARIANT_MANAGER.md)
 - `src/payload.config.ts` - Payload CMS configuration
 - `src/payload-types.ts` - Auto-generated types (do not edit manually)
 
@@ -285,8 +293,9 @@ The application uses a comprehensive role-based access control system defined in
   - `wishlistCount` - Incremented when product is added to wishlist
   - `conversionRate` - (totalSold / viewCount) × 100, recalculated on purchases
   - `cartConversionRate` - (totalSold / addToCartCount) × 100, recalculated on purchases
-- Analytics fields are read-only in admin panel - never manually edit them
-- Access to analytics endpoint restricted to admins, developers, and product's seller
+- Analytics fields are **only visible to superadmins and developers**
+- Analytics fields are read-only - never manually edit them
+- Access to analytics endpoint restricted to superadmins and developers only
 - Tracks up to 1000 unique viewers per product for unique view counting
 
 ### Common Gotchas

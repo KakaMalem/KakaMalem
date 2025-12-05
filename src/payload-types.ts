@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     categories: Category;
     products: Product;
+    'product-variants': ProductVariant;
     orders: Order;
     reviews: Review;
     'payload-jobs': PayloadJob;
@@ -88,6 +89,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
+    'product-variants': ProductVariantsSelect<false> | ProductVariantsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
@@ -338,6 +340,36 @@ export interface Product {
    * Brief summary for listings
    */
   shortDescription?: string | null;
+  /**
+   * Enable if product has variants (size, color, etc.)
+   */
+  hasVariants?: boolean | null;
+  /**
+   * ✨ Define options here (e.g., Size: S/M/L, Color: Red/Blue). Variants will be AUTO-GENERATED when you save!
+   */
+  variantOptions?:
+    | {
+        /**
+         * Option name (e.g., "Size", "Color")
+         */
+        name: string;
+        /**
+         * Available values for this option
+         */
+        values: {
+          /**
+           * Option value (e.g., "Small", "Red")
+           */
+          value: string;
+          /**
+           * Optional: Image for this option (e.g., color swatch, product thumbnail)
+           */
+          image?: (string | null) | Media;
+          id?: string | null;
+        }[];
+        id?: string | null;
+      }[]
+    | null;
   price: number;
   salePrice?: number | null;
   currency: 'AFN' | 'USD';
@@ -354,7 +386,10 @@ export interface Product {
    * Alert threshold for low stock
    */
   lowStockThreshold?: number | null;
-  images: (string | Media)[];
+  /**
+   * Product images. Optional if product has variants with their own images.
+   */
+  images?: (string | Media)[] | null;
   categories?: (string | Category)[] | null;
   publishedAt?: string | null;
   /**
@@ -442,9 +477,25 @@ export interface Order {
   guestEmail?: string | null;
   items: {
     product: string | Product;
+    /**
+     * Product variant (if applicable)
+     */
+    variant?: (string | null) | ProductVariant;
     quantity: number;
     price: number;
     total: number;
+    /**
+     * Snapshot of variant details at time of order (for historical record)
+     */
+    variantDetails?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
     /**
      * Seller who owns this product (auto-populated)
      */
@@ -476,6 +527,80 @@ export interface Order {
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: ('cod' | 'bank_transfer' | 'credit_card') | null;
   currency: 'AFN' | 'USD';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage product variants (sizes, colors, etc.)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "product-variants".
+ */
+export interface ProductVariant {
+  id: string;
+  title?: string | null;
+  /**
+   * Parent product this variant belongs to
+   */
+  product: string | Product;
+  /**
+   * Unique SKU for this variant (e.g., "TSHIRT-M-RED")
+   */
+  sku: string;
+  /**
+   * Variant options (e.g., Size: M, Color: Red)
+   */
+  options: {
+    /**
+     * Option name (e.g., "Size", "Color")
+     */
+    name: string;
+    /**
+     * Option value (e.g., "Medium", "Red")
+     */
+    value: string;
+    id?: string | null;
+  }[];
+  /**
+   * Mark as default variant to display when product is first loaded
+   */
+  isDefault?: boolean | null;
+  /**
+   * Override product price (leave empty to use product price)
+   */
+  price?: number | null;
+  /**
+   * Original price for sale pricing
+   */
+  compareAtPrice?: number | null;
+  /**
+   * Enable inventory tracking for this variant
+   */
+  trackQuantity?: boolean | null;
+  /**
+   * Current stock quantity
+   */
+  quantity?: number | null;
+  /**
+   * Alert threshold for low stock
+   */
+  lowStockThreshold?: number | null;
+  /**
+   * Stock status - Auto-managed when inventory tracking is enabled. Manual control when disabled.
+   */
+  stockStatus: 'in_stock' | 'out_of_stock' | 'low_stock' | 'on_backorder' | 'discontinued';
+  /**
+   * Allow purchases when out of stock
+   */
+  allowBackorders?: boolean | null;
+  /**
+   * 🎨 Upload variant-specific images here (e.g., different colors). Images auto-switch when customers select this variant!
+   */
+  images?: (string | Media)[] | null;
+  /**
+   * Total number of units sold
+   */
+  totalSold?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -656,6 +781,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'products';
         value: string | Product;
+      } | null)
+    | ({
+        relationTo: 'product-variants';
+        value: string | ProductVariant;
       } | null)
     | ({
         relationTo: 'orders';
@@ -843,6 +972,20 @@ export interface ProductsSelect<T extends boolean = true> {
       };
   description?: T;
   shortDescription?: T;
+  hasVariants?: T;
+  variantOptions?:
+    | T
+    | {
+        name?: T;
+        values?:
+          | T
+          | {
+              value?: T;
+              image?: T;
+              id?: T;
+            };
+        id?: T;
+      };
   price?: T;
   salePrice?: T;
   currency?: T;
@@ -866,6 +1009,34 @@ export interface ProductsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "product-variants_select".
+ */
+export interface ProductVariantsSelect<T extends boolean = true> {
+  title?: T;
+  product?: T;
+  sku?: T;
+  options?:
+    | T
+    | {
+        name?: T;
+        value?: T;
+        id?: T;
+      };
+  isDefault?: T;
+  price?: T;
+  compareAtPrice?: T;
+  trackQuantity?: T;
+  quantity?: T;
+  lowStockThreshold?: T;
+  stockStatus?: T;
+  allowBackorders?: T;
+  images?: T;
+  totalSold?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "orders_select".
  */
 export interface OrdersSelect<T extends boolean = true> {
@@ -876,9 +1047,11 @@ export interface OrdersSelect<T extends boolean = true> {
     | T
     | {
         product?: T;
+        variant?: T;
         quantity?: T;
         price?: T;
         total?: T;
+        variantDetails?: T;
         productSeller?: T;
         id?: T;
       };

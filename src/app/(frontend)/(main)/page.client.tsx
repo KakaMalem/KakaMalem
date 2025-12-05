@@ -117,15 +117,39 @@ export default function HomeClient({ data }: HomeClientProps) {
 
   // Get hero background image URL
   let bgImageUrl = ''
-  if (currentHero?.images) {
-    const firstImage = Array.isArray(currentHero.images)
-      ? currentHero.images[0]
-      : currentHero.images
+  if (currentHero) {
+    // Check for variant images first (if product has variants)
+    const heroWithVariant = currentHero as Product & {
+      defaultVariantImages?: Array<string | { url?: string }>
+    }
 
-    if (typeof firstImage === 'string') {
-      bgImageUrl = firstImage
-    } else if (typeof firstImage === 'object' && firstImage && 'url' in firstImage) {
-      bgImageUrl = (firstImage as { url?: string }).url || ''
+    if (
+      currentHero.hasVariants &&
+      heroWithVariant.defaultVariantImages &&
+      Array.isArray(heroWithVariant.defaultVariantImages) &&
+      heroWithVariant.defaultVariantImages.length > 0
+    ) {
+      const firstVariantImage = heroWithVariant.defaultVariantImages[0]
+      if (typeof firstVariantImage === 'string') {
+        bgImageUrl = firstVariantImage
+      } else if (
+        typeof firstVariantImage === 'object' &&
+        firstVariantImage &&
+        'url' in firstVariantImage
+      ) {
+        bgImageUrl = firstVariantImage.url || ''
+      }
+    } else if (currentHero.images) {
+      // Fall back to product images
+      const firstImage = Array.isArray(currentHero.images)
+        ? currentHero.images[0]
+        : currentHero.images
+
+      if (typeof firstImage === 'string') {
+        bgImageUrl = firstImage
+      } else if (typeof firstImage === 'object' && firstImage && 'url' in firstImage) {
+        bgImageUrl = (firstImage as { url?: string }).url || ''
+      }
     }
   }
 
@@ -152,26 +176,84 @@ export default function HomeClient({ data }: HomeClientProps) {
               Featured Deal
             </div>
             <h1 className="mb-5 text-5xl md:text-6xl font-bold drop-shadow-lg">
-              {currentHero?.name || 'Welcome to Our Store'}
+              {currentHero?.name
+                ? currentHero.name.length > 20
+                  ? `${currentHero.name.slice(0, 20)}...`
+                  : currentHero.name
+                : 'Welcome to Our Store'}
             </h1>
             <p className="mb-5 text-lg md:text-xl">
               {currentHero?.shortDescription || 'Discover amazing products at great prices'}
             </p>
             <div className="flex items-center justify-center gap-4 mb-8">
-              {currentHero?.salePrice ? (
-                <>
-                  <span className="text-4xl md:text-5xl font-bold text-primary">
-                    {formatPrice(currentHero.salePrice, currentHero.currency || 'AFN')}
-                  </span>
-                  <span className="text-2xl md:text-3xl line-through opacity-60">
-                    {formatPrice(currentHero.price, currentHero.currency || 'AFN')}
-                  </span>
-                </>
-              ) : currentHero?.price ? (
-                <span className="text-4xl md:text-5xl font-bold text-primary">
-                  {formatPrice(currentHero.price, currentHero.currency || 'AFN')}
-                </span>
-              ) : null}
+              {currentHero &&
+                (() => {
+                  const heroWithVariant = currentHero as Product & {
+                    defaultVariantPrice?: number
+                    defaultVariantCompareAtPrice?: number
+                  }
+
+                  // Use default variant price if product has variants, otherwise use product price
+                  const basePrice: number | undefined =
+                    currentHero.hasVariants && heroWithVariant.defaultVariantPrice !== undefined
+                      ? heroWithVariant.defaultVariantPrice
+                      : typeof currentHero.price === 'number'
+                        ? currentHero.price
+                        : undefined
+
+                  const comparePrice: number | undefined =
+                    currentHero.hasVariants &&
+                    heroWithVariant.defaultVariantCompareAtPrice !== undefined
+                      ? heroWithVariant.defaultVariantCompareAtPrice
+                      : typeof currentHero.salePrice === 'number'
+                        ? currentHero.salePrice
+                        : undefined
+
+                  // Determine final display prices
+                  let displayPrice: number | undefined
+                  let displaySalePrice: number | undefined
+
+                  if (
+                    currentHero.hasVariants &&
+                    comparePrice !== undefined &&
+                    basePrice !== undefined
+                  ) {
+                    // Variant product with compareAtPrice
+                    displayPrice = comparePrice // Original price
+                    displaySalePrice = basePrice // Sale price
+                  } else if (
+                    !currentHero.hasVariants &&
+                    comparePrice !== undefined &&
+                    basePrice !== undefined
+                  ) {
+                    // Regular product with salePrice
+                    displayPrice = basePrice
+                    displaySalePrice = comparePrice
+                  } else {
+                    // No discount
+                    displayPrice = basePrice
+                  }
+
+                  if (displaySalePrice && displaySalePrice < (displayPrice || 0)) {
+                    return (
+                      <>
+                        <span className="text-4xl md:text-5xl font-bold text-primary">
+                          {formatPrice(displaySalePrice, currentHero.currency || 'AFN')}
+                        </span>
+                        <span className="text-2xl md:text-3xl line-through opacity-60">
+                          {formatPrice(displayPrice || 0, currentHero.currency || 'AFN')}
+                        </span>
+                      </>
+                    )
+                  } else if (displayPrice) {
+                    return (
+                      <span className="text-4xl md:text-5xl font-bold text-primary">
+                        {formatPrice(displayPrice, currentHero.currency || 'AFN')}
+                      </span>
+                    )
+                  }
+                  return null
+                })()}
             </div>
             {currentHero && (
               <div className="flex gap-4 justify-center flex-wrap">
