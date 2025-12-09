@@ -28,13 +28,13 @@ export default async function OrderConfirmationPage({ params }: OrderConfirmatio
     })
 
     if (!response.ok) {
-      redirect('/shop')
+      redirect('/')
     }
 
     const order = await response.json()
 
     return <OrderConfirmationClient order={order} />
   } catch (_error) {
-    redirect('/shop')
+    redirect('/')
   }
 }

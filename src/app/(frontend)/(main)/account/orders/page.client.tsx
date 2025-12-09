@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { Package, Calendar, CreditCard, Truck, CheckCircle, XCircle, Clock } from 'lucide-react'
 import type { Order, Product } from '@/payload-types'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 
 interface OrderItem {
   product: string | Product
@@ -46,6 +47,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
   if (orders.length === 0) {
     return (
       <div className="space-y-6">
+        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Orders', active: true }]} />
         <h2 className="text-3xl font-bold">Order History</h2>
         <div className="card bg-base-200">
           <div className="card-body text-center py-12">
@@ -54,7 +56,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
             <p className="text-base-content/70 mb-6">
               You haven&apos;t placed any orders yet. Start shopping to see your order history here.
             </p>
-            <Link href="/shop" className="btn btn-primary">
+            <Link href="/" className="btn btn-primary">
               Start Shopping
             </Link>
           </div>
@@ -65,6 +67,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Orders', active: true }]} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold">Order History</h2>

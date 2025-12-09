@@ -1,9 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import Headroom from 'react-headroom'
 import { getAccountMenuItems } from './constants'
 import Logo from '../Logo'
 import SearchBar from './SearchBar'
@@ -19,6 +19,10 @@ interface MobileNavbarProps {
 export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
   const pathname = usePathname()
 
+  // State for scroll logic
+  const [isCategoryBarVisible, setIsCategoryBarVisible] = useState(true)
+  const lastScrollY = useRef(0)
+
   const friendlyName = user?.firstName || user?.email
   const userRoles = user?.roles as string[] | undefined
   const accountMenuItems = getAccountMenuItems(
@@ -28,149 +32,242 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
     userRoles,
   )
 
-  // CHANGE: Removed "pathname !== '/'"
-  const shouldShowCategories = pathname
-    ? !pathname.startsWith('/shop/') && !pathname.startsWith('/account')
+  // Logic to show/hide categories based on route
+  const shouldRenderCategories = pathname
+    ? !pathname.startsWith('/product/') && !pathname.startsWith('/account')
     : false
 
-  // Estimate mobile top bar height (Logo row + Search row)
-  const MOBILE_TOP_BAR_HEIGHT = '110px'
+  // --- DIMENSIONS ---
+  // Fixed Top Bar: Row 1 (Logo/Menu ~50px) + Row 2 (Search ~50px) + Padding ~20px = 120px
+  const MOBILE_TOP_BAR_HEIGHT_PX = 120
+
+  // Category Bar: Icon + Text + Padding = ~110px
+  const MOBILE_CATEGORY_BAR_HEIGHT_PX = 110
+
+  // --- SCROLL HANDLER ---
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
+      // Threshold: prevent jitter on tiny movements
+      if (Math.abs(currentScrollY - lastScrollY.current) < 10) return
+
+      // Scroll Down -> Hide Categories
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+        setIsCategoryBarVisible(false)
+      }
+      // Scroll Up -> Show Categories
+      else {
+        setIsCategoryBarVisible(true)
+      }
+
+      lastScrollY.current = currentScrollY
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   return (
-    <div className="lg:hidden relative">
-      <style jsx global>{`
-        .mobile-headroom-wrapper .headroom {
-          z-index: 50 !important;
-        }
-        .mobile-headroom-wrapper .headroom--pinned,
-        .mobile-headroom-wrapper .headroom--unfixed {
-          transform: translateY(${MOBILE_TOP_BAR_HEIGHT}) !important;
-          transition: transform 0.3s ease-in-out;
-        }
-
-        .mobile-headroom-wrapper .headroom--unpinned {
-          transform: translateY(0) !important;
-          transition: transform 0.3s ease-in-out;
-        }
-      `}</style>
-
-      {/* 1. SPACER DIV */}
-      <div style={{ height: MOBILE_TOP_BAR_HEIGHT }} />
-
-      {/* 2. FIXED TOP BAR */}
+    <div className="lg:hidden">
+      {/* 1. SPACER 
+         Prevents content from being hidden behind the fixed header.
+      */}
       <div
-        className="fixed top-0 left-0 right-0 z-[60] bg-base-100 border-b border-base-200"
-        style={{ height: MOBILE_TOP_BAR_HEIGHT }}
-      >
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            {/* Mobile Menu Button */}
-            <div className="dropdown">
-              <div
-                tabIndex={0}
-                role="button"
-                className="btn btn-ghost btn-circle btn-sm hover:bg-base-200"
-                title="Menu"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 12h16M4 18h7"
-                  />
-                </svg>
+        style={{
+          height: shouldRenderCategories
+            ? `${MOBILE_TOP_BAR_HEIGHT_PX + MOBILE_CATEGORY_BAR_HEIGHT_PX}px`
+            : `${MOBILE_TOP_BAR_HEIGHT_PX}px`,
+        }}
+      />
+
+      {/* 2. HEADER CONTAINER */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        {/* --- FIXED TOP BAR (Menu, Logo, Search) --- */}
+        {/* z-50 ensures it stays on top of the sliding category bar */}
+        <div
+          className="relative z-50 bg-base-100 border-b border-base-200 shadow-sm"
+          style={{ height: `${MOBILE_TOP_BAR_HEIGHT_PX}px` }}
+        >
+          <div className="flex flex-col justify-center h-full px-4 pb-2">
+            {/* Row 1: Menu - Logo - Cart */}
+            <div className="flex items-center justify-between gap-3 h-[60px]">
+              {/* Mobile Menu Button */}
+              <div className="dropdown">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-ghost btn-circle btn-sm hover:bg-base-200"
+                  title="Menu"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 6h16M4 12h16M4 18h7"
+                    />
+                  </svg>
+                </div>
+                <ul
+                  tabIndex={0}
+                  className="dropdown-content z-[70] menu p-2 shadow-xl bg-base-100 rounded-xl w-64 mt-2 border border-base-200"
+                >
+                  {accountMenuItems.map((item, index) =>
+                    item.isDivider ? (
+                      <div key={index} className="divider my-1"></div>
+                    ) : item.href ? (
+                      <li key={index}>
+                        <Link
+                          href={item.href}
+                          className={`text-base py-3 px-4 hover:bg-base-200 rounded-lg ${
+                            item.isBold ? 'font-semibold' : ''
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
               </div>
-              <ul
-                tabIndex={0}
-                className="dropdown-content z-[70] menu p-2 shadow-xl bg-base-100 rounded-xl w-56 mt-2 border border-base-200"
-              >
-                {accountMenuItems.map((item, index) =>
-                  item.isDivider ? (
-                    <div key={index} className="divider my-1"></div>
-                  ) : item.href ? (
-                    <li key={index}>
-                      <Link
-                        href={item.href}
-                        className={`text-sm py-2.5 px-3 hover:bg-base-200 rounded-lg ${
-                          item.isBold ? 'font-semibold' : ''
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    </li>
-                  ) : null,
-                )}
-              </ul>
+
+              {/* Logo */}
+              <div className="flex-1 flex justify-center">
+                <Logo variant="mobile" />
+              </div>
+
+              {/* Cart */}
+              <CartButton />
             </div>
 
-            {/* Logo */}
-            <div className="flex-1 flex justify-center">
-              <Logo variant="mobile" />
+            {/* Row 2: Search Bar */}
+            <div className="h-[40px] flex items-center">
+              <SearchBar />
             </div>
-
-            {/* Cart */}
-            <CartButton />
-          </div>
-
-          {/* Search Bar */}
-          <div className="mt-3">
-            <SearchBar />
           </div>
         </div>
-      </div>
 
-      {/* 3. MOBILE CATEGORIES (Headroom) */}
-      {shouldShowCategories && (
-        <Headroom
-          className="mobile-headroom-wrapper"
-          pinStart={0}
-          upTolerance={10}
-          downTolerance={10}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 50,
-          }}
-        >
-          <div className="bg-base-100 shadow-sm border-b border-base-200">
-            <div className="py-2.5">
-              <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar px-4">
+        {/* --- SLIDING CATEGORY BAR --- */}
+        {/* z-40 ensures it slides BEHIND the Top Bar */}
+        {shouldRenderCategories && (
+          <div
+            className={`
+              absolute left-0 right-0 bg-base-100 border-b border-base-200 shadow-sm z-40
+              transition-all duration-300 ease-in-out origin-top
+            `}
+            // ^ CHANGED: 'transition-transform' -> 'transition-all' for smooth opacity fade
+            style={{
+              top: `${MOBILE_TOP_BAR_HEIGHT_PX}px`, // Starts exactly below top bar
+              height: `${MOBILE_CATEGORY_BAR_HEIGHT_PX}px`,
+              // Logic: Slide UP (-100%) to hide behind top bar, slide DOWN (0) to show
+              transform: isCategoryBarVisible ? 'translateY(0)' : 'translateY(-100%)',
+              opacity: isCategoryBarVisible ? 1 : 0,
+              pointerEvents: isCategoryBarVisible ? 'auto' : 'none',
+            }}
+          >
+            <div className="h-full py-2">
+              <div className="flex items-center gap-6 overflow-x-auto hide-scrollbar px-4 h-full">
+                {/* 'All Products' Link */}
                 <Link
-                  href="/shop"
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    pathname === '/shop'
-                      ? 'bg-primary text-primary-content shadow-md scale-105'
-                      : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
-                  }`}
+                  href="/"
+                  className="group flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 flex-shrink-0 min-w-[70px]"
                 >
-                  All Products
+                  <div
+                    className={`w-14 h-14 rounded-full flex items-center justify-center ring-2 transition-all ${
+                      pathname === '/'
+                        ? 'ring-primary ring-offset-2 ring-offset-base-100'
+                        : 'ring-base-300 active:ring-base-content/30'
+                    }`}
+                  >
+                    <svg
+                      className="w-6 h-6 text-base-content"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                      />
+                    </svg>
+                  </div>
+                  <span
+                    className={`text-xs font-semibold whitespace-nowrap leading-tight transition-colors ${
+                      pathname === '/' ? 'text-primary' : 'text-base-content'
+                    }`}
+                  >
+                    All Products
+                  </span>
                 </Link>
+
+                {/* Categories */}
                 {categories
                   .filter((cat) => cat.value !== 'all')
                   .map((category) => {
-                    const isActive = pathname === `/${category.slug}`
+                    const isActive = pathname === `/category/${category.slug}`
                     return (
                       <Link
                         key={category.value}
-                        href={`/${category.slug}`}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                          isActive
-                            ? 'bg-primary text-primary-content shadow-md scale-105'
-                            : 'bg-base-200 text-base-content hover:bg-base-300 hover:scale-105'
-                        }`}
+                        href={`/category/${category.slug}`}
+                        className="group flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 flex-shrink-0 min-w-[70px]"
                       >
-                        {category.label}
+                        {category.image ? (
+                          <div
+                            className={`relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all ${
+                              isActive
+                                ? 'ring-primary ring-offset-2 ring-offset-base-100'
+                                : 'ring-base-300 active:ring-base-content/30'
+                            }`}
+                          >
+                            <Image
+                              src={category.image}
+                              alt={category.label}
+                              width={56}
+                              height={56}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={`w-14 h-14 rounded-full flex items-center justify-center ring-2 transition-all ${
+                              isActive
+                                ? 'ring-primary ring-offset-2 ring-offset-base-100'
+                                : 'ring-base-300 active:ring-base-content/30'
+                            }`}
+                          >
+                            <svg
+                              className="w-6 h-6 text-base-content"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                        <span
+                          className={`text-xs font-semibold whitespace-nowrap leading-tight transition-colors ${
+                            isActive ? 'text-primary' : 'text-base-content'
+                          }`}
+                        >
+                          {category.label}
+                        </span>
                       </Link>
                     )
                   })}
               </div>
             </div>
           </div>
-        </Headroom>
-      )}
+        )}
+      </div>
     </div>
   )
 }

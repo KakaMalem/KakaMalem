@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Product, Media, ProductVariant } from '@/payload-types'
+import { Product, Media, ProductVariant, Category } from '@/payload-types'
 import { Star, Plus, Minus, AlertCircle, Check, X } from 'lucide-react'
 import { useCart } from '@/providers/cart'
 import { useRecentlyViewed } from '@/providers/recentlyViewed'
@@ -11,6 +11,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { formatPrice } from '@/utilities/currency'
 import Image from 'next/image'
+import { Breadcrumb, type BreadcrumbItem } from '@/app/(frontend)/components/Breadcrumb'
+
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
 
 type Props = {
   product: Product
@@ -335,8 +339,33 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
     }
   }
 
+  // Build breadcrumb items
+  const breadcrumbItems: BreadcrumbItem[] = []
+
+  // Add category if available
+  if (product.categories && Array.isArray(product.categories) && product.categories.length > 0) {
+    const category = product.categories[0]
+    if (typeof category === 'object' && 'name' in category && 'slug' in category) {
+      breadcrumbItems.push({
+        label: (category as Category).name,
+        href: `/category/${(category as Category).slug}`,
+      })
+    }
+  }
+
+  // Add product name (current page)
+  breadcrumbItems.push({
+    label: product.name,
+    active: true,
+  })
+
   return (
     <>
+      {/* Breadcrumb */}
+      <div className="mb-4">
+        <Breadcrumb items={breadcrumbItems} />
+      </div>
+
       {/* Product Name - Above everything (mobile only) */}
       <div className="mb-3 lg:hidden">
         <h1 className="text-xl font-normal">{product.name}</h1>
@@ -367,7 +396,7 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
         {/* Left: Images */}
         <div>
           <HybridProductGallery
-            images={images.length > 0 ? images : ['/placeholder.jpg']}
+            images={images.length > 0 ? images : [PLACEHOLDER_IMAGE]}
             productName={product.name}
           />
         </div>
@@ -810,28 +839,6 @@ export default function ProductDetailsClient({ product, descriptionHtml }: Props
                   </div>
                 </>
               )}
-
-              <div className="divider my-1"></div>
-              <div className="flex items-start gap-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-success flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-                <div>
-                  <p className="font-medium text-base-content">Secure Checkout</p>
-                  <p className="text-base-content/70">Safe and encrypted payment</p>
-                </div>
-              </div>
             </div>
           </div>
         </aside>

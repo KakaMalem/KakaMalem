@@ -11,11 +11,11 @@ export default function SearchBar() {
     e.preventDefault()
 
     if (searchQuery.trim()) {
-      // Navigate to shop page with search query
-      router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`)
+      // Navigate to home page with search query
+      router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`)
     } else {
-      // Navigate to shop page without query
-      router.push('/shop')
+      // Navigate to home page without query
+      router.push('/')
     }
   }
 

@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { MapPin, Edit2, Trash2, Plus, Home, Building, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 import type { User } from '@/payload-types'
 
 interface AddressesClientProps {
@@ -88,6 +89,8 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Addresses', active: true }]} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

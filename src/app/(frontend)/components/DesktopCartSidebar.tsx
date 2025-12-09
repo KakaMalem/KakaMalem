@@ -155,7 +155,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
               <p className="text-base-content/60 text-center mb-8">
                 Looks like you haven&apos;t added anything to your cart yet
               </p>
-              <Link href="/shop" className="btn btn-primary" onClick={onClose}>
+              <Link href="/" className="btn btn-primary" onClick={onClose}>
                 <ShoppingBag className="w-5 h-5" />
                 Start Shopping
               </Link>
@@ -176,6 +176,9 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
 
                       // Get the appropriate image - variant image first, then product image
                       const getImageUrl = (): string => {
+                        const placeholder =
+                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
+
                         // Try variant images first
                         if (
                           item.variant?.images &&
@@ -203,7 +206,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                           }
                         }
 
-                        return '/placeholder.jpg'
+                        return placeholder
                       }
 
                       const imageUrl = getImageUrl()
@@ -219,7 +222,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                         >
                           {/* Product Image */}
                           <Link
-                            href={`/shop/${item.product.slug}`}
+                            href={`/product/${item.product.slug}`}
                             className="flex-shrink-0"
                             onClick={onClose}
                           >
@@ -238,7 +241,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <Link
-                                href={`/shop/${item.product.slug}`}
+                                href={`/product/${item.product.slug}`}
                                 className="font-medium hover:text-primary transition-colors line-clamp-2 flex-1 mr-2"
                                 onClick={onClose}
                               >
@@ -321,21 +324,21 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                 </div>
               </div>
 
-              {/* Cart Footer */}
-              <div className="border-t border-base-200 p-6 bg-base-100">
+              {/* Cart Footer - Sticky at bottom */}
+              <div className="border-t-2 border-base-300 p-6 bg-base-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                 {/* Free Shipping Progress */}
                 {subtotal < freeShippingThreshold && (
-                  <div className="mb-4 p-3 bg-info/10 rounded-xl">
-                    <p className="text-sm mb-2">
+                  <div className="mb-6 p-4 bg-info/10 rounded-xl border border-info/20">
+                    <p className="text-sm font-medium mb-2">
                       Add{' '}
                       <span className="font-bold text-info">
                         {formatCurrency(freeShippingThreshold - subtotal, cartCurrency)}
                       </span>{' '}
                       more for free shipping!
                     </p>
-                    <div className="w-full bg-base-300 rounded-full h-2">
+                    <div className="w-full bg-base-300 rounded-full h-2.5">
                       <div
-                        className="bg-gradient-to-r from-primary to-info h-2 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-primary to-info h-2.5 rounded-full transition-all duration-500"
                         style={{
                           width: `${Math.min((subtotal / freeShippingThreshold) * 100, 100)}%`,
                         }}
@@ -345,9 +348,9 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                 )}
 
                 {/* Subtotal */}
-                <div className="flex justify-between items-center mb-4 p-4 bg-base-200 rounded-xl">
+                <div className="flex justify-between items-center mb-6 p-5 bg-gradient-to-r from-base-200 to-base-300 rounded-xl">
                   <span className="text-lg font-semibold">Subtotal:</span>
-                  <span className="text-2xl font-bold text-primary">
+                  <span className="text-3xl font-bold text-primary">
                     {formatCurrency(subtotal, cartCurrency)}
                   </span>
                 </div>
@@ -356,14 +359,14 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                 <div className="space-y-3">
                   <Link
                     href="/checkout"
-                    className="btn btn-primary btn-block btn-lg shadow-lg"
+                    className="btn btn-primary btn-block h-14 text-base shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-200"
                     onClick={onClose}
                   >
-                    Proceed to Checkout
+                    <span className="font-semibold">Proceed to Checkout</span>
                     <ArrowRight className="w-5 h-5" />
                   </Link>
 
-                  <button onClick={onClose} className="btn btn-ghost btn-block">
+                  <button onClick={onClose} className="btn btn-ghost btn-block h-12 text-sm">
                     Continue Shopping
                   </button>
                 </div>

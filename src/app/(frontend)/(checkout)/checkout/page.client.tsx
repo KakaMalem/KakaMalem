@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, Check, ShoppingCart } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
 import { ShippingStep } from '@/app/(frontend)/components/checkout/ShippingStep'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 import { PaymentStep } from '@/app/(frontend)/components/checkout/PaymentStep'
 import { ReviewStep } from '@/app/(frontend)/components/checkout/ReviewStep'
 
@@ -77,7 +78,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   useEffect(() => {
     if (!cartLoading && (!cart || cart.length === 0) && !orderPlaced) {
       toast.error('Your cart is empty. Add items to checkout.')
-      router.push('/shop')
+      router.push('/')
     }
   }, [cart, cartLoading, router, orderPlaced])
 
@@ -225,7 +226,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       {/* Header */}
       <div className="bg-base-200 border-b border-base-300">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <Link href="/shop" className="btn btn-ghost btn-sm mb-4">
+          <Breadcrumb items={[{ label: 'Checkout', active: true }]} />
+          <Link href="/" className="btn btn-ghost btn-sm mb-4 mt-4">
             <ArrowLeft className="w-4 h-4" />
             Back to Shop
           </Link>

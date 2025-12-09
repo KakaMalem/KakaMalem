@@ -7,7 +7,11 @@ import { Star } from 'lucide-react'
 import { formatPrice } from '@/utilities/currency'
 import type { Product } from '@/payload-types'
 
-export const RecentlyViewed: React.FC = () => {
+interface RecentlyViewedProps {
+  showTitle?: boolean
+}
+
+export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true }) => {
   const { recentlyViewed, guestItems, isLoading, isAuthenticated } = useRecentlyViewed()
   const [guestProducts, setGuestProducts] = useState<Product[]>([])
   const [loadingGuest, setLoadingGuest] = useState(false)
@@ -61,12 +65,24 @@ export const RecentlyViewed: React.FC = () => {
     isAuthenticated === false ? guestProducts : recentlyViewed.map((item) => item.product)
 
   if (productsToShow.length === 0) {
+    // If showTitle is false (used in account page), show empty state
+    if (!showTitle) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-base-content/30 mb-2">No browsing history yet</div>
+          <p className="text-sm text-base-content/60">
+            Products you view will appear here
+          </p>
+        </div>
+      )
+    }
+    // Otherwise return null (hide entire section on homepage)
     return null
   }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Recently Viewed</h2>
+      {showTitle && <h2 className="text-2xl font-bold">Recently Viewed</h2>}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {productsToShow.map((product) => {
           const productWithVariant = product as Product & {
@@ -136,7 +152,7 @@ export const RecentlyViewed: React.FC = () => {
           return (
             <Link
               key={product.id}
-              href={`/shop/${product.slug}`}
+              href={`/product/${product.slug}`}
               className="card bg-base-100 border border-base-300 hover:shadow-lg transition-all duration-300"
             >
               {/* Image */}

@@ -88,10 +88,58 @@ export const getProducts: Endpoint = {
           })
         }
 
-        // Filter by category
+        // Filter by category (accepts slug or id)
         if (searchParams.category) {
+          const rawCategory = String(searchParams.category).trim()
+
+          // Heuristics: Payload IDs might be 24-hex (Mongo) or UUID (36 chars with dashes).
+          const looksLikeMongoId = /^[0-9a-fA-F]{24}$/.test(rawCategory)
+          const looksLikeUUID = /^[0-9a-fA-F-]{36}$/.test(rawCategory)
+
+          let categoryIdToUse = rawCategory
+
+          // If it doesn't look like an id, try to resolve as a slug
+          if (!looksLikeMongoId && !looksLikeUUID) {
+            const catResult = await payload.find({
+              collection: 'categories',
+              where: { slug: { equals: rawCategory } },
+              limit: 1,
+              depth: 0,
+            })
+
+            if (!catResult.docs.length) {
+              // No category found for that slug -> return empty result set early
+              return Response.json(
+                {
+                  success: true,
+                  products: [],
+                  pagination: {
+                    page: searchParams.page ?? 1,
+                    limit: searchParams.limit ?? 12,
+                    totalPages: 0,
+                    totalDocs: 0,
+                    hasNextPage: false,
+                    hasPrevPage: false,
+                  },
+                  filters: {
+                    query: searchParams.q,
+                    category: searchParams.category,
+                    minPrice: searchParams.minPrice,
+                    maxPrice: searchParams.maxPrice,
+                    rating: searchParams.rating,
+                    sort: searchParams.sort,
+                  },
+                },
+                { status: 200 },
+              )
+            }
+
+            categoryIdToUse = catResult.docs[0].id
+          }
+
+          // Finally add the relationship filter using the category ID
           where.and?.push({
-            categories: { contains: searchParams.category },
+            categories: { contains: categoryIdToUse },
           })
         }
       }
@@ -172,6 +220,7 @@ export const getProducts: Endpoint = {
                 // Add default variant data to product
                 return {
                   ...product,
+                  defaultVariantId: defaultVariant.id,
                   ...(hasVariantImages && { defaultVariantImages: defaultVariant.images }),
                   ...(defaultVariant.price !== undefined &&
                     defaultVariant.price !== null && { defaultVariantPrice: defaultVariant.price }),
@@ -182,10 +231,7 @@ export const getProducts: Endpoint = {
                 }
               }
             } catch (error) {
-              console.error(
-                `Error fetching default variant for product ${product.id}:`,
-                error,
-              )
+              console.error(`Error fetching default variant for product ${product.id}:`, error)
             }
           }
           return product

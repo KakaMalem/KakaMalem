@@ -115,25 +115,12 @@ export const Categories: CollectionConfig = {
       },
     },
     {
-      type: 'row',
-      fields: [
-        {
-          name: 'image',
-          type: 'upload',
-          relationTo: 'media',
-          admin: {
-            width: '50%',
-          },
-        },
-        {
-          name: 'displayOrder',
-          type: 'number',
-          defaultValue: 0,
-          admin: {
-            width: '50%',
-          },
-        },
-      ],
+      name: 'displayOrder',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        width: '50%',
+      },
     },
     {
       name: 'status',

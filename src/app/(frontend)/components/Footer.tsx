@@ -85,22 +85,22 @@ export const Footer: React.FC = () => {
             <h4 className="font-semibold mb-3">Shop</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/shop" className="hover:text-primary">
+                <Link href="/" className="hover:text-primary">
                   All products
                 </Link>
               </li>
               <li>
-                <Link href="/shop?filter=deals" className="hover:text-primary">
+                <Link href="/?filter=deals" className="hover:text-primary">
                   Deals
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=electronics" className="hover:text-primary">
+                <Link href="/category/electronics" className="hover:text-primary">
                   Electronics
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=fashion" className="hover:text-primary">
+                <Link href="/category/fashion" className="hover:text-primary">
                   Fashion
                 </Link>
               </li>

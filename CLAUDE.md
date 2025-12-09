@@ -41,8 +41,8 @@ The app follows **Next.js 15 App Router** with route groups:
 **Key routing patterns:**
 
 - `/shop` - All products with infinite scroll
-- `/{category}` - Category pages (e.g., `/electronics`) with infinite scroll
-- `/shop/{slug}` - Individual product detail pages
+- `/category/{slug}` - Category pages (e.g., `/category/electronics`) with infinite scroll
+- `/product/{slug}` - Individual product detail pages
 - `/checkout` - Multi-step checkout (shipping, payment, review)
 - `/order-confirmation/{id}` - Order success page
 - `/account` - User account dashboard
@@ -301,7 +301,7 @@ The application uses a comprehensive role-based access control system defined in
 ### Common Gotchas
 
 - Don't run the build command on every change
-- Category pages use category slug in URL: `/{category}` not `/shop/category/{category}`
+- Category pages use category slug in URL: `/category/{slug}` (e.g., `/category/electronics`)
 - Cart slider has higher z-index (80) than navbar (60) and overlay (70)
 - Product cards always show star ratings, even with 0 reviews
 - Plus button on product cards accounts for existing cart quantity

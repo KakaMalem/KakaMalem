@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 
 interface SettingsClientProps {
   user: User
@@ -172,6 +173,13 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
   return (
     <div className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: 'Account', href: '/account' },
+          { label: 'Settings', active: true },
+        ]}
+      />
+
       {/* Header */}
       <div>
         <h2 className="text-3xl font-bold">Account Settings</h2>

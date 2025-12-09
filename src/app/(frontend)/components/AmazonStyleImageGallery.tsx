@@ -9,6 +9,9 @@ interface AmazonStyleImageGalleryProps {
   className?: string
 }
 
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
+
 export const AmazonStyleImageGallery: React.FC<AmazonStyleImageGalleryProps> = ({
   images,
   productName,
@@ -21,7 +24,7 @@ export const AmazonStyleImageGallery: React.FC<AmazonStyleImageGalleryProps> = (
   const imageRef = useRef<HTMLDivElement>(null)
   const zoomLensRef = useRef<HTMLDivElement>(null)
 
-  const currentImage = images[selectedIndex] || '/placeholder.jpg'
+  const currentImage = images[selectedIndex] || PLACEHOLDER_IMAGE
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageRef.current) return

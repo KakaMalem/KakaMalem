@@ -4,6 +4,7 @@ import ProductDetailsClient from './page.client'
 import { Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 import { serializeRichText } from '@/utilities/serializeRichText'
+import { RecentlyViewed } from '@/app/(frontend)/components/RecentlyViewed'
 
 interface Params {
   slug: string
@@ -63,6 +64,13 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
       <div className="max-w-7xl mx-auto px-4">
         {/* ProductDetailsClient will check auth on client side */}
         <ProductDetailsClient product={product as Product} descriptionHtml={descriptionHtml} />
+      </div>
+
+      {/* Recently Viewed Section */}
+      <div className="bg-base-200 py-16 mt-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <RecentlyViewed />
+        </div>
       </div>
     </div>
   )

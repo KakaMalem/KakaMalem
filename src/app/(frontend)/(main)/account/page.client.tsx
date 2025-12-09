@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Edit2, Save, X, Package, Heart, MapPin, ShoppingBag } from 'lucide-react'
+import { Edit2, Save, X, Package, Heart, MapPin, ShoppingBag, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import type { User as PayloadUser, Order } from '@/payload-types'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
+import { RecentlyViewed } from '@/app/(frontend)/components/RecentlyViewed'
 
 interface AccountClientProps {
   user: PayloadUser
@@ -63,6 +65,9 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb items={[{ label: 'Account', active: true }]} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <div>
@@ -308,12 +313,28 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
             <div className="text-center py-12">
               <Package className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
               <p className="text-base-content/70 mb-4">No orders yet</p>
-              <Link href="/shop" className="btn btn-primary gap-2">
+              <Link href="/" className="btn btn-primary gap-2">
                 <ShoppingBag className="w-4 h-4" />
                 Start Shopping
               </Link>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Browsing History Section */}
+      <div className="card bg-base-200">
+        <div className="card-body">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Eye className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Browsing History</h3>
+              <p className="text-sm text-base-content/70">Products you&apos;ve recently viewed</p>
+            </div>
+          </div>
+          <RecentlyViewed showTitle={false} />
         </div>
       </div>
     </div>

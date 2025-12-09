@@ -15,6 +15,10 @@ import {
 import type { Order, Product, ProductVariant, Media } from '@/payload-types'
 import confetti from 'canvas-confetti'
 import Image from 'next/image'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
+
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
 
 interface OrderItem {
   product: string | Product
@@ -59,6 +63,9 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
       {/* Success Header */}
       <div className="bg-gradient-to-br from-success/20 to-success/5 border-b border-success/20">
         <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+          <div className="mb-6">
+            <Breadcrumb items={[{ label: 'Checkout', href: '/checkout' }, { label: 'Order Confirmation', active: true }]} />
+          </div>
           <div className="inline-flex items-center justify-center w-20 h-20 bg-success text-success-content rounded-full mb-6 animate-bounce">
             <CheckCircle className="w-12 h-12" />
           </div>
@@ -96,14 +103,14 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                 View Order Details
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href="/shop" className="btn btn-outline btn-lg gap-2">
+              <Link href="/" className="btn btn-outline btn-lg gap-2">
                 <ShoppingBag className="w-5 h-5" />
                 Continue Shopping
               </Link>
             </>
           ) : (
             <>
-              <Link href="/shop" className="btn btn-primary btn-lg gap-2">
+              <Link href="/" className="btn btn-primary btn-lg gap-2">
                 <ShoppingBag className="w-5 h-5" />
                 Continue Shopping
               </Link>
@@ -172,7 +179,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                       <div className="avatar">
                         <div className="w-16 h-16 rounded-lg">
                           <Image
-                            src={imageUrl || '/placeholder.jpg'}
+                            src={imageUrl || PLACEHOLDER_IMAGE}
                             alt={product?.name || 'Product'}
                             width={64}
                             height={64}

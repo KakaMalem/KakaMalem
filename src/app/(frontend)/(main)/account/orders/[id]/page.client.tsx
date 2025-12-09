@@ -15,6 +15,9 @@ import {
 import type { Order, User, Product } from '@/payload-types'
 import Image from 'next/image'
 
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
+
 interface OrderItem {
   product: string | Product
   quantity: number
@@ -125,7 +128,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                         <div className="avatar">
                           <div className="w-20 h-20 rounded-lg">
                             <Image
-                              src={imageUrl || '/placeholder.jpg'}
+                              src={imageUrl || PLACEHOLDER_IMAGE}
                               alt={product?.name || 'Product'}
                               width={80}
                               height={80}

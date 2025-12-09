@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer'
 import { ProductCard } from '@/app/(frontend)/components/ProductCard'
 import type { Category, Product } from '@/payload-types'
 import Link from 'next/link'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 
 interface CategoryPageClientProps {
   category: Category
@@ -112,18 +113,23 @@ export default function CategoryPageClient({
   if (products.length === 0 && !loading) {
     return (
       <div className="min-h-screen bg-base-100">
+        {/* Breadcrumb */}
+        <div className="max-w-7xl mx-auto px-4 pt-4">
+          <Breadcrumb items={[{ label: category.name, active: true }]} />
+        </div>
+
         {/* Header */}
-        <div className="max-w-7xl mx-auto px-4 pt-6 pb-4">
-          <h1 className="text-3xl font-semibold mb-1">{category.name}</h1>
+        <div className="max-w-7xl mx-auto px-4 pt-2 pb-4">
+          {/* <h1 className="text-3xl font-semibold mb-1">{category.name}</h1>
           {category.description && (
             <p className="text-base-content/70 max-w-3xl text-sm">{category.description}</p>
-          )}
+          )} */}
         </div>
 
         <div className="max-w-7xl mx-auto px-4 pb-8">
           <div className="text-center py-16">
             <p className="text-lg text-base-content/70 mb-4">No products found in this category.</p>
-            <Link href="/shop" className="btn btn-primary">
+            <Link href="/" className="btn btn-primary">
               Browse All Products
             </Link>
           </div>
@@ -134,12 +140,17 @@ export default function CategoryPageClient({
 
   return (
     <div className="min-h-screen bg-base-100">
+      {/* Breadcrumb */}
+      <div className="max-w-7xl mx-auto px-4 pt-4">
+        <Breadcrumb items={[{ label: category.name, active: true }]} />
+      </div>
+
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 pt-6 pb-4">
-        <h1 className="text-3xl font-semibold mb-1">{category.name}</h1>
+      <div className="max-w-7xl mx-auto px-4 pt-2 pb-4">
+        {/* <h1 className="text-3xl font-semibold mb-1">{category.name}</h1>
         {category.description && (
           <p className="text-base-content/70 max-w-3xl text-sm">{category.description}</p>
-        )}
+        )} */}
       </div>
 
       {/* Products Grid */}

@@ -5,6 +5,7 @@ import { X, Plus, Minus } from 'lucide-react'
 import type { PopulatedCartItem } from '@/endpoints/cart/types'
 import { formatPrice } from '@/utilities/currency'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Media } from '@/payload-types'
 
 interface CartItemProps {
@@ -27,13 +28,16 @@ export const CartItem: React.FC<CartItemProps> = ({
   const compareAtPrice = variant?.compareAtPrice || product.price || null
 
   // Get the appropriate image - variant image first, then product image
-  const getImage = (): string | null => {
+  const getImage = (): string => {
+    const placeholder =
+      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
+
     // Try variant images first
     if (variant?.images && Array.isArray(variant.images) && variant.images.length > 0) {
       const firstImage = variant.images[0]
       if (typeof firstImage === 'string') return firstImage
       if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
-        return (firstImage as Media).url ?? null
+        return (firstImage as Media).url ?? placeholder
       }
     }
 
@@ -42,14 +46,20 @@ export const CartItem: React.FC<CartItemProps> = ({
       const firstImage = product.images[0]
       if (typeof firstImage === 'string') return firstImage
       if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
-        return (firstImage as Media).url ?? null
+        return (firstImage as Media).url ?? placeholder
       }
     }
 
-    return null
+    return placeholder
   }
 
   const imageUrl = getImage()
+  const imageAlt = product.name || 'Product image'
+
+  // Build product URL with variant parameter if available
+  const productUrl = variantId
+    ? `/product/${product.slug}?variant=${variantId}`
+    : `/product/${product.slug}`
 
   // Get variant details for display
   const variantLabel = variant?.options?.map((opt) => `${opt.name}: ${opt.value}`).join(', ')
@@ -88,17 +98,10 @@ export const CartItem: React.FC<CartItemProps> = ({
     <div className="flex gap-4 py-4 border-b border-base-300 last:border-b-0">
       {/* Product Image */}
       <Link
-        href={`/shop/${product.slug}`}
-        className="flex-shrink-0 w-20 h-20 bg-base-200 rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+        href={productUrl}
+        className="flex-shrink-0 w-20 h-20 bg-base-200 rounded-lg overflow-hidden hover:opacity-80 transition-opacity relative"
       >
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-base-content/30 text-xs">
-            No image
-          </div>
-        )}
+        <Image src={imageUrl} alt={imageAlt} fill sizes="80px" className="object-cover" />
       </Link>
 
       {/* Product Details */}
@@ -106,7 +109,7 @@ export const CartItem: React.FC<CartItemProps> = ({
         <div className="flex justify-between gap-2">
           <div className="flex-1">
             <Link
-              href={`/shop/${product.slug}`}
+              href={productUrl}
               className="font-medium text-base-content hover:text-primary transition-colors line-clamp-1"
             >
               {product.name}

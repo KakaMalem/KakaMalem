@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { Heart, ShoppingBag } from 'lucide-react'
 import { Product } from '@/payload-types'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 import { ProductCard } from '@/app/(frontend)/components/ProductCard'
 
 interface WishlistClientProps {
@@ -14,6 +15,7 @@ export default function WishlistClient({ products }: WishlistClientProps) {
   if (products.length === 0) {
     return (
       <div className="space-y-6">
+        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Wishlist', active: true }]} />
         <div>
           <h2 className="text-2xl md:text-3xl font-bold">My Wishlist</h2>
           <p className="text-base-content/70 mt-1">0 items</p>
@@ -26,7 +28,7 @@ export default function WishlistClient({ products }: WishlistClientProps) {
             <p className="text-base-content/70 mb-6">
               Save items you love for later by clicking the heart icon
             </p>
-            <Link href="/shop" className="btn btn-primary mx-auto gap-2">
+            <Link href="/" className="btn btn-primary mx-auto gap-2">
               <ShoppingBag className="w-4 h-4" />
               Start Shopping
             </Link>
@@ -38,6 +40,7 @@ export default function WishlistClient({ products }: WishlistClientProps) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Wishlist', active: true }]} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold">My Wishlist</h2>
@@ -45,7 +48,7 @@ export default function WishlistClient({ products }: WishlistClientProps) {
             {products.length} {products.length === 1 ? 'item' : 'items'}
           </p>
         </div>
-        <Link href="/shop" className="btn btn-outline gap-2">
+        <Link href="/" className="btn btn-outline gap-2">
           <ShoppingBag className="w-4 h-4" />
           Continue Shopping
         </Link>

@@ -7,17 +7,17 @@ interface CategoryCardProps {
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
-  const categoryImage = category.categoryImage || category.image
+  const categoryImage = category.categoryImage
   const imageSrc =
     typeof categoryImage === 'string'
       ? categoryImage
       : typeof categoryImage === 'object' && categoryImage?.url
         ? categoryImage.url
-        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E'
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
 
   return (
     <a
-      href={`/shop?category=${encodeURIComponent(category.slug)}`}
+      href={`/category/${category.slug}`}
       className="card bg-base-100 shadow-lg hover:shadow-2xl transition-all duration-300 group cursor-pointer overflow-hidden relative
                  group-hover:ring-2 group-hover:ring-primary group-hover:ring-opacity-30"
     >

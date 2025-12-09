@@ -11,6 +11,7 @@ export interface CategoryItem {
   label: string
   slug: string
   displayOrder?: number
+  image?: string | null
 }
 
 async function Navbar() {
@@ -38,12 +39,23 @@ async function Navbar() {
   // Transform Payload data to our navbar format
   const categories: CategoryItem[] = [
     { value: 'all', label: 'All Products', slug: 'all', displayOrder: -1 },
-    ...categoriesData.docs.map((category: Category) => ({
-      value: category.slug,
-      label: category.name,
-      slug: category.slug,
-      displayOrder: category.displayOrder || 0,
-    })),
+    ...categoriesData.docs.map((category: Category) => {
+      const categoryImage = category.categoryImage
+      const imageSrc =
+        typeof categoryImage === 'string'
+          ? categoryImage
+          : typeof categoryImage === 'object' && categoryImage?.url
+            ? categoryImage.url
+            : null
+
+      return {
+        value: category.slug,
+        label: category.name,
+        slug: category.slug,
+        displayOrder: category.displayOrder || 0,
+        image: imageSrc,
+      }
+    }),
   ]
 
   return (

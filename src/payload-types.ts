@@ -449,7 +449,6 @@ export interface Category {
    * Parent category for hierarchy
    */
   parent?: (string | null) | Category;
-  image?: (string | null) | Media;
   displayOrder?: number | null;
   status: 'active' | 'inactive' | 'hidden';
   featured?: boolean | null;
@@ -935,7 +934,6 @@ export interface CategoriesSelect<T extends boolean = true> {
   categoryImage?: T;
   description?: T;
   parent?: T;
-  image?: T;
   displayOrder?: T;
   status?: T;
   featured?: T;
