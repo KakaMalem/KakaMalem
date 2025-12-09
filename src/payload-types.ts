@@ -439,10 +439,8 @@ export interface Media {
 export interface Category {
   id: string;
   name: string;
-  /**
-   * Auto-generated from category name
-   */
-  slug: string;
+  slug?: string | null;
+  slugLock?: boolean | null;
   categoryImage?: (string | null) | Media;
   description?: string | null;
   /**
@@ -931,6 +929,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  slugLock?: T;
   categoryImage?: T;
   description?: T;
   parent?: T;

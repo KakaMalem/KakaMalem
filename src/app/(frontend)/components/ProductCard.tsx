@@ -151,6 +151,50 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       ? `/product/${encodeURIComponent(slug)}?variant=${enriched.defaultVariantId}`
       : `/product/${encodeURIComponent(slug)}`
 
+  // Play success sound - a pleasant two-tone beep
+  const playSuccessSound = () => {
+    try {
+      // Type for older browsers with webkitAudioContext
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const audioContext = new AudioContextConstructor()
+
+      // First tone (higher pitch)
+      const oscillator1 = audioContext.createOscillator()
+      const gainNode1 = audioContext.createGain()
+
+      oscillator1.connect(gainNode1)
+      gainNode1.connect(audioContext.destination)
+
+      oscillator1.type = 'sine'
+      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
+      gainNode1.gain.setValueAtTime(0.2, audioContext.currentTime)
+      gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+
+      oscillator1.start(audioContext.currentTime)
+      oscillator1.stop(audioContext.currentTime + 0.15)
+
+      // Second tone (even higher pitch) - delayed slightly
+      const oscillator2 = audioContext.createOscillator()
+      const gainNode2 = audioContext.createGain()
+
+      oscillator2.connect(gainNode2)
+      gainNode2.connect(audioContext.destination)
+
+      oscillator2.type = 'sine'
+      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1) // E5
+      gainNode2.gain.setValueAtTime(0.2, audioContext.currentTime + 0.1)
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25)
+
+      oscillator2.start(audioContext.currentTime + 0.1)
+      oscillator2.stop(audioContext.currentTime + 0.25)
+    } catch (error) {
+      // Silently fail if audio doesn't work
+      console.debug('Audio playback not available:', error)
+    }
+  }
+
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     if (isAdding || isOutOfStock) return
@@ -158,6 +202,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setIsAdding(true)
     try {
       await addItem(product.id, 1)
+      playSuccessSound()
       setJustAdded(true)
       setTimeout(() => setJustAdded(false), 2000)
     } catch (err) {

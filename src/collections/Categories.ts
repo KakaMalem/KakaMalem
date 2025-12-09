@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
 import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
-import { nobody } from '../access/nobody'
+import { slugField } from '../fields/slug'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -63,40 +63,13 @@ export const Categories: CollectionConfig = {
      */
     delete: isAdminOrDeveloper,
   },
-  hooks: {
-    beforeChange: [
-      ({ data }) => {
-        // Auto-generate slug from name whenever name changes
-        if (data.name) {
-          data.slug = data.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)/g, '')
-        }
-        return data
-      },
-    ],
-  },
   fields: [
     {
       name: 'name',
       type: 'text',
       required: true,
     },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-      access: {
-        // Slug is auto-generated from name, prevent manual updates
-        update: nobody,
-      },
-      admin: {
-        readOnly: true,
-        description: 'Auto-generated from category name',
-      },
-    },
+    ...slugField('name'),
     {
       name: 'categoryImage',
       type: 'upload',
