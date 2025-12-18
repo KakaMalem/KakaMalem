@@ -1,5 +1,5 @@
 import type { Endpoint } from 'payload'
-import type { User, Product } from '@/payload-types'
+import type { User, Product, SiteSetting } from '@/payload-types'
 import { revalidatePath, revalidateTag } from 'next/cache'
 
 interface CartItem {
@@ -334,8 +334,23 @@ export const createOrder: Endpoint = {
         }
       }
 
-      // Calculate shipping
-      const shipping = subtotal > 100 ? 0 : 10
+      // Fetch site settings for delivery configuration
+      let shippingCost = 50
+      let freeDeliveryEnabled = true
+      let freeDeliveryThreshold = 1000
+      try {
+        const siteSettings = (await payload.findGlobal({
+          slug: 'site-settings',
+        })) as SiteSetting
+        shippingCost = siteSettings.shippingCost ?? 50
+        freeDeliveryEnabled = siteSettings.freeDeliveryEnabled ?? true
+        freeDeliveryThreshold = siteSettings.freeDeliveryThreshold ?? 1000
+      } catch (error) {
+        console.error('Error fetching site settings, using defaults:', error)
+      }
+
+      // Calculate shipping based on site settings
+      const shipping = freeDeliveryEnabled && subtotal >= freeDeliveryThreshold ? 0 : shippingCost
       const total = subtotal + shipping
 
       // Create order

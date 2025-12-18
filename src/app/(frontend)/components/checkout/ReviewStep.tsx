@@ -6,6 +6,7 @@ import type { User, Media } from '@/payload-types'
 import type { CartItem } from '@/providers/cart/types'
 import Image from 'next/image'
 import { PLACEHOLDER_IMAGE } from '@/utilities/ui'
+import { formatPrice } from '@/utilities/currency'
 
 /**
  * Extract URL from a Media object or string
@@ -50,6 +51,12 @@ interface GuestFormData {
   }
 }
 
+interface FreeDeliverySettings {
+  enabled: boolean
+  threshold: number
+  badgeText: string
+}
+
 interface ReviewStepProps {
   user: User | null
   cart: CartItem[]
@@ -60,6 +67,7 @@ interface ReviewStepProps {
   subtotal: number
   shipping: number
   total: number
+  freeDelivery: FreeDeliverySettings
 }
 
 export function ReviewStep({
@@ -72,6 +80,7 @@ export function ReviewStep({
   subtotal,
   shipping,
   total,
+  freeDelivery,
 }: ReviewStepProps) {
   const userAddresses = user?.addresses || []
   const shippingAddress = user
@@ -207,7 +216,7 @@ export function ReviewStep({
                     <div className="text-sm opacity-70">تعداد: {item.quantity}</div>
                   </div>
                   <div className="font-bold whitespace-nowrap">
-                    {currency} {(price * item.quantity).toFixed(2)}
+                    {formatPrice(price * item.quantity, currency)}
                   </div>
                 </div>
               )
@@ -221,9 +230,7 @@ export function ReviewStep({
         <div className="space-y-3 bg-base-100 p-4 rounded-lg">
           <div className="flex justify-between">
             <span className="opacity-70">جمع جزء</span>
-            <span className="font-medium">
-              {subtotal.toFixed(2)} {currency}
-            </span>
+            <span className="font-medium">{formatPrice(subtotal, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span className="opacity-70">هزینه ارسال</span>
@@ -231,29 +238,30 @@ export function ReviewStep({
               {shipping === 0 ? (
                 <span className="text-success">رایگان</span>
               ) : (
-                `${shipping.toFixed(2)} ${currency}`
+                formatPrice(shipping, currency)
               )}
             </span>
           </div>
           <div className="divider my-2"></div>
           <div className="flex justify-between text-xl font-bold">
             <span>جمع کل</span>
-            <span className="text-primary">
-              {total.toFixed(2)} {currency}
-            </span>
+            <span className="text-primary">{formatPrice(total, currency)}</span>
           </div>
         </div>
 
-        {/* Shipping Info */}
-        <div className="alert alert-info mt-4">
-          <Truck className="w-5 h-5" />
-          <div className="text-sm">
-            <div className="font-medium">ارسال رایگان</div>
-            <div className="opacity-70">
-              سفارش‌های بالای 1000 {currency} از ارسال رایگان برخوردارند
+        {/* Shipping Info - only show if free delivery is enabled */}
+        {freeDelivery.enabled && (
+          <div className="alert alert-info mt-4">
+            <Truck className="w-5 h-5" />
+            <div className="text-sm">
+              <div className="font-medium">{freeDelivery.badgeText}</div>
+              <div className="opacity-70">
+                سفارش‌های بالای {formatPrice(freeDelivery.threshold, 'AFN')} از{' '}
+                {freeDelivery.badgeText} برخوردارند
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

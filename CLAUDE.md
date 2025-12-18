@@ -83,6 +83,11 @@ The app follows **Next.js 15 App Router** with route groups:
 
 - `Terms` - Terms and conditions content
 - `PrivacyPolicy` - Privacy policy content
+- `Help` - Help center content
+- `Shipping` - Shipping information
+- `Contact` - Contact page content
+- `FAQs` - Frequently asked questions
+- `SiteSettings` - Site-wide configuration settings
 
 ### Frontend Stack
 
@@ -114,7 +119,7 @@ Custom endpoints defined in `src/endpoints/`:
 - `POST /api/products/track-view` - Track product view (increments viewCount and uniqueViewCount)
 - `GET /api/products/recently-viewed` - Get recently viewed products
 - `POST /api/products/merge-recently-viewed` - Merge guest recently viewed on login
-- `GET /api/products/:id/analytics` - Get product analytics (superadmin/developer only)
+- `GET /api/products/:id/analytics` - Get product analytics (developer only)
 
 **Cart:**
 
@@ -201,6 +206,9 @@ Custom endpoints defined in `src/endpoints/`:
   - `NEXT_PUBLIC_SERVER_URL` - Public URL (e.g., http://localhost:3000)
   - `GOOGLE_CLIENT_ID` - Google OAuth client ID (optional, for Google Sign-In)
   - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret (optional, for Google Sign-In)
+  - `UPLOADTHING_TOKEN` - UploadThing storage token (optional, currently disabled)
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` - Email configuration (nodemailer)
+  - `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` - Email sender details
 
 ### Code Conventions
 
@@ -328,9 +336,9 @@ The application uses a comprehensive role-based access control system defined in
   - `wishlistCount` - Incremented when product is added to wishlist
   - `conversionRate` - (totalSold / viewCount) × 100, recalculated on purchases
   - `cartConversionRate` - (totalSold / addToCartCount) × 100, recalculated on purchases
-- Analytics fields are **only visible to superadmins and developers**
+- Analytics fields are **only visible to developers**
 - Analytics fields are read-only - never manually edit them
-- Access to analytics endpoint restricted to superadmins and developers only
+- Access to analytics endpoint restricted to developers only
 - Tracks up to 1000 unique viewers per product for unique view counting
 
 ### Common Gotchas
@@ -341,3 +349,17 @@ The application uses a comprehensive role-based access control system defined in
 - Product cards always show star ratings, even with 0 reviews
 - Plus button on product cards accounts for existing cart quantity
 - Checkout pages are in separate route group without navbar/footer
+
+### Email Integration
+
+Email is configured via `@payloadcms/email-nodemailer` in `src/payload.config.ts:131-142`. Send emails using:
+
+```typescript
+await payload.sendEmail({
+  to: 'user@example.com',
+  subject: 'Subject',
+  html: '<h1>HTML content</h1>',
+})
+```
+
+For Gmail: enable 2FA and use App Password (not regular password).

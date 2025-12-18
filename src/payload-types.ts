@@ -74,6 +74,7 @@ export interface Config {
     'product-variants': ProductVariant;
     orders: Order;
     reviews: Review;
+    'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -92,6 +93,7 @@ export interface Config {
     'product-variants': ProductVariantsSelect<false> | ProductVariantsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -100,6 +102,7 @@ export interface Config {
   db: {
     defaultIDType: string;
   };
+  fallbackLocale: null;
   globals: {
     terms: Term;
     'privacy-policy': PrivacyPolicy;
@@ -107,6 +110,7 @@ export interface Config {
     shipping: Shipping;
     contact: Contact;
     faqs: Faq;
+    'site-settings': SiteSetting;
   };
   globalsSelect: {
     terms: TermsSelect<false> | TermsSelect<true>;
@@ -115,6 +119,7 @@ export interface Config {
     shipping: ShippingSelect<false> | ShippingSelect<true>;
     contact: ContactSelect<false> | ContactSelect<true>;
     faqs: FaqsSelect<false> | FaqsSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
   };
   locale: null;
   user: User & {
@@ -345,7 +350,7 @@ export interface Product {
     root: {
       type: string;
       children: {
-        type: string;
+        type: any;
         version: number;
         [k: string]: unknown;
       }[];
@@ -443,6 +448,7 @@ export interface Media {
    */
   alt?: string | null;
   uploadedBy?: (string | null) | User;
+  _key?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -702,6 +708,23 @@ export interface Review {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv".
+ */
+export interface PayloadKv {
+  id: string;
+  key: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs".
  */
 export interface PayloadJob {
@@ -826,10 +849,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'reviews';
         value: string | Review;
-      } | null)
-    | ({
-        relationTo: 'payload-jobs';
-        value: string | PayloadJob;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -950,6 +969,7 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   uploadedBy?: T;
+  _key?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1164,6 +1184,14 @@ export interface ReviewsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv_select".
+ */
+export interface PayloadKvSelect<T extends boolean = true> {
+  key?: T;
+  data?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs_select".
  */
 export interface PayloadJobsSelect<T extends boolean = true> {
@@ -1242,7 +1270,7 @@ export interface Term {
     root: {
       type: string;
       children: {
-        type: string;
+        type: any;
         version: number;
         [k: string]: unknown;
       }[];
@@ -1277,7 +1305,7 @@ export interface PrivacyPolicy {
     root: {
       type: string;
       children: {
-        type: string;
+        type: any;
         version: number;
         [k: string]: unknown;
       }[];
@@ -1312,7 +1340,7 @@ export interface Help {
     root: {
       type: string;
       children: {
-        type: string;
+        type: any;
         version: number;
         [k: string]: unknown;
       }[];
@@ -1347,7 +1375,7 @@ export interface Shipping {
     root: {
       type: string;
       children: {
-        type: string;
+        type: any;
         version: number;
         [k: string]: unknown;
       }[];
@@ -1389,7 +1417,7 @@ export interface Contact {
     root: {
       type: string;
       children: {
-        type: string;
+        type: any;
         version: number;
         [k: string]: unknown;
       }[];
@@ -1429,7 +1457,7 @@ export interface Faq {
       root: {
         type: string;
         children: {
-          type: string;
+          type: any;
           version: number;
           [k: string]: unknown;
         }[];
@@ -1446,6 +1474,29 @@ export interface Faq {
    * تاریخ آخرین بروزرسانی
    */
   lastUpdated?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: string;
+  freeDeliveryEnabled?: boolean | null;
+  /**
+   * Orders above this amount qualify for free delivery
+   */
+  freeDeliveryThreshold?: number | null;
+  freeDeliveryCurrency?: ('AFN' | 'USD') | null;
+  /**
+   * Text shown in the free delivery badge
+   */
+  freeDeliveryBadgeText?: string | null;
+  /**
+   * Shipping cost charged when free delivery is disabled
+   */
+  shippingCost?: number | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1527,6 +1578,20 @@ export interface FaqsSelect<T extends boolean = true> {
         id?: T;
       };
   lastUpdated?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  freeDeliveryEnabled?: T;
+  freeDeliveryThreshold?: T;
+  freeDeliveryCurrency?: T;
+  freeDeliveryBadgeText?: T;
+  shippingCost?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

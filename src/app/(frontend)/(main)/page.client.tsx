@@ -2,8 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useInView } from 'react-intersection-observer'
+import { Search } from 'lucide-react'
 import { Product } from '@/payload-types'
 import { ProductCard } from '../components/ProductCard'
+import { ProductCardSkeleton, getSkeletonCount } from '../components/ProductCardSkeleton'
+
+const PAGE_SIZE = 12
 
 interface HomeClientProps {
   initialProducts: Product[]
@@ -13,14 +17,15 @@ interface HomeClientProps {
 export default function HomeClient({ initialProducts, searchQuery }: HomeClientProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
+  // Only hasMore if we received a full page of products
+  const [hasMore, setHasMore] = useState(initialProducts.length >= PAGE_SIZE)
   const [loading, setLoading] = useState(false)
 
   // Reset products when search query changes
   useEffect(() => {
     setProducts(initialProducts)
     setPage(1)
-    setHasMore(true)
+    setHasMore(initialProducts.length >= PAGE_SIZE)
   }, [searchQuery, initialProducts])
 
   // Intersection observer to trigger load when user scrolls to bottom
@@ -38,7 +43,7 @@ export default function HomeClient({ initialProducts, searchQuery }: HomeClientP
       // Build URL with search query if provided
       const url = new URL('/api/search-products', window.location.origin)
       url.searchParams.set('page', nextPage.toString())
-      url.searchParams.set('limit', '12')
+      url.searchParams.set('limit', PAGE_SIZE.toString())
       if (searchQuery) {
         url.searchParams.set('q', searchQuery)
       }
@@ -52,6 +57,10 @@ export default function HomeClient({ initialProducts, searchQuery }: HomeClientP
       } else {
         setProducts((prev) => [...prev, ...newItems])
         setPage(nextPage)
+        // If we got fewer items than requested, we've reached the end
+        if (newItems.length < PAGE_SIZE) {
+          setHasMore(false)
+        }
       }
     } catch (e) {
       console.error('Infinite scroll error:', e)
@@ -65,61 +74,63 @@ export default function HomeClient({ initialProducts, searchQuery }: HomeClientP
     if (inView) loadMore()
   }, [inView, loadMore])
 
+  // Empty state when no products found
+  if (products.length === 0 && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <Search className="w-16 h-16 text-base-content/20 mb-4" />
+        {searchQuery ? (
+          <>
+            <h2 className="text-xl font-semibold mb-2">نتیجه‌ای یافت نشد</h2>
+            <p className="text-base-content/60 mb-1">
+              جستجوی شما برای &quot;{searchQuery}&quot; نتیجه‌ای نداشت.
+            </p>
+            <p className="text-base-content/40 text-sm">لطفاً کلمات دیگری را امتحان کنید.</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold mb-2">محصولی موجود نیست</h2>
+            <p className="text-base-content/60">در حال حاضر محصولی برای نمایش وجود ندارد.</p>
+          </>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
+      {/* Search Results Header */}
+      {searchQuery && products.length > 0 && (
+        <div className="flex items-center gap-2 text-base-content/70">
+          <Search className="w-4 h-4" />
+          <span>نتایج جستجو برای &quot;{searchQuery}&quot;</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Render Actual Products */}
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
 
-        {/* Loading Skeletons - fill remaining columns in last row */}
+        {/* Loading Skeletons */}
         {loading &&
-          (() => {
-            // Calculate how many skeletons needed to fill the row
-            // Using 4 columns (lg breakpoint) as the max
-            const cols = 4
-            const remainder = products.length % cols
-            const skeletonsNeeded = remainder === 0 ? cols : cols - remainder
-            return Array.from({ length: skeletonsNeeded }, (_, i) => (
-              <div
-                key={`skeleton-${i}`}
-                className="card card-compact bg-base-100 border border-base-200 overflow-hidden h-full"
-              >
-                {/* Image Skeleton */}
-                <div className="skeleton w-full aspect-[4/5] rounded-b-none"></div>
-
-                <div className="p-4 space-y-3">
-                  {/* Title Line */}
-                  <div className="skeleton h-4 w-3/4"></div>
-
-                  {/* Rating/Meta Line */}
-                  <div className="skeleton h-3 w-1/3"></div>
-
-                  {/* Price & Button Area */}
-                  <div className="flex justify-between items-center pt-2">
-                    <div className="flex flex-col gap-1 w-1/2">
-                      <div className="skeleton h-5 w-16"></div>
-                      <div className="skeleton h-3 w-10"></div>
-                    </div>
-                    <div className="skeleton h-8 w-8 rounded-full"></div>
-                  </div>
-                </div>
-              </div>
-            ))
-          })()}
+          Array.from({ length: getSkeletonCount(products.length) }, (_, i) => (
+            <ProductCardSkeleton key={`skeleton-${i}`} />
+          ))}
       </div>
 
-      {/* Footer / End of list indicator */}
-      <div ref={ref} className="flex justify-center py-8">
-        {!hasMore && products.length > 0 && (
-          <div className="text-center py-8">
-            <p className="text-sm text-base-content/60">
-              به پایان رسیدید. نمایش همه {products.length} محصول.
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Infinite scroll sentinel */}
+      <div ref={ref} className="h-4" />
+
+      {/* End of list indicator */}
+      {!hasMore && products.length > 0 && (
+        <div className="text-center py-8">
+          <p className="text-sm text-base-content/60">
+            به پایان رسیدید. نمایش همه {products.length} محصول.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

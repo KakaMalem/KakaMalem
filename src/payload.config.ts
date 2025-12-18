@@ -1,7 +1,8 @@
-// storage-adapter-import-placeholder
+import { uploadthingStorage } from '@payloadcms/storage-uploadthing'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -20,6 +21,7 @@ import { Help } from './globals/Help'
 import { Shipping } from './globals/Shipping'
 import { Contact } from './globals/Contact'
 import { FAQs } from './globals/FAQs'
+import { SiteSettings } from './globals/SiteSettings'
 import { registerUser } from './endpoints/users/registerUser'
 import { loginUser } from './endpoints/users/loginUser'
 import { setPassword } from './endpoints/users/setPassword'
@@ -86,7 +88,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Products, ProductVariants, Orders, Reviews],
-  globals: [Terms, PrivacyPolicy, Help, Shipping, Contact, FAQs],
+  globals: [Terms, PrivacyPolicy, Help, Shipping, Contact, FAQs, SiteSettings],
   cors: allowedOrigins,
   csrf: allowedOrigins,
   endpoints: [
@@ -126,8 +128,28 @@ export default buildConfig({
     url: process.env.DATABASE_URI || '',
   }),
   sharp,
+  email: nodemailerAdapter({
+    defaultFromAddress: process.env.SMTP_FROM_EMAIL || 'noreply@kakamalem.com',
+    defaultFromName: process.env.SMTP_FROM_NAME || 'Kaka Malem',
+    transportOptions: {
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    },
+  }),
   plugins: [
     payloadCloudPlugin(),
-    // storage-adapter-placeholder
+    uploadthingStorage({
+      collections: {
+        media: true,
+      },
+      options: {
+        token: process.env.UPLOADTHING_TOKEN,
+        acl: 'public-read',
+      },
+    }),
   ],
 })

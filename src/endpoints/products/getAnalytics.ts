@@ -2,7 +2,7 @@ import type { Endpoint } from 'payload'
 
 /**
  * Get product analytics
- * Restricted to superadmins and developers only
+ * Restricted to developers only
  */
 export const getProductAnalytics: Endpoint = {
   path: '/products/:id/analytics',
@@ -14,14 +14,11 @@ export const getProductAnalytics: Endpoint = {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check access: only superadmins and developers
-    const isAuthorized = user.roles?.includes('superadmin') || user.roles?.includes('developer')
+    // Check access: only developers
+    const isAuthorized = user.roles?.includes('developer')
 
     if (!isAuthorized) {
-      return Response.json(
-        { error: 'Only superadmins and developers can view analytics' },
-        { status: 403 },
-      )
+      return Response.json({ error: 'Only developers can view analytics' }, { status: 403 })
     }
 
     // Get product ID from URL params

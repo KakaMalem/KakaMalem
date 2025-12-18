@@ -11,8 +11,16 @@ import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 import { PaymentStep } from '@/app/(frontend)/components/checkout/PaymentStep'
 import { ReviewStep } from '@/app/(frontend)/components/checkout/ReviewStep'
 
+interface FreeDeliverySettings {
+  enabled: boolean
+  threshold: number
+  badgeText: string
+}
+
 interface CheckoutClientProps {
   user: User | null
+  shippingCost: number
+  freeDelivery: FreeDeliverySettings
 }
 
 interface GuestFormData {
@@ -33,7 +41,7 @@ interface GuestFormData {
   }
 }
 
-export default function CheckoutClient({ user }: CheckoutClientProps) {
+export default function CheckoutClient({ user, shippingCost, freeDelivery }: CheckoutClientProps) {
   const { cart: cartData, loading: cartLoading, clearCart } = useCart()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
@@ -112,7 +120,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     return sum + price * item.quantity
   }, 0)
 
-  const shipping = subtotal > 100 ? 0 : 10
+  // Calculate shipping based on free delivery settings
+  const shipping = freeDelivery.enabled && subtotal >= freeDelivery.threshold ? 0 : shippingCost
   const total = subtotal + shipping
 
   const validateStep = (step: number): boolean => {
@@ -312,6 +321,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
             subtotal={subtotal}
             shipping={shipping}
             total={total}
+            freeDelivery={freeDelivery}
           />
         )}
 

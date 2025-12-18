@@ -3,6 +3,10 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { ProductCard } from '@/app/(frontend)/components/ProductCard'
+import {
+  ProductCardSkeleton,
+  getSkeletonCount,
+} from '@/app/(frontend)/components/ProductCardSkeleton'
 import type { Category, Product } from '@/payload-types'
 import Link from 'next/link'
 import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
@@ -160,41 +164,11 @@ export default function CategoryPageClient({
             <ProductCard key={product.id} product={product} />
           ))}
 
-          {/* Loading Skeletons - fill remaining columns in last row */}
+          {/* Loading Skeletons */}
           {loading &&
-            (() => {
-              // Calculate how many skeletons needed to fill the row
-              // Using 4 columns (lg breakpoint) as the max
-              const cols = 4
-              const remainder = products.length % cols
-              const skeletonsNeeded = remainder === 0 ? cols : cols - remainder
-              return Array.from({ length: skeletonsNeeded }, (_, i) => (
-                <div
-                  key={`skeleton-${i}`}
-                  className="card card-compact bg-base-100 border border-base-200 overflow-hidden h-full"
-                >
-                  {/* Image Skeleton */}
-                  <div className="skeleton w-full aspect-[4/5] rounded-b-none"></div>
-
-                  <div className="p-4 space-y-3">
-                    {/* Title Line */}
-                    <div className="skeleton h-4 w-3/4"></div>
-
-                    {/* Rating/Meta Line */}
-                    <div className="skeleton h-3 w-1/3"></div>
-
-                    {/* Price & Button Area */}
-                    <div className="flex justify-between items-center pt-2">
-                      <div className="flex flex-col gap-1 w-1/2">
-                        <div className="skeleton h-5 w-16"></div>
-                        <div className="skeleton h-3 w-10"></div>
-                      </div>
-                      <div className="skeleton h-8 w-8 rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            })()}
+            Array.from({ length: getSkeletonCount(products.length) }, (_, i) => (
+              <ProductCardSkeleton key={`skeleton-${i}`} />
+            ))}
         </div>
 
         {/* Infinite Scroll Sentinel */}

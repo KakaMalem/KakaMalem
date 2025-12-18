@@ -4,7 +4,13 @@ import React, { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { X, ShoppingBag, Plus, Minus, Package, Trash2, ArrowLeft } from 'lucide-react'
-import { useCart, formatCurrency, calculateSubtotal } from '@/providers'
+import {
+  useCart,
+  formatCurrency,
+  calculateSubtotal,
+  useSiteSettings,
+  getRemainingForFreeShipping,
+} from '@/providers'
 import Image from 'next/image'
 
 interface DesktopCartSidebarProps {
@@ -14,17 +20,17 @@ interface DesktopCartSidebarProps {
 
 export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSidebarProps) {
   const { cart, loading, error, removeItem, updateQuantity } = useCart()
+  const { freeDelivery } = useSiteSettings()
   const items = cart?.items || []
   const subtotal = calculateSubtotal(items)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const [mounted, setMounted] = React.useState(false)
 
   // Always use AFN for display since calculateSubtotal converts everything to AFN
-  // This handles mixed-currency carts correctly
   const cartCurrency: 'USD' | 'AFN' = 'AFN'
 
-  // Free shipping threshold is always 1000 AFN (all prices are converted to AFN)
-  const freeShippingThreshold = 1000
+  // Get remaining amount for free shipping (null if disabled or already qualified)
+  const remainingForFree = getRemainingForFreeShipping(subtotal, freeDelivery)
 
   // Handle mounting
   useEffect(() => {
@@ -349,13 +355,13 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
 
               {/* Cart Footer - Sticky at bottom */}
               <div className="border-t-2 border-base-300 p-6 bg-base-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-                {/* Free Shipping Progress */}
-                {subtotal < freeShippingThreshold && (
+                {/* Free Shipping Progress - only show if enabled and not yet qualified */}
+                {remainingForFree !== null && (
                   <div className="mb-6 p-4 bg-info/10 rounded-xl border border-info/20">
                     <p className="text-sm font-medium mb-2">
-                      برای ارسال رایگان{' '}
+                      برای {freeDelivery.badgeText}{' '}
                       <span className="font-bold text-info">
-                        {formatCurrency(freeShippingThreshold - subtotal, cartCurrency)}
+                        {formatCurrency(remainingForFree, cartCurrency)}
                       </span>{' '}
                       دیگر اضافه کنید!
                     </p>
@@ -363,7 +369,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                       <div
                         className="bg-gradient-to-r from-primary to-info h-2.5 rounded-full transition-all duration-500"
                         style={{
-                          width: `${Math.min((subtotal / freeShippingThreshold) * 100, 100)}%`,
+                          width: `${Math.min((subtotal / freeDelivery.threshold) * 100, 100)}%`,
                         }}
                       />
                     </div>

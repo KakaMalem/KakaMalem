@@ -1,7 +1,8 @@
 import React from 'react'
 import type { Metadata } from 'next'
-import { getServerSideURL } from '@/utilities/getURL'
-import { cookies } from 'next/headers'
+import { getPayload } from 'payload'
+import config from '@payload-config'
+import { getMeUser } from '@/utilities/getMeUser'
 import OrderConfirmationClient from './page.client'
 import { redirect } from 'next/navigation'
 
@@ -22,23 +23,48 @@ export default async function OrderConfirmationPage({ params }: OrderConfirmatio
   const { id } = await params
 
   try {
-    const baseURL = getServerSideURL()
-    const cookieStore = await cookies()
-    const token = cookieStore.get('payload-token')
+    const payload = await getPayload({ config })
+    const { user } = await getMeUser({ nullUserRedirect: undefined })
 
-    // Fetch the order using the confirmation endpoint (works for both guests and authenticated users)
-    const response = await fetch(`${baseURL}/api/order-confirmation/${id}`, {
-      headers: {
-        Cookie: token ? `payload-token=${token.value}` : '',
-      },
-      cache: 'no-store',
+    // Fetch the order with fully populated product and variant data using local API
+    // Depth 4 ensures complete population: order -> items.variant -> variant.images -> Media objects
+    const order = await payload.findByID({
+      collection: 'orders',
+      id,
+      depth: 4,
+      overrideAccess: true, // Bypass normal access control to ensure all data is fetched
     })
 
-    if (!response.ok) {
+    if (!order) {
       redirect('/')
     }
 
-    const order = await response.json()
+    // Verify access: either the customer who placed it, or it's a recent guest order
+    let hasAccess = false
+
+    // Check if authenticated user owns this order
+    if (user && order.customer) {
+      hasAccess =
+        typeof order.customer === 'string'
+          ? order.customer === user.id
+          : order.customer.id === user.id
+    }
+
+    // For guest orders, allow access if order is recent (within last 24 hours)
+    // This prevents unauthorized access while allowing immediate confirmation viewing
+    if (!hasAccess && order.guestEmail) {
+      const orderDate = new Date(order.createdAt)
+      const now = new Date()
+      const hoursSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60)
+
+      if (hoursSinceOrder < 24) {
+        hasAccess = true
+      }
+    }
+
+    if (!hasAccess) {
+      redirect('/')
+    }
 
     return <OrderConfirmationClient order={order} />
   } catch (_error) {

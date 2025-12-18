@@ -4,30 +4,49 @@ import Logo from './Logo'
 import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import type { Category } from '@/payload-types'
+import type { Category, SiteSetting } from '@/payload-types'
+import { formatPrice } from '@/utilities/currency'
 
-async function getTopCategories(): Promise<Category[]> {
+interface FooterData {
+  categories: Category[]
+  siteSettings: SiteSetting | null
+}
+
+async function getFooterData(): Promise<FooterData> {
   try {
     const payload = await getPayload({ config })
-    const result = await payload.find({
-      collection: 'categories',
-      where: {
-        status: {
-          equals: 'active',
+
+    const [categoriesResult, siteSettings] = await Promise.all([
+      payload.find({
+        collection: 'categories',
+        where: {
+          status: { equals: 'active' },
         },
-      },
-      sort: 'displayOrder',
-      limit: 3,
-    })
-    return result.docs as Category[]
+        sort: 'displayOrder',
+        limit: 3,
+      }),
+      payload.findGlobal({
+        slug: 'site-settings',
+      }),
+    ])
+
+    return {
+      categories: categoriesResult.docs as Category[],
+      siteSettings: siteSettings as SiteSetting,
+    }
   } catch (error) {
-    console.error('Error fetching categories:', error)
-    return []
+    console.error('Error fetching footer data:', error)
+    return { categories: [], siteSettings: null }
   }
 }
 
 export const Footer: React.FC = async () => {
-  const categories = await getTopCategories()
+  const { categories, siteSettings } = await getFooterData()
+
+  // Free delivery settings with defaults
+  const freeDeliveryEnabled = siteSettings?.freeDeliveryEnabled ?? false
+  const freeDeliveryThreshold = siteSettings?.freeDeliveryThreshold ?? 1000
+  const freeDeliveryBadgeText = siteSettings?.freeDeliveryBadgeText ?? 'ارسال رایگان'
 
   return (
     <footer className="bg-base-200 text-base-content mt-16">
@@ -149,10 +168,14 @@ export const Footer: React.FC = async () => {
             <Link href="/privacy" className="hover:text-primary">
               حریم خصوصی
             </Link>
-            <div className="flex items-center gap-2 text-xs bg-base-100 px-3 py-1 rounded-full border border-base-300">
-              <span className="font-semibold text-primary">ارسال رایگان</span>
-              <span className="opacity-60">بالای ۱۰۰۰ افغانی</span>
-            </div>
+            {freeDeliveryEnabled && (
+              <div className="flex items-center gap-2 text-xs bg-base-100 px-3 py-1 rounded-full border border-base-300">
+                <span className="font-semibold text-primary">{freeDeliveryBadgeText}</span>
+                <span className="opacity-60">
+                  بالای {formatPrice(freeDeliveryThreshold, 'AFN')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

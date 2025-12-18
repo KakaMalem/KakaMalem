@@ -4,7 +4,7 @@ import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
 import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
 import { createIsAdminOrSellerOwner } from '../access/isAdminOrSellerOwner'
 import { nobody } from '../access/nobody'
-import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
+import { isDeveloperOnly } from '../access/isDeveloper'
 import { slugField } from '../fields/slug'
 import { populatePublishedAt } from '../hooks/populatePublishedAt'
 
@@ -87,7 +87,7 @@ import { populatePublishedAt } from '../hooks/populatePublishedAt'
  * 5. Recalculate conversion rates (conversionRate, cartConversionRate)
  *
  * ## Analytics Tracking
- * All products track analytics (visible to superadmins/developers only):
+ * All products track analytics (visible to developers only):
  * - viewCount: Total product detail page views
  * - uniqueViewCount: Unique viewers (tracked via localStorage/DB)
  * - addToCartCount: Times added to cart
@@ -351,7 +351,7 @@ export const Products: CollectionConfig = {
         readOnly: true,
         position: 'sidebar',
         description: 'Total number of units sold',
-        condition: (data, siblingData, { user }) => isSuperAdminOrDeveloper(user),
+        condition: (data, siblingData, { user }) => isDeveloperOnly(user),
       },
     },
     {
@@ -363,7 +363,7 @@ export const Products: CollectionConfig = {
       },
       admin: {
         description: 'Product performance analytics (system-managed)',
-        condition: (data, siblingData, { user }) => isSuperAdminOrDeveloper(user),
+        condition: (data, siblingData, { user }) => isDeveloperOnly(user),
       },
       fields: [
         {
