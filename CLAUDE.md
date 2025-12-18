@@ -155,6 +155,15 @@ Custom endpoints defined in `src/endpoints/`:
 - Star ratings displayed for all products (gray when no reviews)
 - Recently viewed products tracking (localStorage for guests, database for authenticated users)
 
+**Review Submission Flow:**
+
+- Non-authenticated users can fill out the review form (rating, title, comment)
+- On submit, review data is stored in sessionStorage and user is redirected to login
+- After successful login/registration, user is redirected back to product page
+- Review is auto-submitted from stored data after authentication
+- Seamless Amazon-like experience with no data loss during authentication flow
+- Works for both login and registration flows with redirect parameter preservation
+
 **Checkout Flow:**
 
 - Multi-step process: Shipping → Payment → Review
@@ -240,6 +249,32 @@ Custom endpoints defined in `src/endpoints/`:
 - Backgrounds: `bg-base-100`, `bg-base-200`, `bg-base-300`
 - Text: `text-base-content`, `text-primary`
 - Loading: `loading loading-spinner loading-lg text-primary`
+
+### UI Utilities
+
+Shared UI utilities in `src/utilities/ui.ts`:
+
+**Image Handling:**
+
+- `extractMediaUrl(mediaItem)` - Extract URL from Media object or string
+- `getProductImageUrl(product, variant?)` - Get image with proper prioritization:
+  1. Variant images (if variant provided)
+  2. Product main images
+  3. Placeholder image
+- `PLACEHOLDER_IMAGE` - SVG placeholder for missing images
+
+**Variant Display:**
+
+- `formatVariantOptions(variant)` - Format variant options as "Size: Large, Color: Red"
+
+**Usage Example:**
+
+```typescript
+import { getProductImageUrl, formatVariantOptions } from '@/utilities/ui'
+
+const imageUrl = getProductImageUrl(product, variant)
+const variantLabel = formatVariantOptions(variant)
+```
 
 ### Access Control Architecture
 

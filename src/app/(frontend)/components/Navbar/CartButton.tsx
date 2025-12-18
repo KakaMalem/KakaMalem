@@ -16,9 +16,9 @@ export default function CartButton() {
     <>
       <button
         className="btn btn-ghost btn-circle btn-sm hover:bg-base-200 relative"
-        title="Shopping Cart"
+        title="سبد خرید"
         onClick={() => setIsSidebarOpen(true)}
-        aria-label={`Shopping cart with ${itemCount} items`}
+        aria-label={`سبد خرید با ${itemCount} مورد`}
       >
         <div className="indicator">
           <ShoppingBag className="w-5 h-5" />

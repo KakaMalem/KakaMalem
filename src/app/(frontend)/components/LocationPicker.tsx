@@ -17,10 +17,18 @@ const InteractiveMap = dynamic(() => import('./InteractiveMap').then((mod) => mo
   ),
 })
 
+export interface LocationData {
+  latitude: number
+  longitude: number
+  accuracy?: number
+  source: 'gps' | 'ip' | 'manual' | 'map'
+  ip?: string
+}
+
 interface LocationPickerProps {
   latitude?: number
   longitude?: number
-  onLocationSelect: (lat: number, lng: number) => void
+  onLocationSelect: (locationData: LocationData) => void
   className?: string
 }
 
@@ -35,11 +43,26 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const [accuracy, setAccuracy] = useState<number | undefined>(undefined)
   const [gettingLocation, setGettingLocation] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [clientIP, setClientIP] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     setSelectedLat(latitude)
     setSelectedLng(longitude)
   }, [latitude, longitude])
+
+  // Fetch client IP on mount
+  useEffect(() => {
+    const fetchIP = async () => {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json')
+        const data = await response.json()
+        setClientIP(data.ip)
+      } catch (error) {
+        console.warn('Could not fetch IP address:', error)
+      }
+    }
+    fetchIP()
+  }, [])
 
   const getCurrentLocation = () => {
     setGettingLocation(true)
@@ -49,14 +72,14 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     const isSecureContext = window.isSecureContext
     if (!isSecureContext && window.location.hostname !== 'localhost') {
       setError(
-        'Location access requires HTTPS connection. Please use HTTPS or try manual entry below.',
+        'دسترسی به موقعیت به اتصال HTTPS نیاز دارد. لطفاً از HTTPS استفاده کنید یا ورود دستی را امتحان کنید.',
       )
       setGettingLocation(false)
       return
     }
 
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser')
+      setError('موقعیت‌یابی جغرافیایی توسط مرورگر شما پشتیبانی نمی‌شود')
       setGettingLocation(false)
       return
     }
@@ -71,7 +94,15 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         setSelectedLat(lat)
         setSelectedLng(lng)
         setAccuracy(locationAccuracy)
-        onLocationSelect(lat, lng)
+
+        // Pass complete location data with metadata
+        onLocationSelect({
+          latitude: lat,
+          longitude: lng,
+          accuracy: locationAccuracy,
+          source: 'gps',
+          ip: clientIP,
+        })
         setGettingLocation(false)
 
         // Show accuracy feedback
@@ -82,24 +113,24 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         }
       },
       (error) => {
-        let errorMessage = 'Unable to get your location. '
+        let errorMessage = 'دریافت موقعیت شما ممکن نیست. '
 
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage +=
-              'Please allow location access in your browser/device settings. On mobile, check both browser and device location permissions.'
+              'لطفاً دسترسی به موقعیت را در تنظیمات مرورگر/دستگاه خود مجاز کنید. در موبایل، هم دسترسی مرورگر و هم دسترسی دستگاه را بررسی کنید.'
             break
           case error.POSITION_UNAVAILABLE:
             errorMessage +=
-              'GPS signal not available. Make sure location is enabled on your device, try moving to an open area, or use manual entry below.'
+              'سیگنال GPS در دسترس نیست. مطمئن شوید که موقعیت در دستگاه شما فعال است، به منطقه باز بروید یا از ورود دستی استفاده کنید.'
             break
           case error.TIMEOUT:
             errorMessage +=
-              'GPS request timed out. Check that location is enabled on your device, then try again or use manual entry below.'
+              'درخواست GPS زمان‌بندی شد. بررسی کنید که موقعیت در دستگاه شما فعال است، سپس دوباره امتحان کنید یا از ورود دستی استفاده کنید.'
             break
           default:
             errorMessage +=
-              'Please check your browser and device location permissions, ensure GPS/location is enabled.'
+              'لطفاً مجوزهای موقعیت مرورگر و دستگاه خود را بررسی کنید، مطمئن شوید که GPS/موقعیت فعال است.'
         }
 
         setError(errorMessage)
@@ -121,15 +152,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     setError(null)
   }
 
-  const openInGoogleMaps = () => {
-    if (selectedLat && selectedLng) {
-      window.open(`https://www.google.com/maps?q=${selectedLat},${selectedLng}`, '_blank')
-    }
-  }
-
   const openGoogleMapsForSelection = () => {
-    const currentLat = selectedLat || 34.5553 // Default to Kabul if no location
-    const currentLng = selectedLng || 69.2075
+    const currentLat = selectedLat || 34.542693 // Default to Kabul if no location
+    const currentLng = selectedLng || 69.169697
 
     // Open Google Maps with a pin at the location
     window.open(`https://www.google.com/maps?q=${currentLat},${currentLng}`, '_blank')
@@ -139,22 +164,24 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     setSelectedLat(lat)
     setSelectedLng(lng)
     setAccuracy(undefined) // Clear accuracy when manually selecting on map
-    onLocationSelect(lat, lng)
+
+    // Pass complete location data with map source
+    onLocationSelect({
+      latitude: lat,
+      longitude: lng,
+      accuracy: undefined,
+      source: 'map',
+      ip: clientIP,
+    })
   }
 
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center justify-between">
-        <label className="label">
-          <span className="label-text font-medium flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            GPS Location
-          </span>
-        </label>
         {selectedLat && selectedLng && (
           <button type="button" onClick={clearLocation} className="btn btn-ghost btn-xs text-error">
             <X className="w-3 h-3" />
-            Clear
+            پاک کردن
           </button>
         )}
       </div>
@@ -169,9 +196,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           height="350px"
         />
         <p className="text-xs text-base-content/60 mt-2">
-          Click anywhere on the map to set your delivery location
+          برای تنظیم موقعیت تحویل، روی نقشه کلیک کنید
           {accuracy && (
-            <span className="text-primary ml-1">• GPS accuracy: ±{Math.round(accuracy)}m</span>
+            <span className="text-primary ml-1">• دقت GPS: ±{Math.round(accuracy)}m</span>
           )}
         </p>
       </div>
@@ -180,19 +207,18 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         <div className="alert alert-success">
           <Check className="w-5 h-5" />
           <div className="flex-1">
-            <div className="text-sm font-medium">Location Selected</div>
+            <div className="text-sm font-medium">موقعیت انتخاب شد</div>
             <div className="text-xs opacity-80">
               {selectedLat.toFixed(6)}, {selectedLng.toFixed(6)}
             </div>
           </div>
-          <button type="button" onClick={openInGoogleMaps} className="btn btn-sm btn-ghost">
-            View on Map
-          </button>
         </div>
       ) : (
-        <div className="alert">
+        <div className="alert alert-warning">
           <MapPin className="w-5 h-5" />
-          <div className="text-sm">Pin your exact location to help delivery find you easily</div>
+          <div className="text-sm">
+            موقعیت دقیق خود را پین کنید تا تیم ارسال راحت‌تر شما را پیدا کند
+          </div>
         </div>
       )}
 
@@ -208,106 +234,26 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           type="button"
           onClick={getCurrentLocation}
           disabled={gettingLocation}
-          className="btn btn-primary btn-sm gap-2"
+          className="btn btn-primary gap-2"
         >
           {gettingLocation ? (
             <>
               <span className="loading loading-spinner loading-xs"></span>
-              Getting Location...
+              در حال دریافت موقعیت...
             </>
           ) : (
             <>
               <Navigation className="w-4 h-4" />
-              Use My Current Location
+              استفاده از موقعیت فعلی من
             </>
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={openGoogleMapsForSelection}
-          className="btn btn-outline btn-sm gap-2"
-        >
+        <button type="button" onClick={openGoogleMapsForSelection} className="btn btn-soft gap-2">
           <MapPin className="w-4 h-4" />
-          Open Google Maps
+          باز کردن گوگل مپ
         </button>
       </div>
-
-      <div className="text-xs opacity-60 bg-base-200 p-3 rounded-lg">
-        <strong>How to set location:</strong>
-        <ol className="list-decimal list-inside mt-1 space-y-1">
-          <li>
-            <strong>Click on Map:</strong> Simply click your location on the map above
-          </li>
-          <li>
-            <strong>Use GPS (Quick):</strong> Click &ldquo;Use My Current Location&rdquo; button
-          </li>
-          <li>
-            <strong>Mobile Users:</strong> Make sure location/GPS is enabled in device settings for
-            GPS button
-          </li>
-          <li>
-            <strong>Manual Entry:</strong> Enter coordinates manually below if needed
-          </li>
-        </ol>
-        <div className="alert alert-info text-xs mt-2 py-2">
-          <span>
-            <strong>Tip:</strong> Zoom in on the map for precise location selection. The marker
-            shows where delivery will be sent.
-          </span>
-        </div>
-      </div>
-
-      {/* Manual coordinate entry */}
-      <details className="collapse collapse-arrow bg-base-200">
-        <summary className="collapse-title text-sm font-medium">Enter Coordinates Manually</summary>
-        <div className="collapse-content">
-          <div className="grid grid-cols-2 gap-3 mt-2">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text text-xs">Latitude</span>
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                value={selectedLat || ''}
-                onChange={(e) => {
-                  const lat = parseFloat(e.target.value)
-                  if (!isNaN(lat)) {
-                    setSelectedLat(lat)
-                    if (selectedLng) {
-                      onLocationSelect(lat, selectedLng)
-                    }
-                  }
-                }}
-                placeholder="34.555300"
-                className="input input-bordered input-sm"
-              />
-            </div>
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text text-xs">Longitude</span>
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                value={selectedLng || ''}
-                onChange={(e) => {
-                  const lng = parseFloat(e.target.value)
-                  if (!isNaN(lng)) {
-                    setSelectedLng(lng)
-                    if (selectedLat) {
-                      onLocationSelect(selectedLat, lng)
-                    }
-                  }
-                }}
-                placeholder="69.207500"
-                className="input input-bordered input-sm"
-              />
-            </div>
-          </div>
-        </div>
-      </details>
     </div>
   )
 }

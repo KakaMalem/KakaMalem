@@ -25,7 +25,10 @@ export const Media: CollectionConfig = {
     {
       name: 'alt',
       type: 'text',
-      required: true,
+      required: false,
+      admin: {
+        description: 'Leave blank to auto-generate from filename',
+      },
     },
     {
       name: 'uploadedBy',
@@ -44,13 +47,23 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: true,
-  // Hook to automatically set uploadedBy on creation
   hooks: {
     beforeChange: [
       ({ req, data, operation }) => {
+        // Auto-set uploadedBy on creation
         if (operation === 'create' && req.user) {
           data.uploadedBy = req.user.id
         }
+
+        // Auto-generate alt text from filename if not provided
+        if (!data.alt && data.filename) {
+          // Remove file extension and replace dashes/underscores with spaces
+          const nameWithoutExt = data.filename.replace(/\.[^/.]+$/, '')
+          const humanReadable = nameWithoutExt.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
+          // Capitalize first letter
+          data.alt = humanReadable.charAt(0).toUpperCase() + humanReadable.slice(1)
+        }
+
         return data
       },
     ],

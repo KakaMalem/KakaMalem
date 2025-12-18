@@ -46,26 +46,82 @@ export const getRecentlyViewed: Endpoint = {
       const recentlyViewed = (currentUser.recentlyViewed as RecentlyViewedItem[]) || []
 
       // Filter out any products that no longer exist and limit results
-      const validProducts = recentlyViewed
+      const filteredProducts = recentlyViewed
         .filter((item: RecentlyViewedItem) => {
           return item.product && typeof item.product === 'object' && item.product.id
         })
         .slice(0, limit)
-        .map((item: RecentlyViewedItem) => ({
-          product: {
-            id: item.product.id,
-            name: item.product.name,
-            slug: item.product.slug,
-            price: item.product.price,
-            salePrice: item.product.salePrice,
-            currency: item.product.currency,
-            images: item.product.images,
-            averageRating: item.product.averageRating,
-            reviewCount: item.product.reviewCount,
-            stockStatus: item.product.stockStatus,
-          },
-          viewedAt: item.viewedAt,
-        }))
+
+      // For products with variants, fetch default variant data
+      const validProducts = await Promise.all(
+        filteredProducts.map(async (item: RecentlyViewedItem) => {
+          const product = item.product
+          const productData: Record<string, unknown> = {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price,
+            salePrice: product.salePrice,
+            currency: product.currency,
+            images: product.images,
+            averageRating: product.averageRating,
+            reviewCount: product.reviewCount,
+            stockStatus: product.stockStatus,
+            hasVariants: product.hasVariants,
+          }
+
+          // If product has variants, fetch default variant images (or first variant if no default)
+          if (product.hasVariants) {
+            try {
+              // Try to fetch default variant first
+              let variantResult = await payload.find({
+                collection: 'product-variants',
+                where: {
+                  and: [{ product: { equals: product.id } }, { isDefault: { equals: true } }],
+                },
+                limit: 1,
+                depth: 1,
+              })
+
+              // If no default variant, fetch first variant
+              if (variantResult.docs.length === 0) {
+                variantResult = await payload.find({
+                  collection: 'product-variants',
+                  where: {
+                    product: { equals: product.id },
+                  },
+                  limit: 1,
+                  depth: 1,
+                  sort: 'createdAt', // Get the first created variant
+                })
+              }
+
+              if (variantResult.docs.length > 0) {
+                const variant = variantResult.docs[0]
+                const hasVariantImages =
+                  variant.images && Array.isArray(variant.images) && variant.images.length > 0
+
+                if (hasVariantImages) {
+                  productData.defaultVariantImages = variant.images
+                }
+                if (variant.price !== undefined && variant.price !== null) {
+                  productData.defaultVariantPrice = variant.price
+                }
+                if (variant.compareAtPrice !== undefined && variant.compareAtPrice !== null) {
+                  productData.defaultVariantCompareAtPrice = variant.compareAtPrice
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching variant for product ${product.id}:`, error)
+            }
+          }
+
+          return {
+            product: productData,
+            viewedAt: item.viewedAt,
+          }
+        }),
+      )
 
       return Response.json({
         success: true,

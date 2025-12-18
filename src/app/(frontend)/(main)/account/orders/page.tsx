@@ -1,9 +1,16 @@
 import React from 'react'
+import type { Metadata } from 'next'
 import { getMeUser } from '@/utilities/getMeUser'
 import type { Order } from '@/payload-types'
 import OrdersClient from './page.client'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+
+export const metadata: Metadata = {
+  title: 'سفارشات من',
+  description: 'مشاهده و پیگیری سفارشات در فروشگاه کاکا معلم',
+  robots: { index: false, follow: false },
+}
 
 // Force dynamic rendering since we use authentication (cookies)
 export const dynamic = 'force-dynamic'

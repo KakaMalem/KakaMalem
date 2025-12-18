@@ -5,8 +5,15 @@ import EditAddressClient from './page.client'
 // Force dynamic rendering since we use authentication (cookies)
 export const dynamic = 'force-dynamic'
 
-export default async function EditAddressPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditAddressPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ redirect?: string }>
+}) {
   const { id } = await params
+  const { redirect: redirectTo } = await searchParams
   const { user } = await getMeUser()
 
   if (!user) {
@@ -19,5 +26,5 @@ export default async function EditAddressPage({ params }: { params: Promise<{ id
     redirect('/account/addresses')
   }
 
-  return <EditAddressClient user={user} address={address} />
+  return <EditAddressClient user={user} address={address} redirectTo={redirectTo} />
 }

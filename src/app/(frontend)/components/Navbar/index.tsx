@@ -39,23 +39,25 @@ async function Navbar() {
   // Transform Payload data to our navbar format
   const categories: CategoryItem[] = [
     { value: 'all', label: 'All Products', slug: 'all', displayOrder: -1 },
-    ...categoriesData.docs.map((category: Category) => {
-      const categoryImage = category.categoryImage
-      const imageSrc =
-        typeof categoryImage === 'string'
-          ? categoryImage
-          : typeof categoryImage === 'object' && categoryImage?.url
-            ? categoryImage.url
-            : null
+    ...categoriesData.docs
+      .filter((category: Category) => category.slug) // Filter out categories without slugs
+      .map((category: Category) => {
+        const smallCategoryImage = category.smallCategoryImage
+        const imageSrc =
+          typeof smallCategoryImage === 'string'
+            ? smallCategoryImage
+            : typeof smallCategoryImage === 'object' && smallCategoryImage?.url
+              ? smallCategoryImage.url
+              : null
 
-      return {
-        value: category.slug,
-        label: category.name,
-        slug: category.slug,
-        displayOrder: category.displayOrder || 0,
-        image: imageSrc,
-      }
-    }),
+        return {
+          value: category.slug!,
+          label: category.name,
+          slug: category.slug!,
+          displayOrder: category.displayOrder || 0,
+          image: imageSrc,
+        }
+      }),
   ]
 
   return (

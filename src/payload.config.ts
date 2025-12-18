@@ -16,6 +16,10 @@ import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
 import { Terms } from './globals/Terms'
 import { PrivacyPolicy } from './globals/PrivacyPolicy'
+import { Help } from './globals/Help'
+import { Shipping } from './globals/Shipping'
+import { Contact } from './globals/Contact'
+import { FAQs } from './globals/FAQs'
 import { registerUser } from './endpoints/users/registerUser'
 import { loginUser } from './endpoints/users/loginUser'
 import { setPassword } from './endpoints/users/setPassword'
@@ -43,6 +47,29 @@ import { getUserOrders } from './endpoints/orders/getUserOrders'
 import { getOrderConfirmation } from './endpoints/orders/getOrderConfirmation'
 import { getProductVariants } from './endpoints/variants'
 
+const getAllowedOrigins = (): string[] => {
+  const baseUrls = [
+    process.env.NEXT_PUBLIC_SERVER_URL,
+    ...(process.env.ALLOWED_ORIGINS?.split(',') || []),
+  ]
+    .filter(Boolean)
+    .map((url) => url?.trim())
+
+  // Add development-specific URLs
+  if (process.env.NODE_ENV === 'development') {
+    baseUrls.push('http://localhost:3000')
+    // Add VPS IP for testing from external devices
+    if (process.env.VPS_IP) {
+      baseUrls.push(`http://${process.env.VPS_IP}:3000`)
+    }
+  }
+
+  // Remove duplicates and normalize (remove trailing slashes)
+  return [...new Set(baseUrls.map((url) => url?.replace(/\/$/, '') || '').filter(Boolean))]
+}
+
+const allowedOrigins = getAllowedOrigins()
+
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -52,9 +79,16 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      actions: ['/components/ViewWebsiteAction#ViewWebsiteAction'],
+      beforeLogin: ['/components/BeforeLogin#BeforeLogin'],
+      afterLogin: ['/components/AfterLogin#AfterLogin'],
+    },
   },
   collections: [Users, Media, Categories, Products, ProductVariants, Orders, Reviews],
-  globals: [Terms, PrivacyPolicy],
+  globals: [Terms, PrivacyPolicy, Help, Shipping, Contact, FAQs],
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   endpoints: [
     registerUser,
     loginUser,

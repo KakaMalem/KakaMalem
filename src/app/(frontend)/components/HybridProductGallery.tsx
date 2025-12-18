@@ -6,6 +6,8 @@ import { FreeMode, Thumbs, Keyboard, Navigation } from 'swiper/modules'
 import type { Swiper as SwiperType } from 'swiper'
 import Image from 'next/image'
 
+import { PLACEHOLDER_IMAGE } from '@/utilities/ui'
+
 // Import Swiper styles
 import 'swiper/css'
 import 'swiper/css/free-mode'
@@ -17,9 +19,6 @@ interface HybridProductGalleryProps {
   productName: string
   className?: string
 }
-
-const PLACEHOLDER_IMAGE =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
 
 export const HybridProductGallery: React.FC<HybridProductGalleryProps> = ({
   images,
@@ -158,8 +157,8 @@ export const HybridProductGallery: React.FC<HybridProductGalleryProps> = ({
 
           {/* Hover hint */}
           {!isZooming && (
-            <div className="hidden lg:block absolute bottom-8 right-8 bg-base-100/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium shadow-lg z-10">
-              Hover to zoom
+            <div className="hidden lg:block absolute bottom-8 left-8 bg-base-100/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium shadow-lg z-10">
+              برای بزرگنمایی نگه دارید
             </div>
           )}
         </div>
@@ -167,7 +166,7 @@ export const HybridProductGallery: React.FC<HybridProductGalleryProps> = ({
         {/* Floating Zoomed View Overlay - Only appears on hover (like Amazon) - Desktop only */}
         {isZooming && !imageLoadError.has(activeIndex) && (
           <div
-            className="hidden lg:block absolute left-full ml-4 top-0 w-[600px] h-[600px] xl:w-[700px] xl:h-[700px] bg-base-100 rounded-lg border-2 border-base-300 shadow-2xl overflow-hidden z-50"
+            className="hidden lg:block absolute right-full mr-4 top-0 w-[600px] h-[600px] xl:w-[700px] xl:h-[700px] bg-base-100 rounded-lg border-2 border-base-300 shadow-2xl overflow-hidden z-50"
             style={{
               backgroundImage: `url(${currentImage})`,
               backgroundSize: '250%',

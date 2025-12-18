@@ -8,6 +8,119 @@ import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
 import { slugField } from '../fields/slug'
 import { populatePublishedAt } from '../hooks/populatePublishedAt'
 
+/**
+ * PRODUCTS COLLECTION - INVENTORY MANAGEMENT GUIDE
+ * =================================================
+ *
+ * ## Inventory Tracking System
+ *
+ * ### trackQuantity Flag (Default: true)
+ * Controls whether the product uses automatic inventory tracking:
+ *
+ * **When trackQuantity === TRUE (Recommended for physical products):**
+ * ├─ stockStatus is AUTO-CALCULATED via beforeChange hook (READ-ONLY in admin)
+ * ├─ quantity field is EDITABLE
+ * ├─ lowStockThreshold is EDITABLE (default: 5)
+ * ├─ Stock validation enforced during add-to-cart and checkout
+ * ├─ Quantity automatically decrements on order completion
+ * └─ Automatic stock status transitions:
+ *    ├─ quantity > lowStockThreshold → 'in_stock'
+ *    ├─ 0 < quantity ≤ lowStockThreshold → 'low_stock'
+ *    ├─ quantity === 0 && allowBackorders → 'on_backorder'
+ *    └─ quantity === 0 && !allowBackorders → 'out_of_stock'
+ *
+ * **When trackQuantity === FALSE (For digital products, services):**
+ * ├─ stockStatus is MANUALLY EDITABLE by admins
+ * ├─ quantity field is HIDDEN (not used)
+ * ├─ lowStockThreshold is HIDDEN
+ * ├─ NO stock validation during purchases (unlimited availability)
+ * ├─ Quantity NEVER decrements
+ * └─ Perfect for: digital downloads, consultations, subscriptions
+ *
+ * ### Stock Status Types
+ * - 'in_stock': Available for purchase
+ * - 'out_of_stock': Not available (will not allow purchase)
+ * - 'low_stock': Available but quantity is low (warning only)
+ * - 'on_backorder': Out of stock but accepting orders
+ * - 'discontinued': Permanently unavailable (BLOCKS all purchases)
+ *
+ * ## Product Variants System
+ *
+ * ### Enabling Variants
+ * Set hasVariants = true and define variantOptions (e.g., Size, Color)
+ *
+ * ### Auto-Generation Process (afterChange hook)
+ * 1. Creates all possible combinations from variantOptions
+ * 2. Each variant INHERITS initial product settings:
+ *    ├─ trackQuantity, quantity, stockStatus, lowStockThreshold, allowBackorders
+ *    └─ Product images (can be overridden per variant)
+ * 3. First variant is marked as default (isDefault: true)
+ * 4. Variants are INDEPENDENT after creation (no automatic sync)
+ *
+ * ### Variant Independence
+ * IMPORTANT: After creation, variants DO NOT sync with product changes!
+ * - Changing product.quantity does NOT update variant quantities
+ * - Changing product.trackQuantity does NOT affect existing variants
+ * - Each variant manages its own inventory independently
+ *
+ * ### Hierarchical Stock Control
+ * Product-level status OVERRIDES variant status:
+ * - product.stockStatus === 'discontinued' → ALL variants blocked ❌
+ * - product.stockStatus === 'out_of_stock' → ALL variants blocked ❌
+ * - product.stockStatus === 'in_stock' → Check individual variant status ✓
+ *
+ * ## Purchase Flow & Inventory Updates
+ *
+ * ### Add to Cart Validation
+ * 1. Check product stockStatus (discontinued/out_of_stock → reject)
+ * 2. Check variant stockStatus if applicable
+ * 3. Validate quantity against available stock (if trackQuantity === true)
+ * 4. Update product.analytics.addToCartCount
+ *
+ * ### Checkout & Order Creation
+ * 1. Re-validate stock status (product → variant)
+ * 2. Re-validate quantity availability
+ * 3. Decrement quantity (if trackQuantity === true):
+ *    ├─ For products WITHOUT variants: product.quantity -= orderQty
+ *    └─ For products WITH variants: variant.quantity -= orderQty
+ * 4. Increment totalSold (ALWAYS, regardless of trackQuantity)
+ * 5. Recalculate conversion rates (conversionRate, cartConversionRate)
+ *
+ * ## Analytics Tracking
+ * All products track analytics (visible to superadmins/developers only):
+ * - viewCount: Total product detail page views
+ * - uniqueViewCount: Unique viewers (tracked via localStorage/DB)
+ * - addToCartCount: Times added to cart
+ * - wishlistCount: Times added to wishlist
+ * - totalSold: Total units sold (includes variants)
+ * - conversionRate: (totalSold / viewCount) × 100
+ * - cartConversionRate: (totalSold / addToCartCount) × 100
+ *
+ * ## Admin Access Control
+ * - Developers, Superadmins, Admins: Full access to all products
+ * - Sellers: Can create/edit/delete only their own products
+ *   ├─ seller field is AUTO-ASSIGNED on creation
+ *   └─ Cannot modify other sellers' products
+ * - Customers: Can view published products only
+ *
+ * ## Frontend Display Priority (Product Cards)
+ * When displaying products with variants, the system intelligently selects which
+ * variant to showcase based on availability and business logic:
+ *
+ * 1. Default variant (if AVAILABLE)
+ * 2. Best-selling AVAILABLE variant (if default unavailable/not set)
+ * 3. Default variant (even if unavailable - respects admin choice)
+ * 4. Best-selling variant (even if unavailable - shows popularity)
+ * 5. First AVAILABLE variant (new products, no sales yet)
+ * 6. First variant (fallback when all unavailable)
+ *
+ * This prioritization ensures:
+ * - Customers see purchasable items first
+ * - Admin's default choice is respected when available
+ * - Popular variants get visibility when default is unavailable
+ * - System gracefully handles out-of-stock scenarios
+ */
+
 export const Products: CollectionConfig = {
   slug: 'products',
   timestamps: true,
@@ -446,6 +559,9 @@ export const Products: CollectionConfig = {
           type: 'select',
           required: true,
           defaultValue: 'AFN',
+          access: {
+            update: nobody,
+          },
           options: [
             {
               label: 'AFN (Afghan Afghani)',

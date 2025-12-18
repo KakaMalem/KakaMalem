@@ -13,36 +13,36 @@
   --color-base-300: oklch(94% 0.006 264);
   --color-base-content: oklch(25% 0.015 264);
 
-  /* Primary - Vibrant red */
-  --color-primary: oklch(58% 0.22 25);
+  /* Primary - Vibrant red (L:60% action color baseline) */
+  --color-primary: oklch(60% 0.22 25);
   --color-primary-content: oklch(100% 0 0);
 
-  /* Secondary - Elegant purple */
+  /* Secondary - Elegant purple (L:60% harmonized with primary) */
   --color-secondary: oklch(60% 0.2 300);
   --color-secondary-content: oklch(100% 0 0);
 
-  /* Accent - Vibrant teal */
-  --color-accent: oklch(65% 0.2 180);
+  /* Accent - Vibrant teal (L:62% utility color baseline) */
+  --color-accent: oklch(62% 0.2 180);
   --color-accent-content: oklch(100% 0 0);
 
   /* Neutral - Balanced grays */
   --color-neutral: oklch(40% 0.01 264);
   --color-neutral-content: oklch(100% 0 0);
 
-  /* Info - Clear blue */
-  --color-info: oklch(65% 0.2 240);
+  /* Info - Clear blue (L:62% harmonized with accent/success) */
+  --color-info: oklch(62% 0.2 240);
   --color-info-content: oklch(100% 0 0);
 
-  /* Success - Fresh green */
-  --color-success: oklch(65% 0.2 145);
+  /* Success - Fresh green (L:62% harmonized with accent/info) */
+  --color-success: oklch(62% 0.2 145);
   --color-success-content: oklch(100% 0 0);
 
-  /* Warning - Warm orange */
+  /* Warning - Warm orange (L:75% light for dark text contrast) */
   --color-warning: oklch(75% 0.18 75);
   --color-warning-content: oklch(25% 0.015 75);
 
-  /* Error - Clear red */
-  --color-error: oklch(60% 0.25 25);
+  /* Error - Crimson (H:10 cooler than primary H:25, L:55% darker for urgency) */
+  --color-error: oklch(55% 0.25 10);
   --color-error-content: oklch(100% 0 0);
 
   /* Border radius */
@@ -62,6 +62,153 @@
   --noise: 0;
 }
 
+/* Custom semantic colors for app-specific use cases */
+:root {
+  /* Star rating color - warm amber/gold */
+  --color-rating: oklch(75% 0.18 75);
+
+  /* Overlay colors for cards and modals */
+  --color-overlay: oklch(0% 0 0 / 0.6);
+  --color-overlay-light: oklch(0% 0 0 / 0.4);
+
+  /* Map marker color - matches info color for consistency */
+  --color-map-marker: oklch(65% 0.2 240);
+  --color-map-marker-hex: #3b82f6;
+}
+
+/* Utility classes for custom colors */
+.text-rating {
+  color: var(--color-rating);
+}
+
+.fill-rating {
+  fill: var(--color-rating);
+}
+
+.bg-rating {
+  background-color: var(--color-rating);
+}
+
+.bg-overlay {
+  background-color: var(--color-overlay);
+}
+
+.bg-overlay-light {
+  background-color: var(--color-overlay-light);
+}
+
+/* Auth page decorative gradient blobs - using theme colors */
+/* Primary auth blobs (login, register, forgot password) */
+.auth-blob-1 {
+  background: linear-gradient(
+    to bottom right,
+    oklch(60% 0.2 300 / 0.5),
+    oklch(58% 0.22 25 / 0.4),
+    oklch(65% 0.2 180 / 0.3)
+  );
+}
+
+.auth-blob-2 {
+  background: linear-gradient(
+    to top right,
+    oklch(65% 0.2 180 / 0.4),
+    oklch(65% 0.2 240 / 0.35),
+    oklch(60% 0.2 300 / 0.3)
+  );
+}
+
+.auth-blob-3 {
+  background: linear-gradient(
+    to right,
+    oklch(58% 0.22 25 / 0.35),
+    oklch(60% 0.2 300 / 0.3),
+    oklch(65% 0.2 180 / 0.25)
+  );
+}
+
+.auth-blob-4 {
+  background: linear-gradient(
+    to bottom left,
+    oklch(75% 0.18 75 / 0.4),
+    oklch(65% 0.2 145 / 0.35),
+    oklch(65% 0.2 180 / 0.3)
+  );
+}
+
+/* Success auth blobs (success page) */
+.auth-blob-success-1 {
+  background: linear-gradient(
+    to bottom right,
+    oklch(65% 0.2 145 / 0.5),
+    oklch(65% 0.2 180 / 0.4),
+    oklch(70% 0.15 160 / 0.3)
+  );
+}
+
+.auth-blob-success-2 {
+  background: linear-gradient(
+    to top right,
+    oklch(65% 0.2 180 / 0.4),
+    oklch(65% 0.2 240 / 0.35),
+    oklch(65% 0.2 145 / 0.3)
+  );
+}
+
+.auth-blob-success-3 {
+  background: linear-gradient(
+    to right,
+    oklch(70% 0.15 160 / 0.35),
+    oklch(65% 0.2 145 / 0.3),
+    oklch(65% 0.2 180 / 0.25)
+  );
+}
+
+.auth-blob-success-4 {
+  background: linear-gradient(
+    to bottom left,
+    oklch(75% 0.18 75 / 0.4),
+    oklch(70% 0.15 90 / 0.35),
+    oklch(65% 0.2 145 / 0.3)
+  );
+}
+
+/* Neutral auth blobs (logout page) */
+.auth-blob-neutral-1 {
+  background: linear-gradient(
+    to bottom right,
+    oklch(50% 0.02 264 / 0.5),
+    oklch(60% 0.02 264 / 0.4),
+    oklch(70% 0.01 264 / 0.3)
+  );
+}
+
+.auth-blob-neutral-2 {
+  background: linear-gradient(
+    to top right,
+    oklch(65% 0.2 180 / 0.4),
+    oklch(65% 0.2 240 / 0.35),
+    oklch(60% 0.02 264 / 0.3)
+  );
+}
+
+.auth-blob-neutral-3 {
+  background: linear-gradient(
+    to right,
+    oklch(60% 0.2 300 / 0.35),
+    oklch(50% 0.02 264 / 0.3),
+    oklch(65% 0.15 280 / 0.25)
+  );
+}
+
+.auth-blob-neutral-4 {
+  background: linear-gradient(
+    to bottom left,
+    oklch(75% 0.18 75 / 0.4),
+    oklch(70% 0.1 60 / 0.35),
+    oklch(65% 0.05 264 / 0.3)
+  );
+}
+
 /* Hide scrollbars */
 .hide-scrollbar {
   -ms-overflow-style: none;
@@ -70,4 +217,63 @@
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* RTL-specific utilities */
+.rtl-flip-x {
+  transform: scaleX(-1);
+}
+
+/* RTL adjustments for proper text rendering */
+html[dir='rtl'] {
+  text-align: right;
+}
+
+/* Ensure inputs work properly in RTL */
+html[dir='rtl'] input,
+html[dir='rtl'] textarea {
+  direction: rtl;
+}
+
+/* Fix Persian/Arabic letter cutoff in inputs */
+/* Persian characters have descenders (dots below baseline) that get clipped */
+input,
+textarea,
+select,
+.input,
+.textarea,
+.select {
+  line-height: 1.7;
+}
+
+/* Ensure placeholders also have proper line-height */
+input::placeholder,
+textarea::placeholder {
+  line-height: 1.7;
+}
+
+/* Font rendering improvements */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
+}
+
+/* Better number rendering for Persian */
+html[lang='fa'] {
+  font-variant-numeric: lining-nums;
+}
+
+/* Leaflet map z-index constraints - keep map below navbar (z-index: 60) */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-control,
+.leaflet-popup {
+  z-index: 10 !important;
+}
+
+.leaflet-map-pane {
+  z-index: 1 !important;
 }

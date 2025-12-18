@@ -1,0 +1,35 @@
+.before-login-container {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 100;
+}
+
+.home-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  color: var(--theme-elevation-700);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.home-link:hover {
+  color: var(--theme-elevation-900);
+  background: var(--theme-elevation-100);
+}
+
+.home-link svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.home-link:hover svg {
+  opacity: 1;
+}

@@ -69,9 +69,9 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
     if (!showTitle) {
       return (
         <div className="text-center py-12">
-          <div className="text-base-content/30 mb-2">No browsing history yet</div>
+          <div className="text-base-content/30 mb-2">هنوز محصولی مشاهده نکرده‌اید</div>
           <p className="text-sm text-base-content/60">
-            Products you view will appear here
+            محصولاتی که مشاهده می‌کنید اینجا نمایش داده می‌شوند
           </p>
         </div>
       )
@@ -82,7 +82,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
 
   return (
     <div className="space-y-4">
-      {showTitle && <h2 className="text-2xl font-bold">Recently Viewed</h2>}
+      {showTitle && <h2 className="text-2xl font-bold">اخیراً مشاهده شده</h2>}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {productsToShow.map((product) => {
           const productWithVariant = product as Product & {
@@ -166,7 +166,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
                   />
                 ) : (
                   <div className="flex items-center justify-center w-full h-full text-base-content/30">
-                    No image
+                    بدون تصویر
                   </div>
                 )}
               </figure>
@@ -180,8 +180,8 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
                   <Star
                     className={`w-3 h-3 ${
                       product.averageRating && product.averageRating > 0
-                        ? 'fill-orange-400 text-orange-400'
-                        : 'text-gray-300'
+                        ? 'fill-rating text-rating'
+                        : 'text-base-300'
                     }`}
                   />
                   <span className="text-xs opacity-70">
@@ -189,7 +189,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
                       ? product.averageRating.toFixed(1)
                       : product.reviewCount && product.reviewCount > 0
                         ? '0.0'
-                        : 'No reviews'}
+                        : 'بدون امتیاز'}
                   </span>
                 </div>
 

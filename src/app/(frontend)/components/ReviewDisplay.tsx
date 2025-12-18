@@ -61,7 +61,7 @@ const RatingDistribution = ({
             <span className="text-sm w-8">{stars} ★</span>
             <div className="flex-1 bg-base-300 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-orange-400 h-full transition-all duration-300"
+                className="bg-rating h-full transition-all duration-300"
                 style={{ width: `${percentage}%` }}
               />
             </div>
@@ -76,11 +76,13 @@ const RatingDistribution = ({
 const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticated?: boolean }) => {
   const user = typeof review.user === 'object' ? review.user : null
   const userName = user?.name || user?.email?.split('@')[0] || 'Anonymous'
-  const reviewDate = new Date(review.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  const reviewDate = new Date(review.createdAt)
+    .toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+    .replace(/\d{4}/, '2025')
 
   const [helpfulCount, setHelpfulCount] = useState(review.helpful || 0)
   const [isVoting, setIsVoting] = useState(false)
@@ -138,7 +140,7 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
             {review.verifiedPurchase && (
               <div className="badge badge-success badge-sm gap-1">
                 <CheckCircle className="w-3 h-3" />
-                Verified Purchase
+                خرید تایید شده
               </div>
             )}
           </div>
@@ -151,16 +153,18 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
 
       {/* Admin Response */}
       {review.adminResponse && review.adminResponse.response && (
-        <div className="mt-4 p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg">
+        <div className="mt-4 p-4 bg-primary/5 border-r-4 border-primary rounded-l-lg">
           <div className="flex items-start gap-2 mb-2">
-            <div className="badge badge-primary badge-sm">Store Response</div>
+            <div className="badge badge-primary badge-sm">پاسخ فروشگاه</div>
             {review.adminResponse.respondedAt && (
               <span className="text-xs opacity-60">
-                {new Date(review.adminResponse.respondedAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {new Date(review.adminResponse.respondedAt)
+                  .toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                  .replace(/\d{4}/, '2025')}
               </span>
             )}
           </div>
@@ -171,13 +175,13 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
       )}
 
       <div className="mt-4 flex items-center gap-4">
-        <p className="text-sm opacity-60">Was this review helpful?</p>
+        <p className="text-sm opacity-60">آیا این نظر مفید بود؟</p>
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleVote(true)}
             disabled={isVoting}
             className={`btn btn-sm btn-ghost gap-1 ${userVote === 'helpful' ? 'btn-active text-success' : ''}`}
-            aria-label="Mark as helpful"
+            aria-label="مفید بود"
           >
             <ThumbsUp className="w-4 h-4" />
             {userVote === 'helpful' && <span className="text-xs">({helpfulCount})</span>}
@@ -186,14 +190,14 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
             onClick={() => handleVote(false)}
             disabled={isVoting}
             className={`btn btn-sm btn-ghost gap-1 ${userVote === 'not-helpful' ? 'btn-active text-error' : ''}`}
-            aria-label="Mark as not helpful"
+            aria-label="مفید نبود"
           >
             <ThumbsDown className="w-4 h-4" />
           </button>
         </div>
         {helpfulCount > 0 && userVote !== 'helpful' && (
           <span className="text-sm opacity-60">
-            {helpfulCount} {helpfulCount === 1 ? 'person' : 'people'} found this helpful
+            {helpfulCount} {helpfulCount === 1 ? 'نفر' : 'نفر'} این نظر را مفید دانستند
           </span>
         )}
       </div>
@@ -213,9 +217,9 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
 
   if (stats.totalReviews === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-lg opacity-60">No reviews yet</p>
-        <p className="text-sm opacity-40 mt-2">Be the first to review this product!</p>
+      <div className="text-center py-12" dir="rtl">
+        <p className="text-lg opacity-60">هنوز نظری ثبت نشده</p>
+        <p className="text-sm opacity-40 mt-2">اولین نفری باشید که در مورد این محصول نظر میدهد!</p>
       </div>
     )
   }
@@ -226,16 +230,16 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
     : reviews
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" dir="rtl">
       {/* Overall Rating Summary */}
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="text-center md:text-left">
+        <div className="text-center md:text-right">
           <div className="text-5xl font-bold text-primary mb-2">
             {stats.averageRating.toFixed(1)}
           </div>
           <StarRating rating={stats.averageRating} />
           <p className="text-sm opacity-60 mt-2">
-            Based on {stats.totalReviews} {stats.totalReviews === 1 ? 'review' : 'reviews'}
+            بر اساس {stats.totalReviews} {stats.totalReviews === 1 ? 'نظر' : 'نظر'}
           </p>
         </div>
 
@@ -253,10 +257,10 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
       {/* Reviews List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold">Customer Reviews</h3>
+          <h3 className="text-xl font-bold">نظریات مشتریان</h3>
           {selectedRating && (
             <button onClick={() => setSelectedRating(null)} className="btn btn-sm btn-ghost gap-2">
-              <span>Showing {selectedRating} ★ reviews</span>
+              <span>نمایش نظریات {selectedRating} ★</span>
               <span className="text-lg">×</span>
             </button>
           )}
@@ -267,7 +271,7 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
           ))
         ) : (
           <div className="text-center py-8">
-            <p className="text-base opacity-60">No {selectedRating} star reviews yet</p>
+            <p className="text-base opacity-60">هنوز نظری با {selectedRating} ستاره ثبت نشده</p>
           </div>
         )}
       </div>
@@ -279,10 +283,10 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
             {isLoading ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>
-                Loading...
+                در حال بارگذاری...
               </>
             ) : (
-              'Load More Reviews'
+              'نمایش نظریات بیشتر'
             )}
           </button>
         </div>

@@ -103,10 +103,18 @@ export interface Config {
   globals: {
     terms: Term;
     'privacy-policy': PrivacyPolicy;
+    help: Help;
+    shipping: Shipping;
+    contact: Contact;
+    faqs: Faq;
   };
   globalsSelect: {
     terms: TermsSelect<false> | TermsSelect<true>;
     'privacy-policy': PrivacyPolicySelect<false> | PrivacyPolicySelect<true>;
+    help: HelpSelect<false> | HelpSelect<true>;
+    shipping: ShippingSelect<false> | ShippingSelect<true>;
+    contact: ContactSelect<false> | ContactSelect<true>;
+    faqs: FaqsSelect<false> | FaqsSelect<true>;
   };
   locale: null;
   user: User & {
@@ -147,6 +155,9 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  password?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   /**
    * OAuth provider subject ID (system-managed)
    */
@@ -163,13 +174,11 @@ export interface User {
    * Original Fan - Early supporter badge
    */
   ogfan?: boolean | null;
-  /**
-   * User role permissions (Developer and Super Admin can only be assigned by Super Admins)
-   */
-  roles?: ('customer' | 'seller' | 'admin' | 'developer' | 'superadmin')[] | null;
-  firstName?: string | null;
-  lastName?: string | null;
   phone?: string | null;
+  /**
+   * User roles determine access levels. Only superadmins and developers can modify roles.
+   */
+  roles?: ('customer' | 'seller' | 'admin' | 'superadmin' | 'developer')[] | null;
   addresses?:
     | {
         label: string;
@@ -202,6 +211,18 @@ export interface User {
            * Longitude coordinate
            */
           longitude?: number | null;
+          /**
+           * Location accuracy in meters
+           */
+          accuracy?: number | null;
+          /**
+           * How the location was obtained
+           */
+          source?: ('gps' | 'ip' | 'manual' | 'map') | null;
+          /**
+           * IP address when location was captured
+           */
+          ip?: string | null;
         };
         id?: string | null;
       }[]
@@ -257,7 +278,6 @@ export interface User {
         expiresAt: string;
       }[]
     | null;
-  password?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -418,7 +438,10 @@ export interface Product {
  */
 export interface Media {
   id: string;
-  alt: string;
+  /**
+   * Leave blank to auto-generate from filename
+   */
+  alt?: string | null;
   uploadedBy?: (string | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -441,8 +464,9 @@ export interface Category {
   name: string;
   slug?: string | null;
   slugLock?: boolean | null;
-  categoryImage?: (string | null) | Media;
+  smallCategoryImage?: (string | null) | Media;
   description?: string | null;
+  heroImage?: (string | null) | Media;
   /**
    * Parent category for hierarchy
    */
@@ -513,6 +537,18 @@ export interface Order {
     coordinates?: {
       latitude?: number | null;
       longitude?: number | null;
+      /**
+       * Location accuracy in meters
+       */
+      accuracy?: number | null;
+      /**
+       * How the location was obtained
+       */
+      source?: ('gps' | 'ip' | 'manual' | 'map') | null;
+      /**
+       * IP address when location was captured
+       */
+      ip?: string | null;
     };
   };
   trackingNumber?: string | null;
@@ -842,14 +878,15 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  password?: T;
+  firstName?: T;
+  lastName?: T;
   sub?: T;
   picture?: T;
   hasPassword?: T;
   ogfan?: T;
-  roles?: T;
-  firstName?: T;
-  lastName?: T;
   phone?: T;
+  roles?: T;
   addresses?:
     | T
     | {
@@ -867,6 +904,9 @@ export interface UsersSelect<T extends boolean = true> {
           | {
               latitude?: T;
               longitude?: T;
+              accuracy?: T;
+              source?: T;
+              ip?: T;
             };
         id?: T;
       };
@@ -930,8 +970,9 @@ export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
   slugLock?: T;
-  categoryImage?: T;
+  smallCategoryImage?: T;
   description?: T;
+  heroImage?: T;
   parent?: T;
   displayOrder?: T;
   status?: T;
@@ -1070,6 +1111,9 @@ export interface OrdersSelect<T extends boolean = true> {
           | {
               latitude?: T;
               longitude?: T;
+              accuracy?: T;
+              source?: T;
+              ip?: T;
             };
       };
   trackingNumber?: T;
@@ -1253,6 +1297,160 @@ export interface PrivacyPolicy {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "help".
+ */
+export interface Help {
+  id: string;
+  /**
+   * عنوان که در بالای صفحه نمایش داده می‌شود
+   */
+  title: string;
+  /**
+   * محتوای کامل مرکز راهنمایی
+   */
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * تاریخ آخرین بروزرسانی
+   */
+  lastUpdated?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "shipping".
+ */
+export interface Shipping {
+  id: string;
+  /**
+   * عنوان که در بالای صفحه نمایش داده می‌شود
+   */
+  title: string;
+  /**
+   * اطلاعات کامل ارسال و بازگشت کالا
+   */
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * تاریخ آخرین بروزرسانی
+   */
+  lastUpdated?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact".
+ */
+export interface Contact {
+  id: string;
+  title: string;
+  /**
+   * ایمیل
+   */
+  email: string;
+  /**
+   * شماره تماس
+   */
+  phone: string;
+  /**
+   * شماره واتساپ (اختیاری)
+   */
+  whatsapp?: string | null;
+  address: string;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  lastUpdated?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faqs".
+ */
+export interface Faq {
+  id: string;
+  /**
+   * عنوان که در بالای صفحه نمایش داده می‌شود
+   */
+  title: string;
+  /**
+   * لیست سوالات متداول
+   */
+  items: {
+    /**
+     * سوال
+     */
+    question: string;
+    /**
+     * پاسخ به سوال
+     */
+    answer: {
+      root: {
+        type: string;
+        children: {
+          type: string;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    };
+    id?: string | null;
+  }[];
+  /**
+   * تاریخ آخرین بروزرسانی
+   */
+  lastUpdated?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "terms_select".
  */
 export interface TermsSelect<T extends boolean = true> {
@@ -1270,6 +1468,64 @@ export interface TermsSelect<T extends boolean = true> {
 export interface PrivacyPolicySelect<T extends boolean = true> {
   title?: T;
   content?: T;
+  lastUpdated?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "help_select".
+ */
+export interface HelpSelect<T extends boolean = true> {
+  title?: T;
+  content?: T;
+  lastUpdated?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "shipping_select".
+ */
+export interface ShippingSelect<T extends boolean = true> {
+  title?: T;
+  content?: T;
+  lastUpdated?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact_select".
+ */
+export interface ContactSelect<T extends boolean = true> {
+  title?: T;
+  email?: T;
+  phone?: T;
+  whatsapp?: T;
+  address?: T;
+  content?: T;
+  lastUpdated?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faqs_select".
+ */
+export interface FaqsSelect<T extends boolean = true> {
+  title?: T;
+  items?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
   lastUpdated?: T;
   updatedAt?: T;
   createdAt?: T;

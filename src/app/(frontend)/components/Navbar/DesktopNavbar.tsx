@@ -33,8 +33,12 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
   )
 
   // Determine if we should render the category bar at all based on route
+  // Hide categories on: product pages, account pages, and footer link pages
+  const footerPages = ['/terms', '/privacy', '/help', '/shipping', '/contact', '/faqs']
   const shouldRenderCategories = pathname
-    ? !pathname.startsWith('/product/') && !pathname.startsWith('/account')
+    ? !pathname.startsWith('/product/') &&
+      !pathname.startsWith('/account') &&
+      !footerPages.includes(pathname)
     : false
 
   // --- DIMENSIONS ---
@@ -96,7 +100,9 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
 
               {/* Actions */}
               <div className="flex items-center gap-2">
-                <div className="dropdown dropdown-end">
+                <CartButton />
+
+                <div className="dropdown dropdown-end dropdown-bottom">
                   <div
                     tabIndex={0}
                     role="button"
@@ -114,7 +120,7 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
                   </div>
                   <ul
                     tabIndex={0}
-                    className="dropdown-content z-[70] menu p-2 shadow-xl bg-base-100 rounded-xl w-56 mt-2 border border-base-200"
+                    className="dropdown-content z-[70] menu menu-compact p-2 shadow-xl bg-base-100 rounded-box w-56 mt-3 border border-base-200"
                   >
                     {accountMenuItems.map((item, index) =>
                       item.isDivider ? (
@@ -134,8 +140,6 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
                     )}
                   </ul>
                 </div>
-
-                <CartButton />
               </div>
             </div>
           </div>
@@ -159,7 +163,7 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
             }}
           >
             <div className="max-w-7xl mx-auto px-8 py-4 h-full">
-              <div className="flex items-center gap-8 overflow-x-auto hide-scrollbar h-full px-2">
+              <div className="flex items-center gap-8 overflow-x-auto hide-scrollbar h-full">
                 <Link
                   href="/"
                   className="group flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:scale-105 flex-shrink-0 h-full min-w-[80px]"
@@ -190,14 +194,16 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
                       pathname === '/' ? 'text-primary' : 'text-base-content'
                     }`}
                   >
-                    All Products
+                    همه محصولات
                   </span>
                 </Link>
 
                 {categories
                   .filter((cat) => cat.value !== 'all')
                   .map((category) => {
-                    const isActive = pathname === `/category/${category.slug}`
+                    // Decode pathname to handle Persian/Arabic characters in URLs
+                    const decodedPathname = pathname ? decodeURIComponent(pathname) : ''
+                    const isActive = decodedPathname === `/category/${category.slug}`
                     return (
                       <Link
                         key={category.value}

@@ -195,12 +195,25 @@ export const getProducts: Endpoint = {
         depth: 2, // Include categories and images
       })
 
-      // For products with variants, fetch default variant images
+      // For products with variants, fetch the best variant to display
+      // Priority with availability:
+      // 1) Default variant (if available)
+      // 2) Best-selling available variant
+      // 3) Default variant (even if unavailable - respects admin choice)
+      // 4) Best-selling variant (even if unavailable)
+      // 5) First available variant
+      // 6) First variant (fallback)
       const productsWithDefaultVariants = await Promise.all(
         results.docs.map(async (product) => {
           if (product.hasVariants) {
             try {
-              // Fetch default variant for this product
+              let selectedVariant = null
+
+              // Helper function to check if variant is available
+              const isAvailable = (variant: { stockStatus?: string }) =>
+                variant.stockStatus !== 'out_of_stock' && variant.stockStatus !== 'discontinued'
+
+              // Fetch default variant (isDefault: true)
               const defaultVariantResult = await payload.find({
                 collection: 'product-variants',
                 where: {
@@ -210,28 +223,82 @@ export const getProducts: Endpoint = {
                 depth: 1, // Include images
               })
 
-              if (defaultVariantResult.docs.length > 0) {
-                const defaultVariant = defaultVariantResult.docs[0]
-                const hasVariantImages =
-                  defaultVariant.images &&
-                  Array.isArray(defaultVariant.images) &&
-                  defaultVariant.images.length > 0
+              const defaultVariant =
+                defaultVariantResult.docs.length > 0 ? defaultVariantResult.docs[0] : null
 
-                // Add default variant data to product
+              // Fetch all variants for fallback logic
+              const allVariantsResult = await payload.find({
+                collection: 'product-variants',
+                where: {
+                  product: { equals: product.id },
+                },
+                limit: 100, // Reasonable limit
+                depth: 1,
+                sort: '-totalSold,createdAt', // Sort by totalSold descending, then by creation
+              })
+
+              const allVariants = allVariantsResult.docs
+
+              // PRIORITY 1: Default variant if it's AVAILABLE
+              if (defaultVariant && isAvailable(defaultVariant)) {
+                selectedVariant = defaultVariant
+              }
+              // PRIORITY 2: Best-selling AVAILABLE variant (if default is unavailable or doesn't exist)
+              else if (allVariants.length > 0) {
+                const availableVariants = allVariants.filter(isAvailable)
+                const variantsWithSales = allVariants.filter((v) => (v.totalSold || 0) > 0)
+                const availableWithSales = availableVariants.filter((v) => (v.totalSold || 0) > 0)
+
+                if (availableWithSales.length > 0) {
+                  // Best-selling available variant
+                  selectedVariant = availableWithSales[0]
+                }
+                // PRIORITY 3: Default variant (even if unavailable - shows admin's choice)
+                else if (defaultVariant) {
+                  selectedVariant = defaultVariant
+                }
+                // PRIORITY 4: Best-selling variant (even if unavailable)
+                else if (variantsWithSales.length > 0) {
+                  selectedVariant = variantsWithSales[0]
+                }
+                // PRIORITY 5: First AVAILABLE variant (no sales yet)
+                else if (availableVariants.length > 0) {
+                  selectedVariant = availableVariants[0]
+                }
+                // PRIORITY 6: First variant (fallback - all unavailable)
+                else {
+                  selectedVariant = allVariants[0]
+                }
+              }
+
+              // If we found a variant, enrich product with variant data
+              if (selectedVariant) {
+                const hasVariantImages =
+                  selectedVariant.images &&
+                  Array.isArray(selectedVariant.images) &&
+                  selectedVariant.images.length > 0
+
+                // Add selected variant data to product
                 return {
                   ...product,
-                  defaultVariantId: defaultVariant.id,
-                  ...(hasVariantImages && { defaultVariantImages: defaultVariant.images }),
-                  ...(defaultVariant.price !== undefined &&
-                    defaultVariant.price !== null && { defaultVariantPrice: defaultVariant.price }),
-                  ...(defaultVariant.compareAtPrice !== undefined &&
-                    defaultVariant.compareAtPrice !== null && {
-                      defaultVariantCompareAtPrice: defaultVariant.compareAtPrice,
+                  defaultVariantId: selectedVariant.id,
+                  defaultVariantSku: selectedVariant.sku,
+                  defaultVariantStockStatus: selectedVariant.stockStatus,
+                  defaultVariantTotalSold: selectedVariant.totalSold || 0,
+                  defaultVariantQuantity: selectedVariant.quantity,
+                  ...(hasVariantImages && { defaultVariantImages: selectedVariant.images }),
+                  ...(selectedVariant.price !== undefined &&
+                    selectedVariant.price !== null && {
+                      defaultVariantPrice: selectedVariant.price,
+                    }),
+                  ...(selectedVariant.compareAtPrice !== undefined &&
+                    selectedVariant.compareAtPrice !== null && {
+                      defaultVariantCompareAtPrice: selectedVariant.compareAtPrice,
                     }),
                 }
               }
             } catch (error) {
-              console.error(`Error fetching default variant for product ${product.id}:`, error)
+              console.error(`Error fetching variant for product ${product.id}:`, error)
             }
           }
           return product

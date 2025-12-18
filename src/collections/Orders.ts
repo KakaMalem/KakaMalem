@@ -129,14 +129,140 @@ export const Orders: CollectionConfig = {
         return data
       },
     ],
+    afterDelete: [
+      async ({ doc, req }) => {
+        // Restore inventory when an order is deleted
+        if (!doc || !doc.items || !Array.isArray(doc.items)) {
+          return
+        }
+
+        req.payload.logger.info(`Restoring inventory for deleted order: ${doc.orderNumber}`)
+
+        for (const item of doc.items) {
+          try {
+            const productId = typeof item.product === 'string' ? item.product : item.product?.id
+            const variantId = typeof item.variant === 'string' ? item.variant : item.variant?.id
+
+            if (!productId) {
+              req.payload.logger.warn(
+                'Order item missing product ID, skipping inventory restoration',
+              )
+              continue
+            }
+
+            // Fetch the product
+            const product = await req.payload.findByID({
+              collection: 'products',
+              id: productId,
+            })
+
+            if (!product) {
+              req.payload.logger.warn(
+                `Product ${productId} not found, skipping inventory restoration`,
+              )
+              continue
+            }
+
+            // Update product analytics and totalSold
+            const analytics = product.analytics || {}
+            const viewCount = analytics.viewCount || 0
+            const addToCartCount = analytics.addToCartCount || 0
+            const newTotalSold = Math.max(0, (product.totalSold || 0) - item.quantity)
+
+            // Recalculate conversion rates with updated totalSold
+            const conversionRate = viewCount > 0 ? (newTotalSold / viewCount) * 100 : 0
+            const cartConversionRate =
+              addToCartCount > 0 ? (newTotalSold / addToCartCount) * 100 : 0
+
+            // Build update data for product
+            const productUpdateData: {
+              quantity?: number
+              totalSold: number
+              analytics: {
+                conversionRate: number
+                cartConversionRate: number
+                [key: string]: unknown
+              }
+            } = {
+              totalSold: newTotalSold,
+              analytics: {
+                ...analytics,
+                conversionRate: parseFloat(conversionRate.toFixed(2)),
+                cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
+              },
+            }
+
+            // Restore product inventory if tracking is enabled and no variant
+            if (product.trackQuantity === true && !variantId) {
+              productUpdateData.quantity = (product.quantity || 0) + item.quantity
+            }
+
+            await req.payload.update({
+              collection: 'products',
+              id: productId,
+              data: productUpdateData,
+            })
+
+            req.payload.logger.info(
+              `Restored ${item.quantity} units to product ${productId}, new totalSold: ${newTotalSold}`,
+            )
+
+            // Restore variant inventory if variant was used
+            if (variantId) {
+              try {
+                const variant = await req.payload.findByID({
+                  collection: 'product-variants',
+                  id: variantId,
+                })
+
+                if (variant) {
+                  const variantUpdateData: {
+                    quantity?: number
+                    totalSold: number
+                  } = {
+                    totalSold: Math.max(0, (variant.totalSold || 0) - item.quantity),
+                  }
+
+                  if (variant.trackQuantity === true) {
+                    variantUpdateData.quantity = (variant.quantity || 0) + item.quantity
+                  }
+
+                  await req.payload.update({
+                    collection: 'product-variants',
+                    id: variantId,
+                    data: variantUpdateData,
+                  })
+
+                  req.payload.logger.info(
+                    `Restored ${item.quantity} units to variant ${variantId}, new totalSold: ${variantUpdateData.totalSold}`,
+                  )
+                }
+              } catch (error) {
+                req.payload.logger.error(`Failed to restore variant inventory: ${error}`)
+              }
+            }
+          } catch (error) {
+            req.payload.logger.error(`Failed to restore inventory for order item: ${error}`)
+          }
+        }
+      },
+    ],
     beforeValidate: [
       ({ data, req, operation }) => {
         if (!data) return data
 
         const user = req.user
 
-        // Validate seller status updates
-        if (operation === 'update' && user?.roles?.includes('seller')) {
+        // Check if user has elevated privileges (admin/superadmin/developer)
+        const hasElevatedPrivileges =
+          user?.roles?.includes('admin') ||
+          user?.roles?.includes('superadmin') ||
+          user?.roles?.includes('developer')
+
+        // Validate seller status updates (only if seller WITHOUT elevated privileges)
+        const isSellerOnly = user?.roles?.includes('seller') && !hasElevatedPrivileges
+
+        if (operation === 'update' && isSellerOnly) {
           const allowedStatuses = ['processing', 'shipped', 'delivered']
 
           if (data.status && !allowedStatuses.includes(data.status)) {
@@ -154,14 +280,7 @@ export const Orders: CollectionConfig = {
         }
 
         // Customers cannot update their own orders
-        if (
-          operation === 'update' &&
-          user &&
-          !user.roles?.includes('admin') &&
-          !user.roles?.includes('superadmin') &&
-          !user.roles?.includes('developer') &&
-          !user.roles?.includes('seller')
-        ) {
+        if (operation === 'update' && user && !hasElevatedPrivileges && !isSellerOnly) {
           throw new Error('Customers cannot modify orders')
         }
 
@@ -245,25 +364,64 @@ export const Orders: CollectionConfig = {
               relationTo: 'products',
               required: true,
               admin: {
-                width: '40%',
+                width: '50%',
               },
             },
             {
               name: 'variant',
               type: 'relationship',
               relationTo: 'product-variants',
+              filterOptions: ({ siblingData }): Where => {
+                // Only show variants that belong to the selected product
+                const product = (siblingData as Record<string, unknown>)?.product as
+                  | string
+                  | { id: string }
+                  | undefined
+                if (product) {
+                  const productId = typeof product === 'string' ? product : product.id
+                  return {
+                    product: {
+                      equals: productId,
+                    },
+                  } as Where
+                }
+                // If no product selected, show no variants (return impossible condition)
+                return {
+                  id: {
+                    equals: '',
+                  },
+                } as Where
+              },
               admin: {
-                width: '30%',
+                width: '50%',
                 description: 'Product variant (if applicable)',
+                // Only show variant field if product has variants enabled
+                condition: (data, siblingData) => {
+                  const product = (siblingData as Record<string, unknown>)?.product as
+                    | string
+                    | { id: string; hasVariants?: boolean }
+                    | undefined
+                  // Show if product has hasVariants set to true
+                  if (product && typeof product === 'object' && product.hasVariants) {
+                    return true
+                  }
+                  // Default to showing the field (when loading or product not fully loaded)
+                  return true
+                },
               },
             },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
             {
               name: 'quantity',
               type: 'number',
               required: true,
               min: 1,
               admin: {
-                width: '10%',
+                width: '33%',
               },
             },
             {
@@ -271,7 +429,7 @@ export const Orders: CollectionConfig = {
               type: 'number',
               required: true,
               admin: {
-                width: '10%',
+                width: '33%',
               },
             },
             {
@@ -279,7 +437,7 @@ export const Orders: CollectionConfig = {
               type: 'number',
               required: true,
               admin: {
-                width: '10%',
+                width: '34%',
               },
             },
           ],
@@ -290,6 +448,10 @@ export const Orders: CollectionConfig = {
           admin: {
             readOnly: true,
             description: 'Snapshot of variant details at time of order (for historical record)',
+            // Only show to developers
+            condition: (data, siblingData, { user }) => {
+              return !!user?.roles?.includes('developer')
+            },
           },
         },
         {
@@ -434,6 +596,9 @@ export const Orders: CollectionConfig = {
         {
           name: 'coordinates',
           type: 'group',
+          admin: {
+            hidden: true,
+          },
           fields: [
             {
               name: 'latitude',
@@ -443,7 +608,43 @@ export const Orders: CollectionConfig = {
               name: 'longitude',
               type: 'number',
             },
+            {
+              name: 'accuracy',
+              type: 'number',
+              admin: {
+                description: 'Location accuracy in meters',
+              },
+            },
+            {
+              name: 'source',
+              type: 'select',
+              options: [
+                { label: 'GPS', value: 'gps' },
+                { label: 'IP Address', value: 'ip' },
+                { label: 'Manual Entry', value: 'manual' },
+                { label: 'Map Selection', value: 'map' },
+              ],
+              admin: {
+                description: 'How the location was obtained',
+              },
+            },
+            {
+              name: 'ip',
+              type: 'text',
+              admin: {
+                description: 'IP address when location was captured',
+              },
+            },
           ],
+        },
+        {
+          name: 'locationMap',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '/fields/orderLocationMap#OrderLocationMapField',
+            },
+          },
         },
       ],
     },
@@ -476,6 +677,12 @@ export const Orders: CollectionConfig = {
             )
           }
           return false
+        },
+      },
+      admin: {
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
         },
       },
     },
@@ -613,6 +820,9 @@ export const Orders: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'AFN',
+      access: {
+        update: nobody,
+      },
       options: [
         {
           label: 'AFN (Afghan Afghani)',

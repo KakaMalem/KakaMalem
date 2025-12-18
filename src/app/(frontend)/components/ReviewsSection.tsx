@@ -100,11 +100,11 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ productId, isAut
   return (
     <div className="space-y-6">
       {/* Section Header */}
-      <div>
-        <h2 className="text-3xl font-bold mb-2">Ratings & Reviews</h2>
+      <div dir="rtl">
+        <h2 className="text-3xl font-bold mb-2">نظریات مشتریان</h2>
         {stats.totalReviews > 0 && stats.verifiedPurchases > 0 && (
           <p className="text-sm text-base-content/70">
-            {stats.verifiedPurchases} of {stats.totalReviews} reviews are from verified purchasers
+            {stats.verifiedPurchases} از {stats.totalReviews} نظر از خریداران تایید شده است
           </p>
         )}
       </div>

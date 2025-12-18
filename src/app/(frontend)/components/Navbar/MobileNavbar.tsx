@@ -33,8 +33,12 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
   )
 
   // Logic to show/hide categories based on route
+  // Hide categories on: product pages, account pages, and footer link pages
+  const footerPages = ['/terms', '/privacy', '/help', '/shipping', '/contact', '/faqs']
   const shouldRenderCategories = pathname
-    ? !pathname.startsWith('/product/') && !pathname.startsWith('/account')
+    ? !pathname.startsWith('/product/') &&
+      !pathname.startsWith('/account') &&
+      !footerPages.includes(pathname)
     : false
 
   // --- DIMENSIONS ---
@@ -93,7 +97,7 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
             {/* Row 1: Menu - Logo - Cart */}
             <div className="flex items-center justify-between gap-3 h-[60px]">
               {/* Mobile Menu Button */}
-              <div className="dropdown">
+              <div className="dropdown dropdown-start dropdown-bottom">
                 <div
                   tabIndex={0}
                   role="button"
@@ -111,7 +115,7 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
                 </div>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content z-[70] menu p-2 shadow-xl bg-base-100 rounded-xl w-64 mt-2 border border-base-200"
+                  className="dropdown-content z-[70] menu menu-compact p-2 shadow-xl bg-base-100 rounded-box w-64 mt-3 border border-base-200"
                 >
                   {accountMenuItems.map((item, index) =>
                     item.isDivider ? (
@@ -199,7 +203,7 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
                       pathname === '/' ? 'text-primary' : 'text-base-content'
                     }`}
                   >
-                    All Products
+                    همه محصولات
                   </span>
                 </Link>
 
@@ -207,7 +211,9 @@ export default function MobileNavbar({ categories, user }: MobileNavbarProps) {
                 {categories
                   .filter((cat) => cat.value !== 'all')
                   .map((category) => {
-                    const isActive = pathname === `/category/${category.slug}`
+                    // Decode pathname to handle Persian/Arabic characters in URLs
+                    const decodedPathname = pathname ? decodeURIComponent(pathname) : ''
+                    const isActive = decodedPathname === `/category/${category.slug}`
                     return (
                       <Link
                         key={category.value}

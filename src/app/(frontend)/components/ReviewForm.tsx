@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import Link from 'next/link'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Star, Edit, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -27,6 +27,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   onSuccess,
   isAuthenticated,
 }) => {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [title, setTitle] = useState('')
@@ -37,6 +39,85 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   const [isLoadingReview, setIsLoadingReview] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isAutoSubmitting, setIsAutoSubmitting] = useState(false)
+  const hasAutoSubmitted = useRef(false)
+
+  // Extract submission logic into a reusable function
+  const submitReview = useCallback(
+    async (reviewRating: number, reviewTitle: string, reviewComment: string) => {
+      setIsSubmitting(true)
+      setError(null)
+
+      try {
+        const isUpdate = userReview && isEditing
+
+        const response = await fetch(isUpdate ? '/api/update-review' : '/api/create-review', {
+          method: isUpdate ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(
+            isUpdate
+              ? {
+                  reviewId: userReview.id,
+                  rating: reviewRating,
+                  title: reviewTitle.trim(),
+                  comment: reviewComment.trim(),
+                }
+              : {
+                  productId,
+                  rating: reviewRating,
+                  title: reviewTitle.trim(),
+                  comment: reviewComment.trim(),
+                },
+          ),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || `خطا در ${isUpdate ? 'بروزرسانی' : 'ارسال'} نظر. لطفا دوباره تلاش کنید.`,
+          )
+        }
+
+        // Success - update local state
+        const updatedReview: UserReview = {
+          id: data.data.id || userReview?.id || '',
+          rating: data.data.rating,
+          title: data.data.title,
+          comment: data.data.comment,
+          status: data.data.status,
+          verifiedPurchase: data.data.verifiedPurchase || userReview?.verifiedPurchase || false,
+          createdAt: data.data.createdAt || userReview?.createdAt || new Date().toISOString(),
+          updatedAt: data.data.updatedAt,
+        }
+
+        setUserReview(updatedReview)
+        setIsEditing(false)
+        toast.success(isUpdate ? 'نظر شما با موفقیت بروزرسانی شد!' : 'نظر شما با موفقیت ثبت شد!')
+
+        // Clear form
+        setRating(0)
+        setTitle('')
+        setComment('')
+
+        if (onSuccess) {
+          onSuccess()
+        }
+      } catch (error: unknown) {
+        console.error('خطا در ثبت نظر:', error)
+        const errorMessage =
+          error instanceof Error ? error.message : 'خطا در ثبت نظر. لطفا دوباره تلاش کنید.'
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [userReview, isEditing, productId, onSuccess],
+  )
 
   // Fetch user's existing review
   useEffect(() => {
@@ -67,92 +148,141 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     fetchUserReview()
   }, [productId, isAuthenticated])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!isAuthenticated) {
-      setError('You must be logged in to submit a review')
+  // Check for pending review from sessionStorage (after login redirect)
+  useEffect(() => {
+    // Only run if authenticated
+    if (isAuthenticated !== true) {
       return
     }
 
+    const submitAfterLogin = searchParams.get('submitReview')
+
+    // Check if we should auto-submit
+    if (submitAfterLogin === 'true' && !hasAutoSubmitted.current && !isLoadingReview) {
+      const pendingReviewKey = `pendingReview_${productId}`
+      const pendingReviewData = sessionStorage.getItem(pendingReviewKey)
+
+      if (pendingReviewData) {
+        try {
+          const reviewData = JSON.parse(pendingReviewData)
+
+          // Mark as submitted immediately to prevent duplicate submissions
+          hasAutoSubmitted.current = true
+          setIsAutoSubmitting(true)
+
+          // Clear from storage immediately
+          sessionStorage.removeItem(pendingReviewKey)
+
+          // Show notification that we're auto-submitting
+          toast.loading('در حال ارسال نظر شما...', { duration: 2000 })
+
+          // Populate form with stored data first
+          setRating(reviewData.rating)
+          setTitle(reviewData.title)
+          setComment(reviewData.comment)
+
+          // Auto-submit the review after a brief delay to ensure state is updated
+          setTimeout(async () => {
+            try {
+              await submitReview(reviewData.rating, reviewData.title, reviewData.comment)
+              setIsAutoSubmitting(false)
+            } catch (error) {
+              console.error('خطا در ارسال خودکار نظر:', error)
+              toast.error('خطا در ارسال خودکار نظر. لطفا دکمه ارسال را فشار دهید.')
+              setIsAutoSubmitting(false)
+              // Keep data in form so user can manually submit
+              setRating(reviewData.rating)
+              setTitle(reviewData.title)
+              setComment(reviewData.comment)
+            }
+          }, 800)
+        } catch (error) {
+          console.error('خطا در بازیابی اطلاعات نظر:', error)
+          sessionStorage.removeItem(pendingReviewKey)
+          toast.error('خطا در بازیابی اطلاعات نظر. لطفا دوباره وارد کنید.')
+        }
+      } else {
+        // If submitReview param exists but no data, clean up the URL
+        if (submitAfterLogin === 'true') {
+          const url = new URL(window.location.href)
+          url.searchParams.delete('submitReview')
+          window.history.replaceState({}, '', url.pathname + url.search)
+        }
+      }
+    }
+  }, [isAuthenticated, searchParams, productId, submitReview, isLoadingReview])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Validate form fields first
     if (rating === 0) {
-      setError('Please select a rating')
+      setError('لطفاً امتیاز را انتخاب کنید')
+      toast.error('لطفاً امتیاز را انتخاب کنید')
       return
     }
 
     if (title.trim().length === 0) {
-      setError('Please enter a review title')
+      setError('لطفاً عنوان نظر را وارد کنید')
+      toast.error('لطفاً عنوان نظر را وارد کنید')
       return
     }
 
     if (comment.trim().length === 0) {
-      setError('Please enter a review comment')
+      setError('لطفاً متن نظر را وارد کنید')
+      toast.error('لطفاً متن نظر را وارد کنید')
       return
     }
 
-    setIsSubmitting(true)
-    setError(null)
-
-    try {
-      const isUpdate = userReview && isEditing
-
-      const response = await fetch(isUpdate ? '/api/update-review' : '/api/create-review', {
-        method: isUpdate ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(
-          isUpdate
-            ? {
-                reviewId: userReview.id,
-                rating,
-                title: title.trim(),
-                comment: comment.trim(),
-              }
-            : {
-                productId,
-                rating,
-                title: title.trim(),
-                comment: comment.trim(),
-              },
-        ),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || `Failed to ${isUpdate ? 'update' : 'submit'} review`)
+    // If not authenticated, store review data and redirect to login
+    if (isAuthenticated !== true) {
+      const pendingReviewKey = `pendingReview_${productId}`
+      const reviewData = {
+        rating,
+        title: title.trim(),
+        comment: comment.trim(),
+        timestamp: Date.now(),
       }
 
-      // Success - update local state
-      const updatedReview: UserReview = {
-        id: data.data.id || userReview?.id || '',
-        rating: data.data.rating,
-        title: data.data.title,
-        comment: data.data.comment,
-        status: data.data.status,
-        verifiedPurchase: data.data.verifiedPurchase || userReview?.verifiedPurchase || false,
-        createdAt: data.data.createdAt || userReview?.createdAt || new Date().toISOString(),
-        updatedAt: data.data.updatedAt,
+      try {
+        // Store in sessionStorage
+        sessionStorage.setItem(pendingReviewKey, JSON.stringify(reviewData))
+
+        // Verify storage worked
+        const stored = sessionStorage.getItem(pendingReviewKey)
+        if (!stored) {
+          throw new Error('خطا در ذخیره اطلاعات')
+        }
+
+        // Get current URL for return redirect
+        const currentPath = window.location.pathname
+        const currentSearch = window.location.search
+        const baseUrl = currentPath + (currentSearch ? currentSearch : '')
+        const separator = currentSearch ? '&' : '?'
+        const fullUrl = `${baseUrl}${separator}submitReview=true`
+        const redirectUrl = encodeURIComponent(fullUrl)
+
+        // Show toast notification
+        toast.success('نظر شما ذخیره شد! لطفاً وارد شوید تا نظر ارسال شود.', {
+          duration: 3000,
+          icon: '🔐',
+        })
+
+        // Redirect to login with return URL
+        setTimeout(() => {
+          router.push(`/auth/login?redirect=${redirectUrl}`)
+        }, 800)
+      } catch (error) {
+        console.error('خطا در ذخیره نظر:', error)
+        toast.error('خطا در ذخیره اطلاعات. لطفا دوباره تلاش کنید.')
+        setError('خطا در ذخیره اطلاعات. لطفا دوباره تلاش کنید.')
       }
 
-      setUserReview(updatedReview)
-      setIsEditing(false)
-      toast.success(data.message || `Review ${isUpdate ? 'updated' : 'submitted'} successfully!`)
-
-      if (onSuccess) {
-        onSuccess()
-      }
-    } catch (error: unknown) {
-      console.error('Error with review:', error)
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to submit review. Please try again.'
-      setError(errorMessage)
-      toast.error(errorMessage)
-    } finally {
-      setIsSubmitting(false)
+      return
     }
+
+    // Call the submission function
+    await submitReview(rating, title, comment)
   }
 
   const handleEdit = () => {
@@ -188,10 +318,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete review')
+        throw new Error(data.error || 'خطا در حذف نظر')
       }
 
-      toast.success('Review deleted successfully!')
+      toast.success('نظر شما با موفقیت حذف شد!')
       setUserReview(null)
       setShowDeleteConfirm(false)
 
@@ -199,9 +329,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         onSuccess()
       }
     } catch (error: unknown) {
-      console.error('Error deleting review:', error)
+      console.error('خطا در حذف نظر:', error)
       const errorMessage =
-        error instanceof Error ? error.message : 'Failed to delete review. Please try again.'
+        error instanceof Error ? error.message : 'خطا در حذف نظر. لطفا دوباره تلاش کنید.'
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -209,18 +339,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     }
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="card bg-base-200 p-6 text-center">
-        <p className="mb-4">You must be logged in to write a review</p>
-        <Link href="/auth/login" className="btn btn-primary">
-          Log In
-        </Link>
-      </div>
-    )
-  }
-
-  if (isLoadingReview) {
+  if (isLoadingReview && isAuthenticated) {
     return (
       <div className="card bg-base-100 border border-base-300 p-6">
         <div className="flex justify-center items-center py-8">
@@ -233,23 +352,23 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   // Show existing review (not in edit mode)
   if (userReview && !isEditing) {
     return (
-      <div className="card bg-base-100 border border-base-300 p-6">
+      <div className="card bg-base-100 border border-base-300 p-6" dir="rtl">
         <div className="flex items-start justify-between mb-4">
-          <h3 className="text-xl font-bold">Your Review</h3>
+          <h3 className="text-xl font-bold">نظر شما</h3>
           <div className="flex gap-2">
             <button
               onClick={handleEdit}
               className="btn btn-sm btn-ghost"
-              aria-label="Edit review"
-              title="Edit review"
+              aria-label="ویرایش نظر"
+              title="ویرایش نظر"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="btn btn-sm btn-ghost text-error"
-              aria-label="Delete review"
-              title="Delete review"
+              aria-label="حذف نظر"
+              title="حذف نظر"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -264,13 +383,13 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 <Star
                   key={star}
                   className={`w-5 h-5 ${
-                    star <= userReview.rating ? 'fill-orange-400 text-orange-400' : 'text-base-300'
+                    star <= userReview.rating ? 'fill-rating text-rating' : 'text-base-300'
                   }`}
                 />
               ))}
             </div>
             {userReview.verifiedPurchase && (
-              <span className="badge badge-success badge-sm">Verified Purchase</span>
+              <span className="badge badge-success badge-sm">خرید تایید شده</span>
             )}
           </div>
 
@@ -287,13 +406,14 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           {/* Metadata */}
           <div className="text-sm text-base-content/60 pt-2 border-t border-base-300">
             <p>
-              Posted on {new Date(userReview.createdAt).toLocaleDateString()}
+              ارسال شده در{' '}
+              {new Date(userReview.createdAt).toLocaleDateString('en-US').replace(/\d{4}/, '2025')}
               {userReview.updatedAt &&
                 userReview.updatedAt !== userReview.createdAt &&
-                ` • Edited on ${new Date(userReview.updatedAt).toLocaleDateString()}`}
+                ` • ویرایش شده در ${new Date(userReview.updatedAt).toLocaleDateString('en-US').replace(/\d{4}/, '2025')}`}
             </p>
             {userReview.status === 'pending' && (
-              <p className="text-warning mt-1">Your review is pending approval</p>
+              <p className="text-warning mt-1">نظر شما در انتظار تایید است</p>
             )}
           </div>
         </div>
@@ -301,8 +421,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         {/* Delete Confirmation Dialog */}
         {showDeleteConfirm && (
           <div className="mt-4 p-4 bg-error/10 border border-error rounded-lg">
-            <p className="font-semibold mb-3">Are you sure you want to delete your review?</p>
-            <p className="text-sm text-base-content/70 mb-4">This action cannot be undone.</p>
+            <p className="font-semibold mb-3">آیا مطمئن هستید که می‌خواهید نظر خود را حذف کنید؟</p>
+            <p className="text-sm text-base-content/70 mb-4">این عملیات قابل بازگشت نیست.</p>
             <div className="flex gap-2">
               <button
                 onClick={handleDelete}
@@ -312,10 +432,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 {isSubmitting ? (
                   <>
                     <span className="loading loading-spinner loading-xs"></span>
-                    Deleting...
+                    در حال حذف...
                   </>
                 ) : (
-                  'Yes, Delete'
+                  'بله، حذف شود'
                 )}
               </button>
               <button
@@ -323,7 +443,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 disabled={isSubmitting}
                 className="btn btn-ghost btn-sm"
               >
-                Cancel
+                انصراف
               </button>
             </div>
             {error && <p className="text-error text-sm mt-2">{error}</p>}
@@ -335,23 +455,23 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
   // Show form (new review or editing existing)
   return (
-    <div className="card bg-base-100 border border-base-300 p-6">
+    <div className="card bg-base-100 border border-base-300 p-6" dir="rtl">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold">{isEditing ? 'Edit Your Review' : 'Write a Review'}</h3>
+        <h3 className="text-xl font-bold">{isEditing ? 'ویرایش نظر شما' : 'نوشتن نظر'}</h3>
         {isEditing && (
-          <button onClick={handleCancelEdit} className="btn btn-sm btn-ghost" aria-label="Cancel">
+          <button onClick={handleCancelEdit} className="btn btn-sm btn-ghost" aria-label="انصراف">
             <X className="w-4 h-4" />
-            Cancel
+            انصراف
           </button>
         )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Rating Selection */}
-        <div className="form-control">
+        <div className="fieldset">
           <label className="label">
             <span className="label-text font-semibold">
-              Your Rating <span className="text-error">*</span>
+              امتیاز <span className="text-error">*</span>
             </span>
           </label>
           <div className="flex items-center gap-1">
@@ -363,37 +483,35 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 onMouseEnter={() => setHoveredRating(star)}
                 onMouseLeave={() => setHoveredRating(0)}
                 className="transition-transform hover:scale-110"
-                aria-label={`Rate ${star} stars`}
+                aria-label={`امتیاز ${star} ستاره`}
               >
                 <Star
                   className={`w-8 h-8 ${
-                    star <= (hoveredRating || rating)
-                      ? 'fill-orange-400 text-orange-400'
-                      : 'text-base-300'
+                    star <= (hoveredRating || rating) ? 'fill-rating text-rating' : 'text-base-300'
                   }`}
                 />
               </button>
             ))}
             {rating > 0 && (
-              <span className="ml-2 text-sm opacity-70">
-                {rating} {rating === 1 ? 'star' : 'stars'}
+              <span className="mr-2 text-sm opacity-70">
+                {rating} {rating === 1 ? 'ستاره' : 'ستاره'}
               </span>
             )}
           </div>
         </div>
 
         {/* Title */}
-        <div className="form-control">
+        <div className="fieldset">
           <label className="label">
             <span className="label-text font-semibold">
-              Review Title <span className="text-error">*</span>
+              عنوان نظر <span className="text-error">*</span>
             </span>
             <span className="label-text-alt opacity-60">{title.length}/100</span>
           </label>
           <input
             type="text"
-            placeholder="Sum up your review in one line"
-            className="input input-bordered w-full"
+            placeholder="نظر خود را در یک خط خلاصه کنید"
+            className="input w-full"
             value={title}
             onChange={(e) => setTitle(e.target.value.slice(0, 100))}
             maxLength={100}
@@ -402,16 +520,16 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         </div>
 
         {/* Comment */}
-        <div className="form-control">
+        <div className="fieldset">
           <label className="label">
             <span className="label-text font-semibold">
-              Your Review <span className="text-error">*</span>
+              نظر شما <span className="text-error">*</span>
             </span>
             <span className="label-text-alt opacity-60">{comment.length}/2000</span>
           </label>
           <textarea
             className="textarea textarea-bordered w-full h-32"
-            placeholder="Share your thoughts about this product..."
+            placeholder="نظر خود را درباره این محصول بنویسید..."
             value={comment}
             onChange={(e) => setComment(e.target.value.slice(0, 2000))}
             maxLength={2000}
@@ -439,22 +557,34 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           </div>
         )}
 
+        {/* Auto-submit indicator */}
+        {isAutoSubmitting && (
+          <div className="alert alert-info">
+            <div className="flex items-center gap-2">
+              <span className="loading loading-spinner loading-sm"></span>
+              <span>در حال ارسال خودکار نظر شما...</span>
+            </div>
+          </div>
+        )}
+
         {/* Submit Button */}
-        <div className="form-control">
+        <div className="fieldset">
           <button
             type="submit"
-            disabled={isSubmitting || rating === 0 || !title.trim() || !comment.trim()}
+            disabled={
+              isSubmitting || isAutoSubmitting || rating === 0 || !title.trim() || !comment.trim()
+            }
             className="btn btn-primary"
           >
-            {isSubmitting ? (
+            {isSubmitting || isAutoSubmitting ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>
-                {isEditing ? 'Updating...' : 'Submitting...'}
+                {isEditing ? 'در حال بروزرسانی...' : 'در حال ارسال...'}
               </>
             ) : isEditing ? (
-              'Update Review'
+              'بروزرسانی نظر'
             ) : (
-              'Submit Review'
+              'ارسال نظر'
             )}
           </button>
         </div>

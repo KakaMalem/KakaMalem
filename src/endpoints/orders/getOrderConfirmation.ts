@@ -12,12 +12,13 @@ export const getOrderConfirmation: Endpoint = {
     }
 
     try {
-      // Fetch the order with populated product data
+      // Fetch the order with fully populated product and variant data
+      // Depth 4 ensures complete population:  // order -> items.variant -> variant.images -> Media objects
       const order = await payload.findByID({
         collection: 'orders',
         id: orderId as string,
-        depth: 2,
-        overrideAccess: true, // Bypass normal access control
+        depth: 4,
+        overrideAccess: true, // Bypass normal access control to ensure all data is fetched
       })
 
       if (!order) {

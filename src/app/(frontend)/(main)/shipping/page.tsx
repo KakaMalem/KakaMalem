@@ -1,28 +1,34 @@
+import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { serializeRichText } from '@/utilities/serializeRichText'
 
+export const metadata: Metadata = {
+  title: 'ارسال و بازگشت',
+  description: 'اطلاعات ارسال، تحویل و سیاست بازگشت کالا در فروشگاه کاکا معلم',
+}
+
 export const dynamic = 'force-dynamic'
 
-export default async function PrivacyPage() {
+export default async function ShippingPage() {
   const payload = await getPayload({ config })
 
-  const privacy = await payload.findGlobal({
-    slug: 'privacy-policy',
+  const shipping = await payload.findGlobal({
+    slug: 'shipping',
   })
 
   // Serialize the rich text content to HTML
-  const contentHtml = privacy.content ? serializeRichText(privacy.content) : ''
+  const contentHtml = shipping.content ? serializeRichText(shipping.content) : ''
 
   return (
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">{privacy.title || 'Privacy Policy'}</h1>
-          {privacy.lastUpdated && (
+          <h1 className="text-4xl font-bold mb-4">{shipping.title || 'ارسال و بازگشت'}</h1>
+          {shipping.lastUpdated && (
             <p className="text-sm text-base-content/60">
-              Last updated: {new Date(privacy.lastUpdated).toLocaleDateString()}
+              آخرین بروزرسانی: {new Date(shipping.lastUpdated).toLocaleDateString('fa-IR')}
             </p>
           )}
         </div>
@@ -46,7 +52,7 @@ export default async function PrivacyPage() {
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 ></path>
               </svg>
-              <span>Privacy Policy content has not been set yet.</span>
+              <span>محتوای ارسال و بازگشت هنوز تنظیم نشده است.</span>
             </div>
           )}
         </div>

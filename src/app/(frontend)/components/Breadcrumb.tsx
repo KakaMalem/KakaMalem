@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Home } from 'lucide-react'
+import { Home, ChevronRight } from 'lucide-react'
 
 export interface BreadcrumbItem {
   label: string
@@ -16,7 +16,7 @@ interface BreadcrumbProps {
 }
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, showHome = true }) => {
-  const allItems: BreadcrumbItem[] = showHome ? [{ label: 'Home', href: '/' }, ...items] : items
+  const allItems: BreadcrumbItem[] = showHome ? [{ label: 'خانه', href: '/' }, ...items] : items
 
   const truncateLabel = (label: string, maxLength: number = 30) => {
     if (label.length > maxLength) {
@@ -26,36 +26,45 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, showHome = true }
   }
 
   return (
-    <div className="breadcrumbs text-sm overflow-x-auto">
-      <ul>
+    <nav aria-label="Breadcrumb" dir="rtl" className="py-2">
+      <ol className="flex items-center flex-wrap gap-2 text-sm">
         {allItems.map((item, index) => {
           const isLast = index === allItems.length - 1
           const isHome = showHome && index === 0
 
           return (
-            <li key={index}>
+            <li key={index} className="flex items-center gap-2">
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="hover:text-primary transition-colors inline-flex items-center gap-2 max-w-[200px]"
+                  className="inline-flex items-center gap-1.5 text-base-content/60 hover:text-primary transition-colors group"
                   title={item.label}
                 >
                   {isHome && <Home className="w-4 h-4 flex-shrink-0" />}
-                  <span className="truncate">{truncateLabel(item.label)}</span>
+                  <span className="max-w-[150px] md:max-w-[200px] truncate">
+                    {truncateLabel(item.label)}
+                  </span>
                 </Link>
               ) : (
                 <span
-                  className={`inline-flex items-center gap-2 max-w-[200px] ${isLast ? 'text-base-content font-medium' : ''}`}
+                  className={`inline-flex items-center gap-1.5 ${
+                    isLast ? 'text-base-content font-medium' : 'text-base-content/60'
+                  }`}
                   title={item.label}
                 >
                   {isHome && <Home className="w-4 h-4 flex-shrink-0" />}
-                  <span className="truncate">{truncateLabel(item.label)}</span>
+                  <span className="max-w-[150px] md:max-w-[200px] truncate">
+                    {truncateLabel(item.label)}
+                  </span>
                 </span>
+              )}
+              {!isLast && (
+                <ChevronRight className="w-4 h-4 text-base-content/40 flex-shrink-0 rotate-180" />
               )}
             </li>
           )
         })}
-      </ul>
-    </div>
+      </ol>
+    </nav>
   )
 }

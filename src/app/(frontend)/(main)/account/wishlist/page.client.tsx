@@ -15,22 +15,27 @@ export default function WishlistClient({ products }: WishlistClientProps) {
   if (products.length === 0) {
     return (
       <div className="space-y-6">
-        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Wishlist', active: true }]} />
+        <Breadcrumb
+          items={[
+            { label: 'حساب کاربری', href: '/account' },
+            { label: 'لیست علاقه‌مندی‌ها', active: true },
+          ]}
+        />
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold">My Wishlist</h2>
-          <p className="text-base-content/70 mt-1">0 items</p>
+          <h2 className="text-2xl md:text-3xl font-bold">لیست علاقه‌مندی‌های من</h2>
+          <p className="text-base-content/70 mt-1">0 قلم</p>
         </div>
 
         <div className="card bg-base-200">
           <div className="card-body text-center py-12">
             <Heart className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-            <h3 className="text-xl font-bold mb-2">Your wishlist is empty</h3>
+            <h3 className="text-xl font-bold mb-2">لیست علاقه‌مندی‌های شما خالی است</h3>
             <p className="text-base-content/70 mb-6">
-              Save items you love for later by clicking the heart icon
+              با کلیک بر روی آیکون قلب، محصولات مورد علاقه خود را برای بعد ذخیره کنید
             </p>
             <Link href="/" className="btn btn-primary mx-auto gap-2">
               <ShoppingBag className="w-4 h-4" />
-              Start Shopping
+              شروع خرید
             </Link>
           </div>
         </div>
@@ -40,17 +45,20 @@ export default function WishlistClient({ products }: WishlistClientProps) {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Wishlist', active: true }]} />
+      <Breadcrumb
+        items={[
+          { label: 'حساب کاربری', href: '/account' },
+          { label: 'لیست علاقه‌مندی‌ها', active: true },
+        ]}
+      />
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold">My Wishlist</h2>
-          <p className="text-base-content/70 mt-1">
-            {products.length} {products.length === 1 ? 'item' : 'items'}
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold">لیست علاقه‌مندی‌های من</h2>
+          <p className="text-base-content/70 mt-1">{products.length} قلم</p>
         </div>
         <Link href="/" className="btn btn-outline gap-2">
           <ShoppingBag className="w-4 h-4" />
-          Continue Shopping
+          ادامه خرید
         </Link>
       </div>
 

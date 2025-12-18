@@ -1,5 +1,6 @@
 import type { Endpoint } from 'payload'
 import type { User, Product } from '@/payload-types'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 interface CartItem {
   product: string | Product
@@ -11,6 +12,7 @@ interface CartItem {
 interface RequestCartItem {
   product: string
   quantity: number
+  variantId?: string
 }
 
 interface CreateOrderRequest {
@@ -26,6 +28,9 @@ interface CreateOrderRequest {
     coordinates?: {
       latitude: number | null
       longitude: number | null
+      accuracy?: number | null
+      source?: 'gps' | 'ip' | 'manual' | 'map' | null
+      ip?: string | null
     }
     isDefault?: boolean
   }
@@ -40,7 +45,8 @@ export const createOrder: Endpoint = {
   path: '/create-order',
   method: 'post',
   handler: async (req) => {
-    const { payload, user } = req
+    const { payload } = req
+    let user = req.user
 
     // Parse request body
     let body: CreateOrderRequest
@@ -67,9 +73,42 @@ export const createOrder: Endpoint = {
       )
     }
 
+    // If user is not populated but we have an email, try to find the user
+    // This handles cases where req.user isn't populated (e.g., mobile access)
+    if (!user && guestEmail) {
+      try {
+        const users = await payload.find({
+          collection: 'users',
+          where: {
+            email: {
+              equals: guestEmail.toLowerCase().trim(),
+            },
+          },
+          limit: 1,
+        })
+
+        if (users.docs.length > 0) {
+          // Found a user with this email - use it instead of guest checkout
+          user = {
+            ...users.docs[0],
+            collection: 'users',
+          } as User & { collection: 'users' }
+        }
+      } catch (error) {
+        console.log('Error finding user by email:', error)
+        // Continue as guest if lookup fails
+      }
+    }
+
     // For guest checkout, require guestEmail
     if (!user && !guestEmail) {
-      return Response.json({ error: 'Email is required for guest checkout' }, { status: 400 })
+      return Response.json(
+        {
+          error: 'Email is required for guest checkout',
+          hint: 'Please provide your email address or ensure you are logged in',
+        },
+        { status: 400 },
+      )
     }
 
     try {
@@ -122,6 +161,41 @@ export const createOrder: Endpoint = {
           return Response.json({ error: `Product ${cartItem.product} not found` }, { status: 400 })
         }
 
+        // Hierarchical stock check: Product-level status overrides variant status
+        // If product is discontinued or out of stock, no variant can be purchased
+        if (product.stockStatus === 'discontinued' || product.stockStatus === 'out_of_stock') {
+          const message =
+            product.stockStatus === 'discontinued'
+              ? `${product.name} دیگر تولید نمی‌شود و قابل خرید نیست`
+              : `${product.name} موجود نیست`
+          return Response.json({ error: message }, { status: 400 })
+        }
+
+        // Check if product has variants and ALL variants are unavailable
+        if (product.hasVariants) {
+          const allVariants = await payload.find({
+            collection: 'product-variants',
+            where: {
+              product: {
+                equals: product.id,
+              },
+            },
+          })
+
+          const allVariantsUnavailable =
+            allVariants.docs.length > 0 &&
+            allVariants.docs.every(
+              (v) => v.stockStatus === 'out_of_stock' || v.stockStatus === 'discontinued',
+            )
+
+          if (allVariantsUnavailable) {
+            return Response.json(
+              { error: `تمام گزینه‌های ${product.name} ناموجود هستند` },
+              { status: 400 },
+            )
+          }
+        }
+
         // Fetch variant if specified
         let variant = null
         let variantDetails = null
@@ -136,6 +210,16 @@ export const createOrder: Endpoint = {
               sku: variant.sku,
               options: variant.options,
               price: variant.price,
+            }
+
+            // Check if variant is discontinued or out of stock
+            // Note: Product-level check already done above, this is for variant-specific status
+            if (variant.stockStatus === 'discontinued' || variant.stockStatus === 'out_of_stock') {
+              const message =
+                variant.stockStatus === 'discontinued'
+                  ? `گزینه ${variant.sku} از ${product.name} دیگر تولید نمی‌شود و قابل خرید نیست`
+                  : `گزینه ${variant.sku} از ${product.name} موجود نیست`
+              return Response.json({ error: message }, { status: 400 })
             }
           } catch (_error) {
             return Response.json(
@@ -165,14 +249,31 @@ export const createOrder: Endpoint = {
 
         subtotal += itemTotal
 
-        orderItems.push({
+        const orderItem: {
+          product: string
+          quantity: number
+          price: number
+          total: number
+          variant?: string
+          variantDetails?: typeof variantDetails
+        } = {
           product: product.id,
           quantity: cartItem.quantity,
           price,
           total: itemTotal,
-          ...(cartItem.variantId && { variant: cartItem.variantId }),
-          ...(variantDetails && { variantDetails }),
-        })
+        }
+
+        // Add variant if present
+        if (cartItem.variantId) {
+          orderItem.variant = cartItem.variantId
+        }
+
+        // Add variant details snapshot if present
+        if (variantDetails) {
+          orderItem.variantDetails = variantDetails
+        }
+
+        orderItems.push(orderItem)
 
         // Update product inventory and analytics (always)
         const analytics = product.analytics || {}
@@ -265,7 +366,13 @@ export const createOrder: Endpoint = {
           phone: shippingAddress.phone || '',
           nearbyLandmark: shippingAddress.nearbyLandmark || '',
           detailedDirections: shippingAddress.detailedDirections || '',
-          coordinates: shippingAddress.coordinates || { latitude: null, longitude: null },
+          coordinates: shippingAddress.coordinates || {
+            latitude: null,
+            longitude: null,
+            accuracy: null,
+            source: null,
+            ip: null,
+          },
         },
         paymentMethod,
         paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
@@ -321,6 +428,45 @@ export const createOrder: Endpoint = {
             cart: [],
           },
         })
+      }
+
+      // Revalidate product pages to show updated stock quantities
+      try {
+        // Revalidate all product pages
+        for (const item of orderItems) {
+          const productId = typeof item.product === 'string' ? item.product : item.product
+          const product = await payload.findByID({
+            collection: 'products',
+            id: productId,
+          })
+
+          if (product && product.slug) {
+            // Revalidate product detail page
+            revalidatePath(`/product/${product.slug}`)
+
+            // Revalidate by product-specific tag
+            revalidateTag(`product-${product.slug}`)
+
+            // Revalidate category pages if product has categories
+            if (product.categories && Array.isArray(product.categories)) {
+              for (const category of product.categories) {
+                if (typeof category === 'object' && 'slug' in category && category.slug) {
+                  revalidatePath(`/category/${category.slug}`)
+                }
+              }
+            }
+          }
+        }
+
+        // Revalidate shop page and home page
+        revalidatePath('/shop')
+        revalidatePath('/')
+
+        // Revalidate by general tag
+        revalidateTag('products')
+      } catch (revalidateError) {
+        // Log but don't fail the order if revalidation fails
+        console.error('Cache revalidation error:', revalidateError)
       }
 
       return Response.json(

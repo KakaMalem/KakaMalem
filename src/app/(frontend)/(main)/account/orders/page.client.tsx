@@ -47,17 +47,22 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
   if (orders.length === 0) {
     return (
       <div className="space-y-6">
-        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Orders', active: true }]} />
-        <h2 className="text-3xl font-bold">Order History</h2>
+        <Breadcrumb
+          items={[
+            { label: 'حساب کاربری', href: '/account' },
+            { label: 'سفارشات', active: true },
+          ]}
+        />
+        <h2 className="text-3xl font-bold">تاریخچه سفارشات</h2>
         <div className="card bg-base-200">
           <div className="card-body text-center py-12">
             <Package className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-            <h3 className="text-xl font-bold mb-2">No Orders Yet</h3>
+            <h3 className="text-xl font-bold mb-2">هنوز سفارشی ندارید</h3>
             <p className="text-base-content/70 mb-6">
-              You haven&apos;t placed any orders yet. Start shopping to see your order history here.
+              شما هنوز هیچ سفارشی ثبت نکرده‌اید. برای مشاهده تاریخچه سفارشات، خرید خود را شروع کنید.
             </p>
             <Link href="/" className="btn btn-primary">
-              Start Shopping
+              شروع خرید
             </Link>
           </div>
         </div>
@@ -67,13 +72,16 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Orders', active: true }]} />
+      <Breadcrumb
+        items={[
+          { label: 'حساب کاربری', href: '/account' },
+          { label: 'سفارشات', active: true },
+        ]}
+      />
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Order History</h2>
-          <p className="text-base-content/70 mt-1">
-            {orders.length} {orders.length === 1 ? 'order' : 'orders'} total
-          </p>
+          <h2 className="text-3xl font-bold">تاریخچه سفارشات</h2>
+          <p className="text-base-content/70 mt-1">{orders.length} سفارش در مجموع</p>
         </div>
       </div>
 
@@ -98,7 +106,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                         {getStatusIcon(order.status || 'pending')}
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg">Order #{order.id.slice(-8)}</h3>
+                        <h3 className="font-bold text-lg">سفارش #{order.id.slice(-8)}</h3>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-base-content/70 mt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
@@ -106,7 +114,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                           </span>
                           <span className="flex items-center gap-1">
                             <Package className="w-4 h-4" />
-                            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                            {itemCount} قلم
                           </span>
                         </div>
                       </div>
@@ -115,20 +123,20 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                     {/* Order Items Preview */}
                     {order.items && order.items.length > 0 && (
                       <div className="mt-3 pl-14">
-                        <p className="text-sm text-base-content/60 mb-2">Items:</p>
+                        <p className="text-sm text-base-content/60 mb-2">اقلام:</p>
                         <div className="space-y-1">
                           {(order.items as OrderItem[]).slice(0, 3).map((item, index: number) => {
                             const product = typeof item.product === 'object' ? item.product : null
                             return (
                               <div key={index} className="text-sm text-base-content/80">
-                                • {product?.name || 'Product'}{' '}
+                                • {product?.name || 'محصول'}{' '}
                                 {item.quantity > 1 && `(×${item.quantity})`}
                               </div>
                             )
                           })}
                           {order.items.length > 3 && (
                             <div className="text-sm text-base-content/60">
-                              and {order.items.length - 3} more...
+                              و {order.items.length - 3} مورد دیگر...
                             </div>
                           )}
                         </div>
@@ -139,10 +147,11 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                   {/* Order Status & Total */}
                   <div className="flex flex-col items-end gap-3 lg:min-w-[200px]">
                     <div className="text-right">
-                      <div className="text-sm text-base-content/60 mb-1">Total Amount</div>
+                      <div className="text-sm text-base-content/60 mb-1">مبلغ کل</div>
                       <div className="text-2xl font-bold flex items-center gap-1">
                         <CreditCard className="w-5 h-5 text-base-content/50" />
-                        USD {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
+                        {order.currency || 'AFN'}{' '}
+                        {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
                       </div>
                     </div>
 
@@ -152,7 +161,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
 
                     <div className="flex gap-2">
                       <Link href={`/account/orders/${order.id}`} className="btn btn-outline btn-sm">
-                        View Details
+                        مشاهده جزئیات
                       </Link>
                     </div>
                   </div>

@@ -35,7 +35,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed bottom-6 right-6 z-40 btn btn-primary btn-circle btn-lg shadow-lg"
+        className="lg:hidden fixed bottom-6 left-6 z-40 btn btn-primary btn-circle btn-lg shadow-lg"
         aria-label="Open menu"
       >
         <Menu className="w-6 h-6" />
@@ -51,12 +51,12 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
       {/* Mobile Side Panel */}
       <aside
-        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-base-100 z-100 transform transition-transform duration-300 shadow-xl ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`lg:hidden fixed top-0 right-0 h-full w-64 bg-base-100 z-100 transform transition-transform duration-300 shadow-xl ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-base-300">
-          <h2 className="text-lg font-bold">Account Menu</h2>
+          <h2 className="text-lg font-bold">منوی حساب کاربری</h2>
           <button
             onClick={() => setIsOpen(false)}
             className="btn btn-ghost btn-sm btn-circle"
@@ -74,7 +74,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account') ? 'active' : ''} gap-3 py-3`}
               >
                 <User className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Overview</span>
+                <span>خلاصه حساب</span>
               </Link>
             </li>
             <li>
@@ -83,7 +83,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/orders') ? 'active' : ''} gap-3 py-3`}
               >
                 <Package className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Orders</span>
+                <span>سفارشات</span>
               </Link>
             </li>
             <li>
@@ -92,7 +92,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/wishlist') ? 'active' : ''} gap-3 py-3`}
               >
                 <Heart className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Wishlist</span>
+                <span>لیست علاقه‌مندی‌ها</span>
               </Link>
             </li>
             <li>
@@ -101,7 +101,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/addresses') ? 'active' : ''} gap-3 py-3`}
               >
                 <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Addresses</span>
+                <span>آدرس‌ها</span>
               </Link>
             </li>
             <li>
@@ -110,7 +110,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/settings') ? 'active' : ''} gap-3 py-3`}
               >
                 <Settings className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Settings</span>
+                <span>تنظیمات</span>
               </Link>
             </li>
             <div className="divider my-2"></div>
@@ -119,7 +119,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 <li>
                   <Link href="/admin" className="gap-3 py-3 text-success">
                     <Shield className="w-5 h-5 flex-shrink-0" />
-                    <span>Admin Panel</span>
+                    <span>پنل مدیریت</span>
                   </Link>
                 </li>
                 <div className="divider my-2"></div>
@@ -128,7 +128,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             <li className="text-error">
               <Link href="/auth/logout" className="gap-3 py-3">
                 <LogOut className="w-5 h-5 flex-shrink-0" />
-                <span>Logout</span>
+                <span>خروج</span>
               </Link>
             </li>
           </ul>
@@ -145,7 +145,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account') ? 'active' : ''} gap-3 py-2`}
               >
                 <User className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Overview</span>
+                <span>خلاصه حساب</span>
               </Link>
             </li>
             <li>
@@ -154,7 +154,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/orders') ? 'active' : ''} gap-3 py-2`}
               >
                 <Package className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Orders</span>
+                <span>سفارشات</span>
               </Link>
             </li>
             <li>
@@ -163,7 +163,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/wishlist') ? 'active' : ''} gap-3 py-2`}
               >
                 <Heart className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Wishlist</span>
+                <span>لیست علاقه‌مندی‌ها</span>
               </Link>
             </li>
             <li>
@@ -172,7 +172,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/addresses') ? 'active' : ''} gap-3 py-2`}
               >
                 <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Addresses</span>
+                <span>آدرس‌ها</span>
               </Link>
             </li>
             <li>
@@ -181,7 +181,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={`${isActive('/account/settings') ? 'active' : ''} gap-3 py-2`}
               >
                 <Settings className="w-5 h-5 text-primary flex-shrink-0" />
-                <span>Settings</span>
+                <span>تنظیمات</span>
               </Link>
             </li>
             <div className="divider my-2"></div>
@@ -190,7 +190,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 <li>
                   <Link href="/admin" className="gap-3 py-2 text-success">
                     <Shield className="w-5 h-5 flex-shrink-0" />
-                    <span>Admin Panel</span>
+                    <span>پنل مدیریت</span>
                   </Link>
                 </li>
                 <div className="divider my-2"></div>
@@ -199,7 +199,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             <li className="text-error">
               <Link href="/auth/logout" className="gap-3 py-2">
                 <LogOut className="w-5 h-5 flex-shrink-0" />
-                <span>Logout</span>
+                <span>خروج</span>
               </Link>
             </li>
           </ul>

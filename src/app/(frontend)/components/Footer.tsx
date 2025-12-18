@@ -1,35 +1,43 @@
-'use client'
-import React, { useState } from 'react'
-import { Mail, Facebook, Instagram } from 'lucide-react'
+import React from 'react'
+import { Facebook, Instagram } from 'lucide-react'
 import Logo from './Logo'
 import Link from 'next/link'
+import { getPayload } from 'payload'
+import config from '@payload-config'
+import type { Category } from '@/payload-types'
 
-export const Footer: React.FC = () => {
-  const [email, setEmail] = useState('')
-  const [subscribed, setSubscribed] = useState(false)
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-    // TODO: wire this to your newsletter backend or third-party service.
-    // For now we give a friendly UI response.
-    setSubscribed(true)
-    setTimeout(() => {
-      setEmail('')
-      setSubscribed(false)
-    }, 2500)
+async function getTopCategories(): Promise<Category[]> {
+  try {
+    const payload = await getPayload({ config })
+    const result = await payload.find({
+      collection: 'categories',
+      where: {
+        status: {
+          equals: 'active',
+        },
+      },
+      sort: 'displayOrder',
+      limit: 3,
+    })
+    return result.docs as Category[]
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+    return []
   }
+}
+
+export const Footer: React.FC = async () => {
+  const categories = await getTopCategories()
 
   return (
     <footer className="bg-base-200 text-base-content mt-16">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Branding + blurb */}
           <div>
             <Logo />
             <p className="mt-4 text-sm opacity-80">
-              Online shop for groceries, food, gadgets and more. Fast shipping, honest prices, and
-              customer care that actually cares.
+              سودای خانه و دفاتر با نازل ترین قیمت‌ها و ارسال سریع درب منزل تان.
             </p>
 
             <div className="flex items-center gap-3 mt-6">
@@ -50,21 +58,21 @@ export const Footer: React.FC = () => {
                 </svg>
               </a>
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/KakaMalem/"
                 aria-label="Facebook"
                 className="btn btn-ghost btn-sm rounded-full"
               >
                 <Facebook className="w-5 h-5" />
               </a>
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/kaka_malem/"
                 aria-label="Instagram"
                 className="btn btn-ghost btn-sm rounded-full"
               >
                 <Instagram className="w-5 h-5" />
               </a>
               <a
-                href="https://tiktok.com"
+                href="https://tiktok.com/@KakaMalem"
                 aria-label="TikTok"
                 className="btn btn-ghost btn-sm rounded-full"
               >
@@ -82,102 +90,48 @@ export const Footer: React.FC = () => {
 
           {/* Shop links */}
           <div>
-            <h4 className="font-semibold mb-3">Shop</h4>
+            <h4 className="font-semibold mb-3">فروشگاه</h4>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/" className="hover:text-primary">
-                  All products
+                  همه محصولات
                 </Link>
               </li>
-              <li>
-                <Link href="/?filter=deals" className="hover:text-primary">
-                  Deals
-                </Link>
-              </li>
-              <li>
-                <Link href="/category/electronics" className="hover:text-primary">
-                  Electronics
-                </Link>
-              </li>
-              <li>
-                <Link href="/category/fashion" className="hover:text-primary">
-                  Fashion
-                </Link>
-              </li>
+              {categories.map((category) => (
+                <li key={category.id}>
+                  <Link href={`/category/${category.slug}`} className="hover:text-primary">
+                    {category.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Support links */}
           <div>
-            <h4 className="font-semibold mb-3">Support</h4>
+            <h4 className="font-semibold mb-3">پشتیبانی</h4>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/help" className="hover:text-primary">
-                  Help Centre
+                  مرکز راهنمایی
                 </Link>
               </li>
               <li>
                 <Link href="/shipping" className="hover:text-primary">
-                  Shipping & Returns
+                  ارسال و بازگشت
                 </Link>
               </li>
               <li>
                 <Link href="/contact" className="hover:text-primary">
-                  Contact Us
+                  تماس با ما
                 </Link>
               </li>
               <li>
                 <Link href="/faqs" className="hover:text-primary">
-                  FAQs
+                  سوالات متداول
                 </Link>
               </li>
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h4 className="font-semibold mb-3">Get 10% off — join our newsletter</h4>
-            <p className="text-sm opacity-80 mb-4">
-              Subscribe and receive exclusive deals and updates.
-            </p>
-
-            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
-              <label htmlFor="footer-email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="footer-email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input input-bordered w-full"
-                required
-              />
-              <button
-                type="submit"
-                className="btn btn-primary"
-                aria-live="polite"
-                aria-busy={subscribed}
-              >
-                {subscribed ? (
-                  'Subscribed'
-                ) : (
-                  <span className="inline-flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Subscribe
-                  </span>
-                )}
-              </button>
-            </form>
-
-            <p className="text-xs opacity-60 mt-3">
-              By subscribing you agree to our{' '}
-              <Link href="/privacy" className="underline hover:text-primary">
-                Privacy Policy
-              </Link>
-              .
-            </p>
           </div>
         </div>
 
@@ -185,19 +139,19 @@ export const Footer: React.FC = () => {
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
           <div className="opacity-80">
-            © {new Date().getFullYear()} Kaka Malem — All rights reserved.
+            © {new Date().getFullYear()} کاکا معلم — تمامی حقوق محفوظ است.
           </div>
 
           <div className="flex items-center gap-4">
             <Link href="/terms" className="hover:text-primary">
-              Terms
+              قوانین
             </Link>
             <Link href="/privacy" className="hover:text-primary">
-              Privacy
+              حریم خصوصی
             </Link>
             <div className="flex items-center gap-2 text-xs bg-base-100 px-3 py-1 rounded-full border border-base-300">
-              <span className="font-semibold text-primary">Free</span>
-              <span className="opacity-60">Shipping over AF1000</span>
+              <span className="font-semibold text-primary">ارسال رایگان</span>
+              <span className="opacity-60">بالای ۱۰۰۰ افغانی</span>
             </div>
           </div>
         </div>

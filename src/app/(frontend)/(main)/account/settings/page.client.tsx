@@ -33,7 +33,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
   // Preferences state
   const [newsletter, setNewsletter] = useState(user.preferences?.newsletter || false)
-  const [currency, setCurrency] = useState<'USD' | 'AFN'>(user.preferences?.currency || 'AFN')
+  const [currency, setCurrency] = useState<'USD' | 'AFN'>('AFN')
 
   // Password state
   const [passwordData, setPasswordData] = useState({
@@ -71,10 +71,10 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
-      toast.success('Preferences updated successfully!')
+      toast.success('ترجیحات با موفقیت ثبت شد!')
     } catch (err: unknown) {
       console.error('Error updating preferences:', err)
-      toast.error('Failed to update preferences. Please try again.')
+      toast.error('ثبت ترجیحات ناموفق بود. لطفاً دوباره امتحان کنید.')
     } finally {
       setSavingPreferences(false)
     }
@@ -130,7 +130,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
         throw new Error(data.error || 'Failed to set password')
       }
 
-      toast.success(data.message || 'Password updated successfully!')
+      toast.success(data.message || 'رمز عبور با موفقیت ثبت شد!')
 
       // Update user state to reflect that they now have a password
       setUser({ ...user, hasPassword: true })
@@ -160,11 +160,11 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       }
 
       // Redirect to home after deletion
-      toast.success('Account deleted successfully')
+      toast.success('حساب کاربری با موفقیت حذف شد')
       window.location.href = '/'
     } catch (err: unknown) {
       console.error('Error deleting account:', err)
-      toast.error('Failed to delete account. Please try again.')
+      toast.error('حذف حساب کاربری ناموفق بود. لطفاً دوباره امتحان کنید.')
     } finally {
       setDeletingAccount(false)
       setShowDeleteConfirm(false)
@@ -175,69 +175,108 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
     <div className="space-y-6">
       <Breadcrumb
         items={[
-          { label: 'Account', href: '/account' },
-          { label: 'Settings', active: true },
+          { label: 'حساب کاربری', href: '/account' },
+          { label: 'تنظیمات', active: true },
         ]}
       />
 
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold">Account Settings</h2>
-        <p className="text-base-content/70 mt-1">Manage your account preferences and security</p>
+        <h2 className="text-3xl font-bold">تنظیمات حساب کاربری</h2>
+        <p className="text-base-content/70 mt-1">مدیریت ترجیحات و امنیت حساب کاربری</p>
       </div>
 
       {/* Preferences */}
-      <div className="card bg-base-200">
+      <div className="card bg-base-100 border-2 border-base-300">
         <div className="card-body">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-6">
             <Bell className="w-5 h-5 text-primary" />
-            <h3 className="card-title text-lg">Preferences</h3>
+            <h3 className="card-title text-lg">ترجیحات</h3>
           </div>
 
           <div className="space-y-6">
-            {/* Newsletter */}
-            <div className="form-control">
-              <label className="label cursor-pointer justify-start gap-4">
+            {/* Newsletter Toggle */}
+            <div>
+              <label className="label cursor-pointer justify-start gap-4 bg-base-200 hover:bg-base-300/50 transition-colors rounded-lg p-4 border-2 border-base-300">
                 <input
                   type="checkbox"
                   className="checkbox checkbox-primary"
                   checked={newsletter}
                   onChange={(e) => setNewsletter(e.target.checked)}
                 />
-                <div>
-                  <div className="font-medium">Newsletter Subscription</div>
-                  <div className="text-sm text-base-content/70">
-                    Receive updates about new products and exclusive offers
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">اشتراک خبرنامه</span>
+                    {newsletter && <span className="badge badge-primary badge-sm">فعال</span>}
                   </div>
+                  <p className="text-sm text-base-content/60 mt-1">
+                    دریافت ثبت‌ها درباره محصولات جدید، پیشنهادات ویژه، و تخفیف‌های انحصاری
+                  </p>
                 </div>
               </label>
             </div>
 
-            {/* Currency */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  Preferred Currency
+            <div className="divider my-4"></div>
+
+            {/* Currency Selection */}
+            <div>
+              <label className="label pb-2">
+                <span className="label-text font-semibold flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  واحد پول ترجیحی
                 </span>
               </label>
-              <select
-                className="select select-bordered w-full max-w-xs"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value as 'USD' | 'AFN')}
-              >
-                <option value="AFN">AFN - Afghan Afghani</option>
-                <option value="USD">USD - US Dollar</option>
-              </select>
-              <label className="label">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  className={`label cursor-pointer justify-start gap-3 rounded-lg p-4 border-2 transition-all ${
+                    currency === 'AFN'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-base-300 hover:border-primary/50 bg-base-200'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="currency"
+                    value="AFN"
+                    className="radio radio-primary"
+                    checked={currency === 'AFN'}
+                    onChange={(e) => setCurrency(e.target.value as 'USD' | 'AFN')}
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">افغانی</div>
+                    <div className="text-xs text-base-content/60">AFN - ؋</div>
+                  </div>
+                  {currency === 'AFN' && <CheckCircle className="w-5 h-5 text-primary" />}
+                </label>
+
+                <label
+                  className={`label cursor-not-allowed justify-start gap-3 rounded-lg p-4 border-2 transition-all opacity-50 border-base-300 bg-base-200`}
+                >
+                  <input
+                    type="radio"
+                    name="currency"
+                    value="USD"
+                    className="radio radio-primary"
+                    checked={currency === 'USD'}
+                    onChange={(e) => setCurrency(e.target.value as 'USD' | 'AFN')}
+                    disabled
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">دلار امریکا</div>
+                    <div className="text-xs text-base-content/60">USD - $ (به زودی)</div>
+                  </div>
+                  {currency === 'USD' && <CheckCircle className="w-5 h-5 text-primary" />}
+                </label>
+              </div>
+              <label className="label pt-2">
                 <span className="label-text-alt text-base-content/60">
-                  This will be used for pricing throughout the site
+                  این واحد برای نمایش قیمت‌ها در سراسر سایت استفاده می‌شود
                 </span>
               </label>
             </div>
 
             {/* Save Button */}
-            <div className="card-actions">
+            <div className="card-actions pt-2">
               <button
                 onClick={handleSavePreferences}
                 className="btn btn-primary gap-2"
@@ -246,12 +285,12 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 {savingPreferences ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
-                    Saving...
+                    در حال ذخیره...
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save Preferences
+                    ذخیره ترجیحات
                   </>
                 )}
               </button>
@@ -261,47 +300,53 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       </div>
 
       {/* Security */}
-      <div className="card bg-base-200">
+      <div className="card bg-base-100 border-2 border-base-300">
         <div className="card-body">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-6">
             <Lock className="w-5 h-5 text-primary" />
-            <h3 className="card-title text-lg">Security</h3>
+            <h3 className="card-title text-lg">امنیت</h3>
           </div>
 
           {!showPasswordForm ? (
             <div>
               {needsToSetPassword ? (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 p-3 bg-base-300/50 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <p className="font-medium text-base-content">
-                        You&apos;re signed in with Google
-                      </p>
-                      <p className="text-base-content/70 mt-1">
-                        Create a password to enable signing in with both Google and email/password
+                <div className="space-y-4">
+                  <div className="alert alert-success">
+                    <CheckCircle className="w-5 h-5" />
+                    <div className="flex-1">
+                      <div className="font-medium">شما با گوگل وارد شده‌اید</div>
+                      <p className="text-sm opacity-90 mt-1">
+                        یک رمز عبور ایجاد کنید تا بتوانید با گوگل و ایمیل/رمز عبور وارد شوید
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowPasswordForm(true)}
-                    className="btn btn-outline gap-2"
+                    className="btn btn-primary gap-2"
                   >
                     <Lock className="w-4 h-4" />
-                    Set Password
+                    تنظیم رمز عبور
                   </button>
                 </div>
               ) : (
-                <div>
-                  <p className="text-sm text-base-content/70 mb-4">
-                    Keep your account secure by using a strong password
-                  </p>
+                <div className="space-y-4">
+                  <div className="bg-base-200 rounded-lg p-4 border-2 border-base-300">
+                    <div className="flex items-start gap-3">
+                      <Lock className="w-5 h-5 text-primary mt-0.5" />
+                      <div>
+                        <div className="font-medium mb-1">رمز عبور حساب کاربری</div>
+                        <p className="text-sm text-base-content/60">
+                          با استفاده از یک رمز عبور قوی و منحصر به فرد، حساب خود را امن نگه دارید
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   <button
                     onClick={() => setShowPasswordForm(true)}
-                    className="btn btn-outline gap-2"
+                    className="btn btn-primary gap-2"
                   >
                     <Lock className="w-4 h-4" />
-                    Change Password
+                    تغییر رمز عبور
                   </button>
                 </div>
               )}
@@ -319,21 +364,21 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 <div className="alert alert-info">
                   <CheckCircle className="w-5 h-5" />
                   <span>
-                    Setting a password allows you to sign in with either Google or email/password.
+                    تنظیم رمز عبور به شما اجازه می‌دهد با گوگل یا ایمیل/رمز عبور وارد شوید.
                   </span>
                 </div>
               )}
 
               {/* Current Password - Only show if user already has a password */}
               {!needsToSetPassword && (
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Current Password</span>
+                <div className="fieldset">
+                  <label className="label pb-1">
+                    <span className="label-text font-medium">رمز عبور فعلی</span>
                   </label>
                   <div className="relative">
                     <input
                       type={showPasswords.current ? 'text' : 'password'}
-                      className="input input-bordered w-full pr-12"
+                      className="input w-full pl-12"
                       value={passwordData.currentPassword}
                       onChange={(e) =>
                         setPasswordData({ ...passwordData, currentPassword: e.target.value })
@@ -344,7 +389,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                       onClick={() =>
                         setShowPasswords({ ...showPasswords, current: !showPasswords.current })
                       }
-                      className="btn btn-ghost btn-sm absolute right-1 top-1"
+                      className="btn btn-ghost btn-sm absolute left-1 top-1"
                     >
                       {showPasswords.current ? (
                         <EyeOff className="w-4 h-4" />
@@ -357,16 +402,16 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               )}
 
               {/* New Password */}
-              <div className="form-control">
-                <label className="label">
+              <div className="fieldset">
+                <label className="label pb-1">
                   <span className="label-text font-medium">
-                    {needsToSetPassword ? 'Password' : 'New Password'}
+                    {needsToSetPassword ? 'رمز عبور' : 'رمز عبور جدید'}
                   </span>
                 </label>
                 <div className="relative">
                   <input
                     type={showPasswords.new ? 'text' : 'password'}
-                    className="input input-bordered w-full pr-12"
+                    className="input w-full pl-12"
                     value={passwordData.newPassword}
                     onChange={(e) =>
                       setPasswordData({ ...passwordData, newPassword: e.target.value })
@@ -375,7 +420,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                   <button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                    className="btn btn-ghost btn-sm absolute right-1 top-1"
+                    className="btn btn-ghost btn-sm absolute left-1 top-1"
                   >
                     {showPasswords.new ? (
                       <EyeOff className="w-4 h-4" />
@@ -384,22 +429,22 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     )}
                   </button>
                 </div>
-                <label className="label">
-                  <span className="label-text-alt text-base-content/60">Minimum 8 characters</span>
+                <label className="label pt-1">
+                  <span className="label-text-alt text-base-content/60">حداقل 8 حرف</span>
                 </label>
               </div>
 
               {/* Confirm Password */}
-              <div className="form-control">
-                <label className="label">
+              <div className="fieldset">
+                <label className="label pb-1">
                   <span className="label-text font-medium">
-                    {needsToSetPassword ? 'Confirm Password' : 'Confirm New Password'}
+                    {needsToSetPassword ? 'تأیید رمز عبور' : 'تأیید رمز عبور جدید'}
                   </span>
                 </label>
                 <div className="relative">
                   <input
                     type={showPasswords.confirm ? 'text' : 'password'}
-                    className="input input-bordered w-full pr-12"
+                    className="input w-full pl-12"
                     value={passwordData.confirmPassword}
                     onChange={(e) =>
                       setPasswordData({ ...passwordData, confirmPassword: e.target.value })
@@ -410,7 +455,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     onClick={() =>
                       setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
                     }
-                    className="btn btn-ghost btn-sm absolute right-1 top-1"
+                    className="btn btn-ghost btn-sm absolute left-1 top-1"
                   >
                     {showPasswords.confirm ? (
                       <EyeOff className="w-4 h-4" />
@@ -422,21 +467,21 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={handleChangePassword}
-                  className="btn btn-primary gap-2"
+                  className="btn btn-primary gap-2 order-1"
                   disabled={savingPassword}
                 >
                   {savingPassword ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
-                      {needsToSetPassword ? 'Setting...' : 'Changing...'}
+                      {needsToSetPassword ? 'در حال تنظیم...' : 'در حال تغییر...'}
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      {needsToSetPassword ? 'Set Password' : 'Change Password'}
+                      {needsToSetPassword ? 'تنظیم رمز عبور' : 'تغییر رمز عبور'}
                     </>
                   )}
                 </button>
@@ -446,10 +491,10 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
                     setPasswordError(null)
                   }}
-                  className="btn btn-ghost"
+                  className="btn btn-ghost order-2"
                   disabled={savingPassword}
                 >
-                  Cancel
+                  لغو
                 </button>
               </div>
             </div>
@@ -458,63 +503,72 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       </div>
 
       {/* Danger Zone */}
-      <div className="card bg-error/10 border-2 border-error/50">
+      <div className="card bg-error/5 border-2 border-error">
         <div className="card-body">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-error/30 mb-6">
             <AlertTriangle className="w-5 h-5 text-error" />
-            <h3 className="card-title text-lg text-error">Danger Zone</h3>
+            <h3 className="card-title text-lg text-error">منطقه خطرناک</h3>
           </div>
 
           {!showDeleteConfirm ? (
-            <div>
-              <p className="text-sm text-base-content/70 mb-4">
-                Once you delete your account, there is no going back. Please be certain.
-              </p>
+            <div className="space-y-4">
+              <div className="bg-base-100 rounded-lg p-4 border-2 border-error/30">
+                <div className="flex items-start gap-3">
+                  <Trash2 className="w-5 h-5 text-error mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium mb-1 text-error">حذف دائمی حساب کاربری</div>
+                    <p className="text-sm text-base-content/60">
+                      پس از حذف حساب کاربری، راه بازگشتی وجود ندارد. تمام داده‌ها، سفارشات، و
+                      آدرس‌های شما برای همیشه حذف می‌شوند.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 className="btn btn-error btn-outline gap-2"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete Account
+                حذف حساب کاربری
               </button>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="alert alert-warning">
-                <AlertTriangle className="w-5 h-5" />
-                <div>
-                  <h4 className="font-bold">Are you absolutely sure?</h4>
-                  <p className="text-sm">
-                    This action cannot be undone. This will permanently delete your account and
-                    remove all your data from our servers.
+                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-bold mb-1">آیا کاملاً مطمئن هستید؟</div>
+                  <p className="text-sm opacity-90">
+                    این عمل قابل بازگشت نیست. این کار حساب شما را برای همیشه حذف کرده و تمام
+                    اطلاعاتتان را از سرورهای ما پاک خواهد کرد.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleDeleteAccount}
-                  className="btn btn-error gap-2"
+                  className="btn btn-error gap-2 order-1"
                   disabled={deletingAccount}
                 >
                   {deletingAccount ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
-                      Deleting...
+                      در حال حذف...
                     </>
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4" />
-                      Yes, Delete My Account
+                      بله، حساب من را حذف کن
                     </>
                   )}
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="btn btn-ghost"
+                  className="btn btn-ghost order-2"
                   disabled={deletingAccount}
                 >
-                  Cancel
+                  لغو
                 </button>
               </div>
             </div>

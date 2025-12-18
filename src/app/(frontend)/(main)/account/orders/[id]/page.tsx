@@ -17,11 +17,11 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
   const payload = await getPayload({ config })
 
   try {
-    // Fetch the order
+    // Fetch the order with full depth to populate variants and their images
     const order = await payload.findByID({
       collection: 'orders',
       id: id,
-      depth: 2, // Populate product details
+      depth: 4, // Depth 4: order -> items.variant -> variant.images -> Media objects
     })
 
     // Check if order belongs to the current user

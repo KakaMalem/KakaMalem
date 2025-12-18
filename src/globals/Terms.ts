@@ -5,9 +5,10 @@ export const Terms: GlobalConfig = {
   slug: 'terms',
   admin: {
     hidden: ({ user }) => {
-      // Only show to admins and superadmins
-      return !(user?.roles?.includes('admin') || user?.roles?.includes('superadmin'))
+      // Only show to developers and superadmins
+      return !(user?.roles?.includes('developer') || user?.roles?.includes('superadmin'))
     },
+    group: 'CMS',
   },
   access: {
     // Anyone can read terms

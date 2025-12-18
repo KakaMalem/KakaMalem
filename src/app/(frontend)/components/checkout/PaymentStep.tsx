@@ -12,20 +12,20 @@ export function PaymentStep({ paymentMethod, setPaymentMethod }: PaymentStepProp
   const paymentMethods = [
     {
       value: 'cod' as const,
-      label: 'Cash on Delivery',
-      desc: 'Pay when you receive your order',
+      label: 'پرداخت هنگام تحویل',
+      desc: 'هنگام دریافت سفارش پرداخت کنید',
       available: true,
     },
     {
       value: 'bank_transfer' as const,
-      label: 'Bank Transfer',
-      desc: 'Transfer payment to our bank account',
+      label: 'انتقال بانکی',
+      desc: 'واریز به حساب بانکی ما',
       available: false,
     },
     {
       value: 'credit_card' as const,
-      label: 'Credit Card',
-      desc: 'Pay securely with your credit card',
+      label: 'کارت اعتباری',
+      desc: 'پرداخت امن با کارت اعتباری',
       available: false,
     },
   ]
@@ -35,7 +35,7 @@ export function PaymentStep({ paymentMethod, setPaymentMethod }: PaymentStepProp
       <div className="card-body">
         <h2 className="card-title text-2xl mb-4 flex items-center gap-2">
           <CreditCard className="w-6 h-6 text-primary" />
-          Payment Method
+          روش پرداخت
         </h2>
 
         <div className="space-y-3">
@@ -63,7 +63,7 @@ export function PaymentStep({ paymentMethod, setPaymentMethod }: PaymentStepProp
                   <div className="font-semibold flex items-center gap-2">
                     {method.label}
                     {!method.available && (
-                      <span className="badge badge-warning badge-sm">Coming Soon</span>
+                      <span className="badge badge-warning badge-sm">به زودی</span>
                     )}
                   </div>
                   <div className="text-sm opacity-70">{method.desc}</div>

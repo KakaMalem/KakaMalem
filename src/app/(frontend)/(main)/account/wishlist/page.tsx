@@ -1,8 +1,15 @@
 import React from 'react'
+import type { Metadata } from 'next'
 import { getMeUser } from '@/utilities/getMeUser'
 import WishlistClient from './page.client'
 import { Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
+
+export const metadata: Metadata = {
+  title: 'لیست علاقه‌مندی‌ها',
+  description: 'محصولات مورد علاقه شما در فروشگاه کاکا معلم',
+  robots: { index: false, follow: false },
+}
 
 // Force dynamic rendering since we use authentication (cookies)
 export const dynamic = 'force-dynamic'

@@ -19,31 +19,25 @@ export const registerUser: Endpoint = {
     try {
       body = (await req.json?.()) || req.body
     } catch (_e) {
-      return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 })
+      return Response.json({ error: 'فرمت درخواست نامعتبر است' }, { status: 400 })
     }
 
     const { email, password, firstName, lastName, phone } = body
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName) {
-      return Response.json(
-        { error: 'Email, password, first name, and last name are required' },
-        { status: 400 },
-      )
+      return Response.json({ error: 'ایمیل، رمز عبور، نام و تخلص الزامی است' }, { status: 400 })
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      return Response.json({ error: 'Invalid email format' }, { status: 400 })
+      return Response.json({ error: 'فرمت ایمیل نامعتبر است' }, { status: 400 })
     }
 
     // Validate password strength
     if (password.length < 8) {
-      return Response.json(
-        { error: 'Password must be at least 8 characters long' },
-        { status: 400 },
-      )
+      return Response.json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, { status: 400 })
     }
 
     try {
@@ -55,7 +49,7 @@ export const registerUser: Endpoint = {
       })
 
       if (existingUsers.docs.length > 0) {
-        return Response.json({ error: 'Email already registered' }, { status: 409 })
+        return Response.json({ error: 'این ایمیل قبلاً ثبت شده است' }, { status: 409 })
       }
 
       // Create user
@@ -114,7 +108,7 @@ export const registerUser: Endpoint = {
       return Response.json(
         {
           success: true,
-          message: 'Registration successful',
+          message: 'ثبت‌نام با موفقیت انجام شد',
           user: {
             id: user.id,
             email: user.email,
@@ -135,7 +129,7 @@ export const registerUser: Endpoint = {
           const validationError = error as { data?: unknown; message?: string }
           return Response.json(
             {
-              error: 'Validation failed',
+              error: 'اعتبارسنجی ناموفق بود',
               details: validationError.data || validationError.message,
             },
             { status: 400 },
@@ -145,12 +139,15 @@ export const registerUser: Endpoint = {
         if (error.name === 'MongoError' || error.name === 'BulkWriteError') {
           const dbError = error as { code?: number }
           if (dbError.code === 11000) {
-            return Response.json({ error: 'Email already exists' }, { status: 409 })
+            return Response.json({ error: 'این ایمیل قبلاً ثبت شده است' }, { status: 409 })
           }
         }
       }
 
-      return Response.json({ error: 'Registration failed. Please try again.' }, { status: 500 })
+      return Response.json(
+        { error: 'ثبت‌نام ناموفق بود. لطفاً دوباره امتحان کنید.' },
+        { status: 500 },
+      )
     }
   },
 }

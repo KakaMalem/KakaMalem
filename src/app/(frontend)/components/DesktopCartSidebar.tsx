@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { X, ShoppingBag, ArrowRight, Plus, Minus, Package, Trash2 } from 'lucide-react'
+import { X, ShoppingBag, Plus, Minus, Package, Trash2, ArrowLeft } from 'lucide-react'
 import { useCart, formatCurrency, calculateSubtotal } from '@/providers'
 import Image from 'next/image'
 
@@ -91,8 +91,8 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
 
       {/* Sidebar - Full width on mobile, 450px on larger screens */}
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-full sm:max-w-[450px] bg-base-100 z-[9999] shadow-2xl transform transition-all duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed left-0 top-0 h-full w-full max-w-full sm:max-w-[450px] bg-base-100 z-[9999] shadow-2xl transform transition-all duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ isolation: 'isolate' }}
       >
@@ -103,21 +103,23 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
               <div className="relative">
                 <ShoppingBag className="w-6 h-6 text-primary" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary text-primary-content text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-2 -left-2 bg-primary text-primary-content text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                     {itemCount}
                   </span>
                 )}
               </div>
               <div>
-                <h2 className="text-xl font-bold">Shopping Cart</h2>
+                <h2 className="text-xl font-bold">سبد خرید</h2>
                 <p className="text-sm text-base-content/60">
-                  {itemCount === 0
-                    ? 'Your cart is empty'
-                    : `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+                  {itemCount === 0 ? 'سبد خرید شما خالی است' : `${itemCount} مورد`}
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="btn btn-ghost btn-circle" aria-label="Close cart">
+            <button
+              onClick={onClose}
+              className="btn btn-ghost btn-circle"
+              aria-label="بستن سبد خرید"
+            >
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -151,13 +153,13 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
               <div className="w-24 h-24 rounded-full bg-base-200 flex items-center justify-center mb-6">
                 <Package className="w-12 h-12 text-base-content/30" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
+              <h3 className="text-xl font-semibold mb-2">سبد خرید شما خالی است</h3>
               <p className="text-base-content/60 text-center mb-8">
-                Looks like you haven&apos;t added anything to your cart yet
+                به نظر می‌رسد هنوز چیزی به سبد خرید خود اضافه نکرده‌اید
               </p>
               <Link href="/" className="btn btn-primary" onClick={onClose}>
                 <ShoppingBag className="w-5 h-5" />
-                Start Shopping
+                شروع خرید
               </Link>
             </div>
           ) : (
@@ -215,17 +217,30 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                       const price =
                         item.variant?.price ?? item.product.salePrice ?? item.product.price ?? 0
 
+                      // Build product URL with variant query param if variant exists
+                      const productUrl = item.variantId
+                        ? `/product/${item.product.slug}?variant=${item.variantId}`
+                        : `/product/${item.product.slug}`
+
+                      // Calculate maximum quantity based on stock
+                      const stockSource = item.variant || item.product
+                      const maxQuantity =
+                        stockSource.trackQuantity &&
+                        stockSource.quantity &&
+                        !stockSource.allowBackorders
+                          ? Math.min(99, stockSource.quantity)
+                          : 99
+
+                      // Check if at max quantity
+                      const isAtMaxQuantity = item.quantity >= maxQuantity
+
                       return (
                         <div
                           key={`${item.productId}-${item.variantId}`}
                           className="flex gap-4 p-4 rounded-xl border border-base-200 hover:border-base-300 hover:shadow-md transition-all duration-200 bg-base-100"
                         >
                           {/* Product Image */}
-                          <Link
-                            href={`/product/${item.product.slug}`}
-                            className="flex-shrink-0"
-                            onClick={onClose}
-                          >
+                          <Link href={productUrl} className="flex-shrink-0" onClick={onClose}>
                             <div className="w-24 h-24 bg-base-200 rounded-lg overflow-hidden group">
                               <Image
                                 src={imageUrl}
@@ -241,8 +256,8 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <Link
-                                href={`/product/${item.product.slug}`}
-                                className="font-medium hover:text-primary transition-colors line-clamp-2 flex-1 mr-2"
+                                href={productUrl}
+                                className="font-medium hover:text-primary transition-colors line-clamp-2 flex-1 ml-2"
                                 onClick={onClose}
                               >
                                 {item.product.name}
@@ -276,15 +291,15 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                             <div className="text-lg font-bold text-primary mb-2">
                               {formatCurrency(price * item.quantity, item.product.currency)}
                               {item.quantity > 1 && (
-                                <span className="text-sm font-normal text-base-content/60 ml-2">
-                                  ({formatCurrency(price, item.product.currency)} each)
+                                <span className="text-sm font-normal text-base-content/60 mr-2">
+                                  ({formatCurrency(price, item.product.currency)} دانه)
                                 </span>
                               )}
                             </div>
 
                             {/* Quantity Controls */}
                             <div className="flex items-center gap-3">
-                              <span className="text-sm text-base-content/60">Quantity:</span>
+                              <span className="text-sm text-base-content/60">تعداد:</span>
                               <div className="flex items-center border border-base-300 rounded-lg">
                                 <button
                                   onClick={() =>
@@ -294,8 +309,8 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                                       item.quantity - 1,
                                     )
                                   }
-                                  className="btn btn-ghost btn-sm btn-square rounded-r-none"
-                                  aria-label="Decrease quantity"
+                                  className="btn btn-ghost btn-sm btn-square rounded-l-none"
+                                  aria-label="کاهش تعداد"
                                 >
                                   <Minus className="w-4 h-4" />
                                 </button>
@@ -310,8 +325,16 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                                       item.quantity + 1,
                                     )
                                   }
-                                  className="btn btn-ghost btn-sm btn-square rounded-l-none"
-                                  aria-label="Increase quantity"
+                                  disabled={isAtMaxQuantity}
+                                  className="btn btn-ghost btn-sm btn-square rounded-r-none"
+                                  aria-label="افزایش تعداد"
+                                  title={
+                                    isAtMaxQuantity
+                                      ? stockSource.trackQuantity && stockSource.quantity
+                                        ? `حداکثر ${maxQuantity} عدد در گدام موجود است`
+                                        : 'حداکثر مقدار مجاز'
+                                      : 'افزایش تعداد'
+                                  }
                                 >
                                   <Plus className="w-4 h-4" />
                                 </button>
@@ -330,11 +353,11 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                 {subtotal < freeShippingThreshold && (
                   <div className="mb-6 p-4 bg-info/10 rounded-xl border border-info/20">
                     <p className="text-sm font-medium mb-2">
-                      Add{' '}
+                      برای ارسال رایگان{' '}
                       <span className="font-bold text-info">
                         {formatCurrency(freeShippingThreshold - subtotal, cartCurrency)}
                       </span>{' '}
-                      more for free shipping!
+                      دیگر اضافه کنید!
                     </p>
                     <div className="w-full bg-base-300 rounded-full h-2.5">
                       <div
@@ -349,7 +372,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
 
                 {/* Subtotal */}
                 <div className="flex justify-between items-center mb-6 p-5 bg-gradient-to-r from-base-200 to-base-300 rounded-xl">
-                  <span className="text-lg font-semibold">Subtotal:</span>
+                  <span className="text-lg font-semibold">مجموع:</span>
                   <span className="text-3xl font-bold text-primary">
                     {formatCurrency(subtotal, cartCurrency)}
                   </span>
@@ -362,12 +385,12 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                     className="btn btn-primary btn-block h-14 text-base shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-200"
                     onClick={onClose}
                   >
-                    <span className="font-semibold">Proceed to Checkout</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <span className="font-semibold">تصفیه حساب</span>
+                    <ArrowLeft className="w-5 h-5" />
                   </Link>
 
                   <button onClick={onClose} className="btn btn-ghost btn-block h-12 text-sm">
-                    Continue Shopping
+                    ادامه خرید
                   </button>
                 </div>
               </div>

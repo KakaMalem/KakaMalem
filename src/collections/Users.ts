@@ -1,8 +1,11 @@
 import type { CollectionConfig } from 'payload'
-import { isAdmin, isAdminField } from '../access/isAdmin'
+import { isAdmin } from '../access/isAdmin'
 import { isAdminOrSelf } from '../access/isAdminOrSelf'
 import { isDeveloperField } from '../access/isDeveloper'
-import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
+import {
+  isSuperAdminOrDeveloper,
+  isSuperAdminOrDeveloperField,
+} from '../access/isSuperAdminOrDeveloper'
 import { nobody } from '../access/nobody'
 
 export const Users: CollectionConfig = {
@@ -68,11 +71,47 @@ export const Users: CollectionConfig = {
     tokenExpiration: 60 * 60 * 24 * 7, // 7 days (when "remember me" is checked)
     cookies: {
       sameSite: 'Lax',
-      secure: process.env.NODE_ENV === 'production',
+      // Allow HTTP cookies for local network access (192.168.x.x, localhost)
+      // Only enforce secure cookies in production on public domains
+      secure: false, // Let individual endpoints handle security based on host
     },
     // verify: false, // Disable email verification for OAuth users
   },
   fields: [
+    /**
+     * PASSWORD FIELD ACCESS CONTROL
+     * Override the default auth password field to restrict access
+     * - Users can change their own password via the "Change Password" button
+     * - Developers can change any user's password (for account recovery/support)
+     * - Field is hidden from admin panel for non-developers
+     */
+    {
+      name: 'password',
+      type: 'text',
+      access: {
+        update: ({ req: { user }, id }) => {
+          if (!user) return false
+          // Users can change their own password
+          if (user.id === id) return true
+          // Only developers can change other users' passwords
+          return !!user.roles?.includes('developer')
+        },
+      },
+      admin: {
+        // Hidden from admin panel for everyone - use "Change Password" button or API
+        hidden: true,
+      },
+    },
+    {
+      name: 'firstName',
+      type: 'text',
+      required: false, // Allow OAuth users without firstName
+    },
+    {
+      name: 'lastName',
+      type: 'text',
+      required: false, // Allow OAuth users without lastName
+    },
     {
       name: 'sub',
       type: 'text',
@@ -82,9 +121,9 @@ export const Users: CollectionConfig = {
       },
       admin: {
         readOnly: true,
-        // Hidden from non-developers/superadmins
+        // Hidden from non-developers
         condition: (data, siblingData, { user }) => {
-          return isSuperAdminOrDeveloper(user)
+          return !!user?.roles?.includes('developer')
         },
         description: 'OAuth provider subject ID (system-managed)',
       },
@@ -99,9 +138,9 @@ export const Users: CollectionConfig = {
       },
       admin: {
         readOnly: true,
-        // Hidden from non-developers/superadmins
+        // Hidden from non-developers
         condition: (data, siblingData, { user }) => {
-          return isSuperAdminOrDeveloper(user)
+          return !!user?.roles?.includes('developer')
         },
         description: 'OAuth provider profile picture URL (system-managed)',
       },
@@ -116,9 +155,9 @@ export const Users: CollectionConfig = {
       },
       admin: {
         readOnly: true,
-        // Hidden from non-developers/superadmins
+        // Hidden from non-developers
         condition: (data, siblingData, { user }) => {
-          return isSuperAdminOrDeveloper(user)
+          return !!user?.roles?.includes('developer')
         },
         description: 'Indicates if user has set a custom password (system-managed)',
       },
@@ -141,6 +180,10 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      name: 'phone',
+      type: 'text',
+    },
+    {
       name: 'roles',
       type: 'select',
       required: true,
@@ -160,66 +203,119 @@ export const Users: CollectionConfig = {
           value: 'admin',
         },
         {
-          label: 'Developer',
-          value: 'developer',
-        },
-        {
           label: 'Super Admin',
           value: 'superadmin',
         },
+        {
+          label: 'Developer',
+          value: 'developer',
+        },
       ],
       admin: {
+        position: 'sidebar',
         description:
-          'User role permissions (Developer and Super Admin can only be assigned by Super Admins)',
-        // Filter options based on user's role
+          'User roles determine access levels. Only superadmins and developers can modify roles.',
+        /**
+         * VISIBILITY CONDITION
+         * - First user creation (no user logged in): Show field to set initial developer role
+         * - Superadmins/Developers: Can see and manage roles
+         * - Everyone else: Cannot see this field at all
+         */
         condition: (data, siblingData, { user }) => {
-          // Show roles field to admins and superadmins
-          return !!(user?.roles?.includes('admin') || user?.roles?.includes('superadmin'))
+          // First user creation - show to set up initial developer account
+          if (!user) return true
+          // Only superadmins and developers can see/manage roles
+          return isSuperAdminOrDeveloper(user)
         },
       },
       access: {
         /**
-         * ROLES FIELD ACCESS
-         * - Only admins can assign/change roles
-         * - Hook prevents non-superadmins from assigning superadmin/developer roles
+         * ROLES FIELD ACCESS CONTROL
+         * - Only superadmins and developers can assign or modify roles
+         * - Regular admins cannot manage roles (prevents privilege escalation)
+         * - Default role (customer) is applied automatically for new registrations
          */
-        create: isAdminField,
-        update: isAdminField,
+        create: isSuperAdminOrDeveloperField,
+        update: isSuperAdminOrDeveloperField,
       },
       hooks: {
         beforeChange: [
-          ({ req, value }) => {
-            // Prevent non-superadmins from assigning superadmin or developer roles
-            if (value && Array.isArray(value)) {
-              const isSuperAdmin = req.user?.roles?.includes('superadmin')
+          ({ req, value, data, operation }) => {
+            // Define valid roles and privilege hierarchy
+            const VALID_ROLES = ['customer', 'seller', 'admin', 'superadmin', 'developer']
+            // Elevated roles that only superadmin/developer can assign
+            const ELEVATED_ROLES = ['admin', 'superadmin']
+            // Developer role is exclusive - only developers can assign it
+            const DEVELOPER_ONLY_ROLE = 'developer'
 
-              // Filter out restricted roles if user is not a superadmin
-              if (!isSuperAdmin) {
-                return value.filter((role: string) => role !== 'superadmin' && role !== 'developer')
+            // Ensure value is always an array
+            let roles = Array.isArray(value) ? value : []
+
+            // Validate all roles are from the allowed list
+            roles = roles.filter((role: string) => VALID_ROLES.includes(role))
+
+            // FIRST USER CREATION: Allow all roles when no user is logged in
+            // This enables setting up the initial developer/superadmin account
+            if (!req.user) {
+              if (roles.length === 0) {
+                roles = ['customer']
+              }
+              return roles
+            }
+
+            // Check current user's privileges
+            const userIsDeveloper = req.user.roles?.includes('developer')
+            const userIsSuperAdmin = req.user.roles?.includes('superadmin')
+            const userIsSuperAdminOrDeveloper = userIsSuperAdmin || userIsDeveloper
+
+            // PREVENT SELF-DEMOTION: Users cannot remove their own elevated roles
+            // This prevents accidental lockout from the system
+            if (operation === 'update' && data?.id === req.user.id && userIsSuperAdminOrDeveloper) {
+              const currentUserRoles = (req.user.roles || []) as string[]
+              // Preserve elevated roles
+              ELEVATED_ROLES.forEach((elevatedRole) => {
+                if (currentUserRoles.includes(elevatedRole) && !roles.includes(elevatedRole)) {
+                  roles.push(elevatedRole)
+                }
+              })
+              // Preserve developer role if user is a developer
+              if (
+                currentUserRoles.includes(DEVELOPER_ONLY_ROLE) &&
+                !roles.includes(DEVELOPER_ONLY_ROLE)
+              ) {
+                roles.push(DEVELOPER_ONLY_ROLE)
               }
             }
-            return value
+
+            // DEVELOPER ROLE RESTRICTION: Only developers can assign the developer role
+            if (!userIsDeveloper && roles.includes(DEVELOPER_ONLY_ROLE)) {
+              roles = roles.filter((role: string) => role !== DEVELOPER_ONLY_ROLE)
+            }
+
+            // ELEVATED ROLE RESTRICTION: Only superadmin/developer can assign elevated roles
+            if (!userIsSuperAdminOrDeveloper) {
+              roles = roles.filter((role: string) => !ELEVATED_ROLES.includes(role))
+            }
+
+            // Ensure at least 'customer' role is always present
+            if (roles.length === 0) {
+              roles = ['customer']
+            }
+
+            return roles
           },
         ],
       },
     },
     {
-      name: 'firstName',
-      type: 'text',
-      required: false, // Allow OAuth users without firstName
-    },
-    {
-      name: 'lastName',
-      type: 'text',
-      required: false, // Allow OAuth users without lastName
-    },
-    {
-      name: 'phone',
-      type: 'text',
-    },
-    {
       name: 'addresses',
       type: 'array',
+      admin: {
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
+      },
       fields: [
         {
           name: 'label',
@@ -291,6 +387,34 @@ export const Users: CollectionConfig = {
                 description: 'Longitude coordinate',
               },
             },
+            {
+              name: 'accuracy',
+              type: 'number',
+              admin: {
+                step: 0.01,
+                description: 'Location accuracy in meters',
+              },
+            },
+            {
+              name: 'source',
+              type: 'select',
+              options: [
+                { label: 'GPS', value: 'gps' },
+                { label: 'IP Address', value: 'ip' },
+                { label: 'Manual Entry', value: 'manual' },
+                { label: 'Map Selection', value: 'map' },
+              ],
+              admin: {
+                description: 'How the location was obtained',
+              },
+            },
+            {
+              name: 'ip',
+              type: 'text',
+              admin: {
+                description: 'IP address when location was captured',
+              },
+            },
           ],
           admin: {
             description: 'GPS location - Pin your exact location on the map',
@@ -301,11 +425,20 @@ export const Users: CollectionConfig = {
     {
       name: 'preferences',
       type: 'group',
+      admin: {
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
+      },
       fields: [
         {
           name: 'currency',
           type: 'select',
           defaultValue: 'AFN',
+          access: {
+            update: nobody,
+          },
           options: [
             {
               label: 'AFN (Afghan Afghani)',
@@ -333,9 +466,9 @@ export const Users: CollectionConfig = {
       },
       admin: {
         readOnly: true,
-        // Hidden from non-developers/superadmins
+        // Hidden from non-developers
         condition: (data, siblingData, { user }) => {
-          return isSuperAdminOrDeveloper(user)
+          return !!user?.roles?.includes('developer')
         },
         description: 'Shopping cart data (managed via API, JSON format)',
       },
@@ -347,6 +480,10 @@ export const Users: CollectionConfig = {
       hasMany: true,
       admin: {
         description: 'Products added to wishlist',
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
       },
     },
     {
@@ -359,6 +496,10 @@ export const Users: CollectionConfig = {
       admin: {
         readOnly: true,
         description: 'Recently viewed products (managed via API, max 20 items)',
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
       },
       fields: [
         {
@@ -384,6 +525,12 @@ export const Users: CollectionConfig = {
       type: 'join',
       collection: 'orders',
       on: 'customer',
+      admin: {
+        // Only show to developers
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
+      },
     },
   ],
 }

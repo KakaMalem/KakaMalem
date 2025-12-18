@@ -4,14 +4,13 @@ import React, { useState, useCallback } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react'
 
+import { PLACEHOLDER_IMAGE } from '@/utilities/ui'
+
 interface ImageGalleryProps {
   images: string[]
   productName: string
   className?: string
 }
-
-const PLACEHOLDER_IMAGE =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({
   images,
@@ -117,14 +116,14 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                     className="absolute left-2 top-1/2 -translate-y-1/2 btn btn-circle btn-sm bg-base-100/80 hover:bg-base-100 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-label="Previous image"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronRight className="w-5 h-5 rotate-180" />
                   </button>
                   <button
                     onClick={handleNext}
                     className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-circle btn-sm bg-base-100/80 hover:bg-base-100 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-label="Next image"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronLeft className="w-5 h-5 rotate-180" />
                   </button>
                 </>
               )}
@@ -233,14 +232,14 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 className="absolute left-4 top-1/2 -translate-y-1/2 btn btn-circle btn-lg bg-white/10 hover:bg-white/20 border-none text-white"
                 aria-label="Previous image"
               >
-                <ChevronLeft className="w-8 h-8" />
+                <ChevronRight className="w-8 h-8 rotate-180" />
               </button>
               <button
                 onClick={handleNext}
                 className="absolute right-4 top-1/2 -translate-y-1/2 btn btn-circle btn-lg bg-white/10 hover:bg-white/20 border-none text-white"
                 aria-label="Next image"
               >
-                <ChevronRight className="w-8 h-8" />
+                <ChevronLeft className="w-8 h-8 rotate-180" />
               </button>
             </>
           )}

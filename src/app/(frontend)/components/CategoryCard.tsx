@@ -7,12 +7,12 @@ interface CategoryCardProps {
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
-  const categoryImage = category.categoryImage
+  const smallCategoryImage = category.smallCategoryImage
   const imageSrc =
-    typeof categoryImage === 'string'
-      ? categoryImage
-      : typeof categoryImage === 'object' && categoryImage?.url
-        ? categoryImage.url
+    typeof smallCategoryImage === 'string'
+      ? smallCategoryImage
+      : typeof smallCategoryImage === 'object' && smallCategoryImage?.url
+        ? smallCategoryImage.url
         : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
 
   return (
@@ -30,11 +30,13 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         {/* subtle dark gradient to improve text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-neutral/80 via-neutral/50 to-transparent"></div>
 
         {/* centered category name */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <h3 className="text-2xl font-bold text-white drop-shadow-md">{category.name}</h3>
+          <h3 className="text-2xl font-bold text-neutral-content drop-shadow-md">
+            {category.name}
+          </h3>
         </div>
       </figure>
     </a>

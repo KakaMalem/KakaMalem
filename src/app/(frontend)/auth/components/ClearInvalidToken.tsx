@@ -1,25 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
+/**
+ * Clears authentication cookies when OAuth errors occur
+ * This prevents invalid tokens from blocking future login attempts
+ */
 export default function ClearInvalidToken() {
-  const [_cleared, setCleared] = useState(false)
-
   useEffect(() => {
-    // Check if there's an error in the URL
     const params = new URLSearchParams(window.location.search)
     const hasError = params.has('error')
 
-    // If there's an error or we detect issues, clear cookies
-    if (hasError || document.cookie.includes('payload-token')) {
+    if (hasError) {
       fetch('/api/logout', { method: 'POST' })
-        .then(() => {
-          console.log('🧹 Cleared any invalid auth cookies')
-          setCleared(true)
-        })
+        .then(() => console.log('Cleared invalid auth cookies due to OAuth error'))
         .catch((err) => console.error('Failed to clear cookies:', err))
     }
   }, [])
 
-  return null // This component doesn't render anything
+  return null
 }

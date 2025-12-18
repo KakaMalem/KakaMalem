@@ -1,6 +1,5 @@
 import type { CollectionConfig } from 'payload'
 import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
-import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
 import { slugField } from '../fields/slug'
 
 export const Categories: CollectionConfig = {
@@ -45,16 +44,16 @@ export const Categories: CollectionConfig = {
     },
     /**
      * CREATE ACCESS
-     * - Admins, Developers, Sellers: Can create categories
-     * - Customers: No access
+     * - Only admins and developers can create categories
+     * - Sellers can read categories to assign to products but cannot create new ones
      */
-    create: isAdminSellerOrDeveloper,
+    create: isAdminOrDeveloper,
     /**
      * UPDATE ACCESS
-     * - Admins, Developers, Sellers: Can update categories
-     * - Customers: No access
+     * - Only admins and developers can update categories
+     * - Ensures category structure integrity across the platform
      */
-    update: isAdminSellerOrDeveloper,
+    update: isAdminOrDeveloper,
     /**
      * DELETE ACCESS
      * - Only admins and developers can delete categories
@@ -71,13 +70,18 @@ export const Categories: CollectionConfig = {
     },
     ...slugField('name'),
     {
-      name: 'categoryImage',
+      name: 'smallCategoryImage',
       type: 'upload',
       relationTo: 'media',
     },
     {
       name: 'description',
       type: 'textarea',
+    },
+    {
+      name: 'heroImage',
+      type: 'upload',
+      relationTo: 'media',
     },
     {
       name: 'parent',

@@ -7,9 +7,11 @@ import type { Metadata } from 'next'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'payload template',
-  description: 'payload template website for کاکا معلم',
-  keywords: 'online, shopping, ecommerce, کاکا معلم',
+  title: {
+    default: 'کاکا معلم',
+    template: '%s | کاکا معلم',
+  },
+  description: 'فروشگاه اینترنتی کاکا معلم - خرید آنلاین محصولات با کیفیت با ارسال سریع در کابل',
 }
 
 export default function MainLayout(props: { children: React.ReactNode }) {

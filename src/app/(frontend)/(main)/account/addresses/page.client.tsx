@@ -9,9 +9,10 @@ import type { User } from '@/payload-types'
 
 interface AddressesClientProps {
   user: User
+  redirectTo?: string
 }
 
-export default function AddressesClient({ user: initialUser }: AddressesClientProps) {
+export default function AddressesClient({ user: initialUser, redirectTo }: AddressesClientProps) {
   const [user, setUser] = useState(initialUser)
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -39,10 +40,10 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
 
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
-      toast.success('Address deleted successfully!')
+      toast.success('آدرس مؤفقانه حذف شد!')
     } catch (err: unknown) {
       console.error('Error deleting address:', err)
-      toast.error('Failed to delete address. Please try again.')
+      toast.error('حذف آدرس ناموفق بود. لطفاً دوباره امتحان کنید.')
     } finally {
       setDeleting(null)
     }
@@ -71,10 +72,10 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
 
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
-      toast.success('Default address updated!')
+      toast.success('آدرس اصلی ثبت شد!')
     } catch (err: unknown) {
       console.error('Error setting default address:', err)
-      toast.error('Failed to set default address. Please try again.')
+      toast.error('تبدیل آدرس اصلی ناموفق بود. لطفاً دوباره امتحان کنید.')
     } finally {
       setDeleting(null)
     }
@@ -89,21 +90,27 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Addresses', active: true }]} />
+      <Breadcrumb
+        items={[
+          { label: 'حساب کاربری', href: '/account' },
+          { label: 'آدرس‌ها', active: true },
+        ]}
+      />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold">Delivery Addresses</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold">آدرس‌های تحویل</h2>
           <p className="text-base-content/60 text-sm mt-1">
-            {addresses.length > 0
-              ? `${addresses.length} ${addresses.length === 1 ? 'address' : 'addresses'} saved`
-              : 'No addresses yet'}
+            {addresses.length > 0 ? `${addresses.length} آدرس ذخیره شده` : 'هنوز آدرسی ندارید'}
           </p>
         </div>
-        <Link href="/account/addresses/add" className="btn btn-primary gap-2 btn-sm sm:btn-md">
+        <Link
+          href={`/account/addresses/add${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
+          className="btn btn-primary gap-2 btn-sm sm:btn-md"
+        >
           <Plus className="w-4 h-4" />
-          Add Address
+          افزودن آدرس
         </Link>
       </div>
 
@@ -130,7 +137,7 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
                       {address.isDefault && (
                         <span className="badge badge-primary badge-sm gap-1 mt-0.5">
                           <Star className="w-3 h-3" fill="currentColor" />
-                          Default
+                          آدرس اصلی
                         </span>
                       )}
                     </div>
@@ -149,7 +156,9 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
                       )}
                       <span className="badge badge-sm badge-ghost">{address.country}</span>
                       {address.phone && (
-                        <span className="badge badge-sm badge-ghost">{address.phone}</span>
+                        <span className="badge badge-sm badge-ghost" dir="ltr">
+                          {address.phone}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -161,12 +170,12 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
                     <div className="bg-base-200/50 rounded-lg p-3 space-y-2">
                       <div className="flex items-center gap-2 text-xs font-semibold text-primary mb-2">
                         <MapPin className="w-3.5 h-3.5" />
-                        <span>Delivery Location</span>
+                        <span>موقعیت تحویل</span>
                       </div>
 
                       {address.nearbyLandmark && (
                         <div className="text-sm">
-                          <span className="font-medium">Landmark:</span>
+                          <span className="font-medium">نشانی:</span>
                           <span className="ml-1 text-base-content/80">
                             {address.nearbyLandmark}
                           </span>
@@ -192,7 +201,7 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
                           className="btn btn-xs btn-primary gap-1 mt-1"
                         >
                           <MapPin className="w-3 h-3" />
-                          Open in Maps
+                          باز کردن در نقشه
                         </button>
                       )}
                     </div>
@@ -201,11 +210,11 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
 
                 <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-base-300">
                   <Link
-                    href={`/account/addresses/${address.id}`}
+                    href={`/account/addresses/${address.id}${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
                     className="btn btn-sm btn-outline gap-1 flex-1 sm:flex-none"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
-                    Edit
+                    ویرایش
                   </Link>
                   {!address.isDefault && (
                     <button
@@ -214,7 +223,7 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
                       disabled={deleting === address.id}
                     >
                       <Star className="w-3.5 h-3.5" />
-                      Set Default
+                      آدرس اصلی
                     </button>
                   )}
                   <button
@@ -223,7 +232,7 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
                     disabled={deleting === address.id}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    {deleting === address.id ? 'Deleting...' : 'Delete'}
+                    {deleting === address.id ? 'در حال حذف...' : 'حذف'}
                   </button>
                 </div>
               </div>
@@ -234,13 +243,16 @@ export default function AddressesClient({ user: initialUser }: AddressesClientPr
         <div className="card bg-base-200/50 border-2 border-dashed border-base-300">
           <div className="card-body text-center py-16">
             <MapPin className="w-20 h-20 mx-auto text-base-content/20 mb-4" />
-            <h3 className="text-xl font-bold mb-2">No Delivery Addresses Yet</h3>
+            <h3 className="text-xl font-bold mb-2">هنوز آدرس تحویلی ندارید</h3>
             <p className="text-base-content/60 mb-6 max-w-md mx-auto">
-              Add your first address with GPS location and landmark to ensure smooth delivery.
+              اولین آدرس خود را با موقعیت GPS و نشانی اضافه کنید تا تحویل روان انجام شود.
             </p>
-            <Link href="/account/addresses/add" className="btn btn-primary gap-2 mx-auto">
+            <Link
+              href={`/account/addresses/add${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
+              className="btn btn-primary gap-2 mx-auto"
+            >
               <Plus className="w-4 h-4" />
-              Add Your First Address
+              افزودن اولین آدرس
             </Link>
           </div>
         </div>

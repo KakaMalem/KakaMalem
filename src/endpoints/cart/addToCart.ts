@@ -15,7 +15,7 @@ export const addToCart: Endpoint = {
         return Response.json(
           {
             success: false,
-            error: 'Valid product ID is required',
+            error: 'شناسه محصول معتبر الزامی است',
           },
           { status: 400 },
         )
@@ -25,7 +25,7 @@ export const addToCart: Endpoint = {
         return Response.json(
           {
             success: false,
-            error: 'Quantity must be a positive integer',
+            error: 'تعداد باید یک عدد صحیح مثبت باشد',
           },
           { status: 400 },
         )
@@ -35,7 +35,7 @@ export const addToCart: Endpoint = {
         return Response.json(
           {
             success: false,
-            error: 'Maximum quantity per item is 100',
+            error: 'حداکثر تعداد هر محصول ۱۰۰ عدد است',
           },
           { status: 400 },
         )
@@ -52,7 +52,7 @@ export const addToCart: Endpoint = {
         return Response.json(
           {
             success: false,
-            error: 'Product not found',
+            error: 'محصول یافت نشد',
           },
           { status: 404 },
         )
@@ -63,7 +63,33 @@ export const addToCart: Endpoint = {
         return Response.json(
           {
             success: false,
-            error: 'Product is not available',
+            error: 'محصول در دسترس نیست',
+          },
+          { status: 400 },
+        )
+      }
+
+      // HIERARCHICAL STOCK STATUS LOGIC
+      // ================================
+      // Product-level status (discontinued/out_of_stock) BLOCKS ALL variant purchases
+      // This ensures that if a product is discontinued, customers cannot buy ANY variant
+      // even if individual variants show as available. This maintains business integrity.
+      //
+      // Example:
+      // - Product: stockStatus = 'discontinued'
+      // - Variant A: stockStatus = 'in_stock', quantity = 50
+      // - Result: CANNOT purchase Variant A (blocked by product status)
+      //
+      // Only if product is available, then variant-specific status is checked (below)
+      if (product.stockStatus === 'discontinued' || product.stockStatus === 'out_of_stock') {
+        const message =
+          product.stockStatus === 'discontinued'
+            ? 'این محصول دیگر تولید نمی‌شود و قابل خرید نیست'
+            : 'این محصول موجود نیست'
+        return Response.json(
+          {
+            success: false,
+            error: message,
           },
           { status: 400 },
         )
@@ -87,7 +113,31 @@ export const addToCart: Endpoint = {
             return Response.json(
               {
                 success: false,
-                error: 'Variant does not belong to this product',
+                error: 'این گزینه متعلق به این محصول نیست',
+              },
+              { status: 400 },
+            )
+          }
+
+          // VARIANT-SPECIFIC STOCK STATUS
+          // ==============================
+          // This check only runs if product-level status allows purchases
+          // Individual variants can be discontinued/out_of_stock independently
+          //
+          // Example:
+          // - Product: stockStatus = 'in_stock'
+          // - Variant A: stockStatus = 'discontinued'
+          // - Variant B: stockStatus = 'in_stock'
+          // - Result: Can buy Variant B, CANNOT buy Variant A
+          if (variant.stockStatus === 'discontinued' || variant.stockStatus === 'out_of_stock') {
+            const message =
+              variant.stockStatus === 'discontinued'
+                ? 'این گزینه محصول دیگر تولید نمی‌شود و قابل خرید نیست'
+                : 'این گزینه محصول موجود نیست'
+            return Response.json(
+              {
+                success: false,
+                error: message,
               },
               { status: 400 },
             )
@@ -96,7 +146,7 @@ export const addToCart: Endpoint = {
           return Response.json(
             {
               success: false,
-              error: 'Variant not found',
+              error: 'گزینه محصول یافت نشد',
             },
             { status: 404 },
           )
@@ -106,6 +156,34 @@ export const addToCart: Endpoint = {
       // For products with variants, automatically select default variant if none provided
       if (product.hasVariants && !finalVariantId) {
         try {
+          // First, check if ALL variants are unavailable
+          const allVariants = await req.payload.find({
+            collection: 'product-variants',
+            where: {
+              product: {
+                equals: productId,
+              },
+            },
+          })
+
+          // Check if all variants are out of stock or discontinued
+          const allVariantsUnavailable =
+            allVariants.docs.length > 0 &&
+            allVariants.docs.every(
+              (v) => v.stockStatus === 'out_of_stock' || v.stockStatus === 'discontinued',
+            )
+
+          if (allVariantsUnavailable) {
+            return Response.json(
+              {
+                success: false,
+                error: 'تمام گزینه‌های این محصول ناموجود هستند',
+              },
+              { status: 400 },
+            )
+          }
+
+          // Try to get default variant
           const defaultVariants = await req.payload.find({
             collection: 'product-variants',
             where: {
@@ -129,26 +207,19 @@ export const addToCart: Endpoint = {
             variant = defaultVariants.docs[0]
             finalVariantId = variant.id
           } else {
-            // If no default variant found, try to get the first variant
-            const firstVariant = await req.payload.find({
-              collection: 'product-variants',
-              where: {
-                product: {
-                  equals: productId,
-                },
-              },
-              limit: 1,
-              sort: 'createdAt',
-            })
+            // If no default variant found, try to get the first available variant
+            const firstAvailableVariant = allVariants.docs.find(
+              (v) => v.stockStatus !== 'out_of_stock' && v.stockStatus !== 'discontinued',
+            )
 
-            if (firstVariant.docs && firstVariant.docs.length > 0) {
-              variant = firstVariant.docs[0]
+            if (firstAvailableVariant) {
+              variant = firstAvailableVariant
               finalVariantId = variant.id
             } else {
               return Response.json(
                 {
                   success: false,
-                  error: 'No variants available for this product',
+                  error: 'هیچ گزینه موجودی برای این محصول یافت نشد',
                 },
                 { status: 400 },
               )
@@ -158,7 +229,7 @@ export const addToCart: Endpoint = {
           return Response.json(
             {
               success: false,
-              error: 'Failed to find product variant',
+              error: 'خطا در یافتن گزینه محصول',
             },
             { status: 500 },
           )
@@ -204,7 +275,7 @@ export const addToCart: Endpoint = {
             return Response.json(
               {
                 success: false,
-                error: `Cannot add ${quantity} more. You already have ${currentInCart} in your cart. Only ${stockSource.quantity} available in stock (you can add ${availableToAdd} more)`,
+                error: `نمی‌توانید ${quantity} عدد دیگر اضافه کنید. شما در حال حاضر ${currentInCart} عدد در سبد خرید دارید. تنها ${stockSource.quantity} عدد در گدام موجود است (می‌توانید ${availableToAdd} عدد دیگر اضافه کنید)`,
                 availableQuantity: stockSource.quantity,
                 currentInCart: currentInCart,
                 availableToAdd: availableToAdd,
@@ -231,7 +302,7 @@ export const addToCart: Endpoint = {
           return Response.json(
             {
               success: false,
-              error: `Only ${stockSource.quantity} items available in stock`,
+              error: `تنها ${stockSource.quantity} عدد در گدام موجود است`,
               availableQuantity: stockSource.quantity,
             },
             { status: 400 },
@@ -253,7 +324,7 @@ export const addToCart: Endpoint = {
         return Response.json(
           {
             success: false,
-            error: 'Maximum cart size (50 items) reached',
+            error: 'حداکثر تعداد اقلام سبد خرید (۵۰ مورد) رسیده است',
           },
           { status: 400 },
         )
@@ -317,7 +388,7 @@ export const addToCart: Endpoint = {
       return createCartResponse(
         {
           success: true,
-          message: 'Product added to cart',
+          message: 'محصول به سبد خرید اضافه شد',
           data: {
             itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
             items: updatedItems,
@@ -331,7 +402,7 @@ export const addToCart: Endpoint = {
       return Response.json(
         {
           success: false,
-          error: 'Failed to add product to cart',
+          error: 'خطا در افزودن محصول به سبد خرید',
         },
         { status: 500 },
       )

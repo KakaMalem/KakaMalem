@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react' // Added useMemo
+import React, { useState, useEffect, useMemo } from 'react'
 import { useCart } from '@/providers/cart'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Check, ShoppingCart } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
@@ -28,6 +27,9 @@ interface GuestFormData {
   coordinates: {
     latitude: number | null
     longitude: number | null
+    accuracy?: number | null
+    source?: 'gps' | 'ip' | 'manual' | 'map' | null
+    ip?: string | null
   }
 }
 
@@ -43,8 +45,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
     email: '',
     firstName: '',
     lastName: '',
-    state: '',
-    country: '',
+    state: 'کابل',
+    country: 'افغانستان',
     phone: '',
     nearbyLandmark: '',
     detailedDirections: '',
@@ -61,23 +63,26 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
   const currency = user?.preferences?.currency || 'AFN'
 
   const steps = [
-    { number: 1, name: 'Shipping', component: 'shipping' },
-    { number: 2, name: 'Payment', component: 'payment' },
-    { number: 3, name: 'Review', component: 'review' },
+    { number: 1, name: 'آدرس تحویل', component: 'shipping' },
+    { number: 2, name: 'روش پرداخت', component: 'payment' },
+    { number: 3, name: 'بررسی نهایی', component: 'review' },
   ]
 
-  // Auto-select default address
+  // Auto-select default address or newly added address
   useEffect(() => {
-    if (userAddresses.length > 0 && selectedAddressIndex === null) {
-      const defaultIndex = userAddresses.findIndex((addr) => addr.isDefault)
-      setSelectedAddressIndex(defaultIndex >= 0 ? defaultIndex : 0)
+    if (userAddresses.length > 0) {
+      if (selectedAddressIndex === null || selectedAddressIndex >= userAddresses.length) {
+        const defaultIndex = userAddresses.findIndex((addr) => addr.isDefault)
+        // Select default address, or the last added address (most recent)
+        setSelectedAddressIndex(defaultIndex >= 0 ? defaultIndex : userAddresses.length - 1)
+      }
     }
   }, [userAddresses, selectedAddressIndex])
 
   // Redirect if cart is empty (but not when order is being placed)
   useEffect(() => {
     if (!cartLoading && (!cart || cart.length === 0) && !orderPlaced) {
-      toast.error('Your cart is empty. Add items to checkout.')
+      toast.error('سبد خرید شما خالی است. لطفاً محصولاتی را اضافه کنید.')
       router.push('/')
     }
   }, [cart, cartLoading, router, orderPlaced])
@@ -102,7 +107,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
 
   const subtotal = cart.reduce((sum, item) => {
     if (!item.product) return sum
-    const price = item.product.salePrice || item.product.price
+    // Use variant price if available, otherwise product price
+    const price = item.variant?.price || item.product.salePrice || item.product.price
     return sum + price * item.quantity
   }, 0)
 
@@ -114,8 +120,12 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       case 1:
         // Validate shipping step
         if (user) {
+          if (userAddresses.length === 0) {
+            toast.error('لطفاً ابتدا یک آدرس اضافه کنید')
+            return false
+          }
           if (selectedAddressIndex === null) {
-            toast.error('Please select a shipping address')
+            toast.error('لطفاً آدرس تحویل را انتخاب کنید')
             return false
           }
         } else {
@@ -125,7 +135,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
             !guestForm.lastName ||
             !guestForm.country
           ) {
-            toast.error('Please fill in all required fields')
+            toast.error('لطفاً تمام فیلدهای الزامی را پر کنید')
             return false
           }
         }
@@ -150,7 +160,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
-      toast.error('Your cart is empty')
+      toast.error('سبد خرید شما خالی است')
       return
     }
 
@@ -167,6 +177,8 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       if (user) {
         // Authenticated user - use selected address
         shippingAddress = userAddresses[selectedAddressIndex!]
+        // Always include user email for fallback authentication
+        guestEmail = user.email
       } else {
         // Guest user - use form data
         guestEmail = guestForm.email
@@ -182,10 +194,11 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
         }
       }
 
-      // Prepare cart items for the order
+      // Prepare cart items for the order - include variant if present
       const items = cart.map((item) => ({
         product: item.productId,
         quantity: item.quantity,
+        ...(item.variantId && { variantId: item.variantId }),
       }))
 
       const response = await fetch('/api/create-order', {
@@ -204,7 +217,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create order')
+        throw new Error(data.error || 'ایجاد سفارش با خطا مواجه شد')
       }
 
       setOrderPlaced(true)
@@ -214,7 +227,7 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       router.push(`/order-confirmation/${data.order.id}`)
     } catch (error: unknown) {
       console.error('Checkout error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to place order'
+      const errorMessage = error instanceof Error ? error.message : 'ثبت سفارش با خطا مواجه شد'
       toast.error(errorMessage)
     } finally {
       setProcessing(false)
@@ -226,14 +239,10 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
       {/* Header */}
       <div className="bg-base-200 border-b border-base-300">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <Breadcrumb items={[{ label: 'Checkout', active: true }]} />
-          <Link href="/" className="btn btn-ghost btn-sm mb-4 mt-4">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Shop
-          </Link>
+          <Breadcrumb items={[{ label: 'تصفیه حساب', active: true }]} />
           <div className="flex items-center gap-3 mb-6">
-            <ShoppingCart className="w-8 h-8 text-primary" />
-            <h1 className="text-3xl font-bold">Checkout</h1>
+            <ShoppingCart className="w-8 h-8 text-primary mb-4 mt-4" />
+            <h1 className="text-3xl font-bold">تصفیه حساب</h1>
           </div>
 
           {/* Step Indicator */}
@@ -314,14 +323,14 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
             onClick={handleBack}
             disabled={currentStep === 1}
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back
+            <ArrowRight className="w-4 h-4" />
+            بازگشت
           </button>
 
           {currentStep < 3 ? (
             <button type="button" className="btn btn-primary" onClick={handleNext}>
-              Continue
-              <ArrowRight className="w-4 h-4" />
+              ادامه
+              <ArrowLeft className="w-4 h-4" />
             </button>
           ) : (
             <button
@@ -333,12 +342,12 @@ export default function CheckoutClient({ user }: CheckoutClientProps) {
               {processing ? (
                 <>
                   <span className="loading loading-spinner"></span>
-                  Processing Order...
+                  در حال پردازش سفارش...
                 </>
               ) : (
                 <>
                   <Check className="w-5 h-5" />
-                  Place Order ({currency} {total.toFixed(2)})
+                  ثبت نهایی سفارش
                 </>
               )}
             </button>

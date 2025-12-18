@@ -11,14 +11,13 @@ import {
   ArrowRight,
   ShoppingBag,
   FileText,
+  Calendar,
 } from 'lucide-react'
 import type { Order, Product, ProductVariant, Media } from '@/payload-types'
 import confetti from 'canvas-confetti'
 import Image from 'next/image'
 import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
-
-const PLACEHOLDER_IMAGE =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="500"%3E%3Crect width="400" height="500" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E'
+import { PLACEHOLDER_IMAGE } from '@/utilities/ui'
 
 interface OrderItem {
   product: string | Product
@@ -32,30 +31,98 @@ interface OrderConfirmationClientProps {
   order: Order
 }
 
+/**
+ * Extract URL from a Media object or string
+ * Handles various formats: string ID, Media object, or object with url property
+ */
+const extractMediaUrl = (mediaItem: unknown): string | null => {
+  if (typeof mediaItem === 'string') return mediaItem
+
+  if (typeof mediaItem === 'object' && mediaItem !== null) {
+    const media = mediaItem as Media | { url?: string | null }
+
+    // Try Media.url first
+    if ('url' in media && typeof media.url === 'string' && media.url) {
+      return media.url
+    }
+
+    // Try generic url property
+    const possibleUrl = (media as { url?: string | null }).url
+    if (typeof possibleUrl === 'string' && possibleUrl) {
+      return possibleUrl
+    }
+  }
+
+  return null
+}
+
 export default function OrderConfirmationClient({ order }: OrderConfirmationClientProps) {
   const [confettiShown, setConfettiShown] = React.useState(false)
   const currency = order.currency || 'AFN'
   const isGuest = !order.customer
 
-  // Show confetti on mount
+  // Show confetti on mount (only once per session for this order)
   React.useEffect(() => {
-    if (!confettiShown) {
+    const confettiKey = `confetti-${order.id}`
+    const hasShown = sessionStorage.getItem(confettiKey)
+
+    if (!confettiShown && !hasShown) {
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
       })
       setConfettiShown(true)
+      sessionStorage.setItem(confettiKey, 'true')
     }
-  }, [confettiShown])
+  }, [confettiShown, order.id])
 
   const getPaymentMethodLabel = (method: string) => {
     const labels: Record<string, string> = {
-      cod: 'Cash on Delivery',
-      bank_transfer: 'Bank Transfer',
-      credit_card: 'Credit Card',
+      cod: 'پرداخت هنگام تحویل',
+      bank_transfer: 'انتقال بانکی',
+      credit_card: 'کارت اعتباری',
     }
     return labels[method] || method
+  }
+
+  const getPaymentStatusBadge = (status: string | null | undefined) => {
+    const statusConfig: Record<string, { label: string; class: string }> = {
+      pending: { label: 'در انتظار پرداخت', class: 'badge-warning' },
+      paid: { label: 'پرداخت شده', class: 'badge-success' },
+      failed: { label: 'ناموفق', class: 'badge-error' },
+      refunded: { label: 'بازگشت وجه', class: 'badge-info' },
+    }
+    const config = statusConfig[status || 'pending'] || statusConfig.pending
+    return <span className={`badge badge-sm ${config.class}`}>{config.label}</span>
+  }
+
+  const getOrderStatusBadge = (status: string | null | undefined) => {
+    const statusConfig: Record<string, { label: string; class: string }> = {
+      pending: { label: 'در انتظار بررسی', class: 'badge-warning' },
+      processing: { label: 'در حال پردازش', class: 'badge-info' },
+      shipped: { label: 'ارسال شده', class: 'badge-primary' },
+      delivered: { label: 'تحویل داده شده', class: 'badge-success' },
+      cancelled: { label: 'لغو شده', class: 'badge-error' },
+    }
+    const config = statusConfig[status || 'pending'] || statusConfig.pending
+    return <span className={`badge ${config.class}`}>{config.label}</span>
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (amount === null || amount === undefined) return '0'
+    const formatted = amount.toLocaleString()
+    return currency === 'AFN' ? `${formatted} ؋` : `$${formatted}`
   }
 
   return (
@@ -64,18 +131,38 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
       <div className="bg-gradient-to-br from-success/20 to-success/5 border-b border-success/20">
         <div className="max-w-4xl mx-auto px-4 py-12 text-center">
           <div className="mb-6">
-            <Breadcrumb items={[{ label: 'Checkout', href: '/checkout' }, { label: 'Order Confirmation', active: true }]} />
+            <Breadcrumb
+              items={[
+                { label: 'تصفیه حساب', href: '/checkout' },
+                { label: 'تأیید سفارش', active: true },
+              ]}
+            />
           </div>
           <div className="inline-flex items-center justify-center w-20 h-20 bg-success text-success-content rounded-full mb-6 animate-bounce">
             <CheckCircle className="w-12 h-12" />
           </div>
-          <h1 className="text-4xl font-bold mb-3">Order Confirmed!</h1>
+          <h1 className="text-4xl font-bold mb-3">سفارش شما ثبت شد!</h1>
           <p className="text-lg opacity-80 mb-2">
-            Thank you for your order. We&apos;ve received it and will process it shortly.
+            از خرید شما متشکریم. سفارش شما دریافت شده و به زودی پردازش خواهد شد.
           </p>
-          <div className="inline-block bg-base-200 px-6 py-3 rounded-lg mt-4">
-            <div className="text-sm opacity-70">Order Number</div>
-            <div className="text-2xl font-bold text-primary">{order.orderNumber}</div>
+
+          {/* Order Info Cards */}
+          <div className="flex flex-wrap justify-center gap-4 mt-6">
+            <div className="bg-base-200 px-6 py-3 rounded-lg">
+              <div className="text-sm opacity-70">شماره سفارش</div>
+              <div className="text-2xl font-bold text-primary">{order.orderNumber}</div>
+            </div>
+            <div className="bg-base-200 px-6 py-3 rounded-lg">
+              <div className="text-sm opacity-70">وضعیت سفارش</div>
+              <div className="mt-1">{getOrderStatusBadge(order.status)}</div>
+            </div>
+            <div className="bg-base-200 px-6 py-3 rounded-lg">
+              <div className="text-sm opacity-70">تاریخ ثبت</div>
+              <div className="text-sm font-medium mt-1 flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                {formatDate(order.createdAt)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -86,9 +173,9 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
           <div className="alert alert-info mb-6">
             <Mail className="w-5 h-5" />
             <div>
-              <div className="font-semibold">Order confirmation sent!</div>
+              <div className="font-semibold">تأیید سفارش ارسال شد!</div>
               <div className="text-sm">
-                We&apos;ve sent a confirmation email to <strong>{order.guestEmail}</strong>
+                ایمیل تأیید به <strong>{order.guestEmail}</strong> ارسال شد
               </div>
             </div>
           </div>
@@ -100,23 +187,23 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
             <>
               <Link href={`/account/orders/${order.id}`} className="btn btn-primary btn-lg gap-2">
                 <FileText className="w-5 h-5" />
-                View Order Details
-                <ArrowRight className="w-4 h-4" />
+                مشاهده جزئیات سفارش
+                <ArrowRight className="w-4 h-4 rotate-180" />
               </Link>
               <Link href="/" className="btn btn-outline btn-lg gap-2">
                 <ShoppingBag className="w-5 h-5" />
-                Continue Shopping
+                ادامه خرید
               </Link>
             </>
           ) : (
             <>
               <Link href="/" className="btn btn-primary btn-lg gap-2">
                 <ShoppingBag className="w-5 h-5" />
-                Continue Shopping
+                ادامه خرید
               </Link>
               <Link href="/auth/register" className="btn btn-outline btn-lg gap-2">
-                Create Account
-                <ArrowRight className="w-4 h-4" />
+                ایجاد حساب کاربری
+                <ArrowRight className="w-4 h-4 rotate-180" />
               </Link>
             </>
           )}
@@ -128,43 +215,40 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
             <div className="card-body">
               <h2 className="card-title text-xl mb-4 flex items-center gap-2">
                 <Package className="w-5 h-5 text-primary" />
-                Order Summary
+                خلاصه سفارش
               </h2>
 
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
                 {(order.items as OrderItem[]).map((item, index: number) => {
                   const product = typeof item.product === 'object' ? item.product : null
                   const variant = typeof item.variant === 'object' ? item.variant : null
 
-                  // Get the appropriate image - variant image first, then product image
-                  const getImageUrl = (): string | null => {
-                    // Try variant images first
+                  if (!product) return null
+
+                  // Get the appropriate image using proper prioritization (matching ReviewStep)
+                  const getImageUrl = (): string => {
+                    // Priority 1: Variant images
                     if (
                       variant?.images &&
                       Array.isArray(variant.images) &&
                       variant.images.length > 0
                     ) {
-                      const firstImage = variant.images[0]
-                      if (typeof firstImage === 'string') return firstImage
-                      if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
-                        return (firstImage as Media).url ?? null
-                      }
+                      const url = extractMediaUrl(variant.images[0])
+                      if (url) return url
                     }
 
-                    // Fall back to product images
+                    // Priority 2: Product main images
                     if (
-                      product?.images &&
+                      product.images &&
                       Array.isArray(product.images) &&
                       product.images.length > 0
                     ) {
-                      const firstImage = product.images[0]
-                      if (typeof firstImage === 'string') return firstImage
-                      if (typeof firstImage === 'object' && (firstImage as Media)?.url) {
-                        return (firstImage as Media).url ?? null
-                      }
+                      const url = extractMediaUrl(product.images[0])
+                      if (url) return url
                     }
 
-                    return null
+                    // Priority 3: Placeholder
+                    return PLACEHOLDER_IMAGE
                   }
 
                   const imageUrl = getImageUrl()
@@ -175,12 +259,12 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                     .join(', ')
 
                   return (
-                    <div key={index} className="flex gap-3 p-3 bg-base-100 rounded-lg">
+                    <div key={index} className="flex gap-3">
                       <div className="avatar">
                         <div className="w-16 h-16 rounded-lg">
                           <Image
-                            src={imageUrl || PLACEHOLDER_IMAGE}
-                            alt={product?.name || 'Product'}
+                            src={imageUrl}
+                            alt={product.name}
                             width={64}
                             height={64}
                             className="object-cover"
@@ -188,16 +272,14 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium line-clamp-2">{product?.name || 'Product'}</div>
+                        <div className="font-medium line-clamp-2">{product.name}</div>
                         {variantLabel && (
                           <div className="text-xs text-base-content/60 mt-0.5">{variantLabel}</div>
                         )}
-                        <div className="text-sm opacity-70">Qty: {item.quantity}</div>
+                        <div className="text-sm opacity-70">تعداد: {item.quantity}</div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold">
-                          {currency} {item.total?.toFixed(2) || '0.00'}
-                        </div>
+                      <div className="font-bold whitespace-nowrap">
+                        {formatCurrency(item.total)}
                       </div>
                     </div>
                   )
@@ -208,27 +290,23 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
 
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="opacity-70">Subtotal</span>
-                  <span className="font-medium">
-                    {currency} {order.subtotal?.toFixed(2) || '0.00'}
-                  </span>
+                  <span className="opacity-70">جمع جزء</span>
+                  <span className="font-medium">{formatCurrency(order.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="opacity-70">Shipping</span>
+                  <span className="opacity-70">هزینه ارسال</span>
                   <span className="font-medium">
                     {order.shipping === 0 ? (
-                      <span className="text-success">FREE</span>
+                      <span className="text-success">رایگان</span>
                     ) : (
-                      `${currency} ${order.shipping?.toFixed(2) || '0.00'}`
+                      formatCurrency(order.shipping)
                     )}
                   </span>
                 </div>
                 <div className="divider my-2"></div>
                 <div className="flex justify-between text-xl font-bold">
-                  <span>Total</span>
-                  <span className="text-primary">
-                    {currency} {order.total?.toFixed(2) || '0.00'}
-                  </span>
+                  <span>جمع کل</span>
+                  <span className="text-primary">{formatCurrency(order.total)}</span>
                 </div>
               </div>
             </div>
@@ -240,7 +318,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
               <div className="card-body">
                 <h2 className="card-title text-lg mb-3 flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-primary" />
-                  Shipping Address
+                  آدرس ارسال
                 </h2>
 
                 <div className="space-y-1 text-sm">
@@ -251,7 +329,8 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                   <div>{order.shippingAddress.country}</div>
                   {order.shippingAddress.phone && (
                     <div className="mt-2">
-                      <span className="opacity-70">Phone:</span> {order.shippingAddress.phone}
+                      <span className="opacity-70">شماره تماس:</span>
+                      <span dir="ltr">{order.shippingAddress.phone}</span>
                     </div>
                   )}
 
@@ -262,20 +341,20 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                     <>
                       <div className="divider my-2"></div>
                       <div className="text-xs font-semibold text-primary mb-1">
-                        Delivery Instructions:
+                        دستورالعمل‌های تحویل:
                       </div>
                       {order.shippingAddress.nearbyLandmark && (
                         <div className="flex items-start gap-2 bg-info/10 p-2 rounded">
                           <MapPin className="w-4 h-4 mt-0.5 text-info flex-shrink-0" />
                           <div>
-                            <div className="text-xs font-medium">Landmark:</div>
+                            <div className="text-xs font-medium">نشانی اطراف:</div>
                             <div>{order.shippingAddress.nearbyLandmark}</div>
                           </div>
                         </div>
                       )}
                       {order.shippingAddress.detailedDirections && (
                         <div className="bg-base-100 p-2 rounded">
-                          <div className="text-xs font-medium mb-1">Directions:</div>
+                          <div className="text-xs font-medium mb-1">راهنمای مسیر:</div>
                           <div className="text-xs opacity-80 whitespace-pre-line">
                             {order.shippingAddress.detailedDirections}
                           </div>
@@ -293,7 +372,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                             className="btn btn-sm btn-primary gap-2 w-full"
                           >
                             <MapPin className="w-4 h-4" />
-                            Open in Google Maps
+                            باز کردن در گوگل مپ
                           </button>
                         )}
                     </>
@@ -307,15 +386,15 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
               <div className="card-body">
                 <h2 className="card-title text-lg mb-3 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-primary" />
-                  Payment Method
+                  روش پرداخت
                 </h2>
 
                 <div className="text-sm">
                   <div className="font-medium">
-                    {order.paymentMethod ? getPaymentMethodLabel(order.paymentMethod) : 'N/A'}
+                    {order.paymentMethod ? getPaymentMethodLabel(order.paymentMethod) : 'ندارد'}
                   </div>
-                  <div className="opacity-70 mt-1">
-                    Status: <span className="badge badge-warning badge-sm">Pending</span>
+                  <div className="opacity-70 mt-2">
+                    وضعیت: {getPaymentStatusBadge(order.paymentStatus)}
                   </div>
                 </div>
               </div>
@@ -324,19 +403,19 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
             {/* What's Next */}
             <div className="card bg-primary text-primary-content">
               <div className="card-body">
-                <h3 className="card-title text-lg">What&apos;s Next?</h3>
+                <h3 className="card-title text-lg">مراحل بعدی چیست؟</h3>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>We&apos;ll send you an email confirmation</span>
+                    <span>ایمیل تأیید برای شما ارسال خواهد شد</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Your order will be processed within 1-2 business days</span>
+                    <span>سفارش شما ظرف ۱-۲ روز کاری پردازش خواهد شد</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>You&apos;ll receive tracking information once shipped</span>
+                    <span>اطلاعات رهگیری پس از ارسال به شما اطلاع داده می‌شود</span>
                   </li>
                 </ul>
               </div>
@@ -348,17 +427,18 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
         {isGuest && (
           <div className="card bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 mt-8">
             <div className="card-body text-center">
-              <h3 className="text-2xl font-bold mb-2">Want to Track Your Order?</h3>
+              <h3 className="text-2xl font-bold mb-2">می‌خواهید سفارش خود را پیگیری کنید؟</h3>
               <p className="opacity-80 mb-4">
-                Create an account to view your order history and track shipments anytime.
+                حساب کاربری ایجاد کنید تا تاریخچه سفارشات و پیگیری مرسولات خود را در هر زمان مشاهده
+                کنید.
               </p>
               <div className="flex gap-3 justify-center">
                 <Link href="/auth/register" className="btn btn-primary gap-2">
-                  Create Account
-                  <ArrowRight className="w-4 h-4" />
+                  ایجاد حساب کاربری
+                  <ArrowRight className="w-4 h-4 rotate-180" />
                 </Link>
                 <Link href="/auth/login" className="btn btn-outline">
-                  Sign In
+                  ورود
                 </Link>
               </div>
             </div>

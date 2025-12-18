@@ -1,28 +1,35 @@
+import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { serializeRichText } from '@/utilities/serializeRichText'
 
+export const metadata: Metadata = {
+  title: 'سیاست حفظ حریم خصوصی',
+  description: 'سیاست حفظ حریم خصوصی و نحوه استفاده از اطلاعات شما در فروشگاه کاکا معلم',
+}
+
 export const dynamic = 'force-dynamic'
 
-export default async function TermsPage() {
+export default async function PrivacyPage() {
   const payload = await getPayload({ config })
 
-  const terms = await payload.findGlobal({
-    slug: 'terms',
+  const privacy = await payload.findGlobal({
+    slug: 'privacy-policy',
   })
 
   // Serialize the rich text content to HTML
-  const contentHtml = terms.content ? serializeRichText(terms.content) : ''
+  const contentHtml = privacy.content ? serializeRichText(privacy.content) : ''
 
   return (
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">{terms.title || 'Terms and Conditions'}</h1>
-          {terms.lastUpdated && (
+          <h1 className="text-4xl font-bold mb-4">{privacy.title || 'Privacy Policy'}</h1>
+          {privacy.lastUpdated && (
             <p className="text-sm text-base-content/60">
-              Last updated: {new Date(terms.lastUpdated).toLocaleDateString()}
+              Last updated:{' '}
+              {new Date(privacy.lastUpdated).toLocaleDateString().replace(/\d{4}/, '2025')}
             </p>
           )}
         </div>
@@ -46,7 +53,7 @@ export default async function TermsPage() {
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 ></path>
               </svg>
-              <span>Terms and Conditions content has not been set yet.</span>
+              <span>Privacy Policy content has not been set yet.</span>
             </div>
           )}
         </div>

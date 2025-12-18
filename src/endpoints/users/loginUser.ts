@@ -17,18 +17,29 @@ export const loginUser: Endpoint = {
     try {
       body = (await req.json?.()) || req.body
     } catch (_e) {
-      return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 })
+      return Response.json({ error: 'فرمت درخواست نامعتبر است' }, { status: 400 })
     }
 
     const { email, password, stayLoggedIn = false } = body
 
     // Validate required fields
     if (!email || !password) {
-      return Response.json({ error: 'Email and password are required' }, { status: 400 })
+      return Response.json({ error: 'ایمیل و رمز عبور الزامی است' }, { status: 400 })
     }
 
     try {
-      // Use Payload's built-in login
+      // First check if user exists (for more specific error messages)
+      const existingUsers = await payload.find({
+        collection: 'users',
+        where: { email: { equals: email.toLowerCase().trim() } },
+        limit: 1,
+      })
+
+      if (existingUsers.docs.length === 0) {
+        return Response.json({ error: 'کاربری با این ایمیل یافت نشد' }, { status: 404 })
+      }
+
+      // User exists, try to login
       const result = await payload.login({
         collection: 'users',
         data: { email, password },
@@ -79,9 +90,13 @@ export const loginUser: Endpoint = {
         : 60 * 60 * 24 // 24 hours if not checked
 
       // Set the cookie with appropriate expiration
+      // Only require secure cookies in production AND when not on local network
+      const isLocalNetwork =
+        req.headers.get('host')?.includes('192.168.') ||
+        req.headers.get('host')?.includes('localhost')
       const cookieOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' && !isLocalNetwork,
         sameSite: 'lax' as const,
         maxAge: cookieExpiration,
         path: '/',
@@ -90,7 +105,7 @@ export const loginUser: Endpoint = {
       // Create response with updated cookie
       const response = Response.json(
         {
-          message: 'Login successful',
+          message: 'ورود با موفقیت انجام شد',
           user: result.user,
           token: result.token,
           exp: result.exp,
@@ -110,21 +125,23 @@ export const loginUser: Endpoint = {
 
       // Handle authentication errors
       if (error && typeof error === 'object' && 'message' in error) {
-        const errorMessage = (error as { message: string }).message
+        const errorMessage = (error as { message: string }).message.toLowerCase()
 
-        if (errorMessage.includes('credentials')) {
-          return Response.json({ error: 'Invalid email or password' }, { status: 401 })
+        // Since we already checked user exists, this means password is wrong
+        if (errorMessage.includes('incorrect') || errorMessage.includes('credentials')) {
+          return Response.json({ error: 'رمز عبور اشتباه است' }, { status: 401 })
         }
 
+        // Check for locked account
         if (errorMessage.includes('locked')) {
           return Response.json(
-            { error: 'Account is locked. Please contact support.' },
+            { error: 'حساب کاربری قفل شده است. لطفاً با پشتیبانی تماس بگیرید.' },
             { status: 403 },
           )
         }
       }
 
-      return Response.json({ error: 'Login failed. Please try again.' }, { status: 500 })
+      return Response.json({ error: 'ورود ناموفق بود. لطفاً دوباره امتحان کنید.' }, { status: 500 })
     }
   },
 }

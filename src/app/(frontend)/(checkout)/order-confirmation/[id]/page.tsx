@@ -1,8 +1,15 @@
 import React from 'react'
+import type { Metadata } from 'next'
 import { getServerSideURL } from '@/utilities/getURL'
 import { cookies } from 'next/headers'
 import OrderConfirmationClient from './page.client'
 import { redirect } from 'next/navigation'
+
+export const metadata: Metadata = {
+  title: 'تأیید سفارش',
+  description: 'سفارش شما با موفقیت ثبت شد',
+  robots: { index: false, follow: false },
+}
 
 // Force dynamic rendering since we use cookies
 export const dynamic = 'force-dynamic'

@@ -1,32 +1,52 @@
 import Link from 'next/link'
 
+type LogoVariant = 'desktop' | 'mobile' | 'compact' | 'large'
+
 interface LogoProps {
-  variant?: 'desktop' | 'mobile' | 'icon' | 'full'
+  /** Size variant for different contexts */
+  variant?: LogoVariant
+  /** Additional CSS classes */
   className?: string
+  /** Disable link behavior (for non-clickable logo usage) */
+  asSpan?: boolean
 }
 
-const Logo = ({ variant = 'desktop', className = '' }: LogoProps) => {
-  const config = {
-    desktop: { fontSize: 'text-2xl' },
-    mobile: { fontSize: 'text-xl' },
-    icon: { fontSize: 'text-lg' },
-    full: { fontSize: 'text-3xl' },
-  }
+const VARIANT_STYLES: Record<LogoVariant, string> = {
+  large: 'text-3xl',
+  desktop: 'text-2xl',
+  mobile: 'text-xl',
+  compact: 'text-lg',
+}
 
-  const { fontSize } = config[variant]
+const Logo = ({ variant = 'desktop', className = '', asSpan = false }: LogoProps) => {
+  const sizeClass = VARIANT_STYLES[variant]
+
+  const logoContent = (
+    <span
+      className={`
+        ${sizeClass}
+        font-bold
+        text-primary
+        tracking-wide
+        select-none
+        ${className}
+      `}
+    >
+      کاکا معلم
+    </span>
+  )
+
+  if (asSpan) {
+    return logoContent
+  }
 
   return (
     <Link
       href="/"
-      className={`inline-block transition-all duration-300 hover:scale-105 ${className}`}
-      aria-label="Kakamalem - Home"
+      className="inline-block transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded"
+      aria-label="کاکا معلم - صفحه اصلی"
     >
-      <span
-        className={`${fontSize} font-bold text-primary tracking-wide select-none`}
-        style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-      >
-        کاکا معلم
-      </span>
+      {logoContent}
     </Link>
   )
 }

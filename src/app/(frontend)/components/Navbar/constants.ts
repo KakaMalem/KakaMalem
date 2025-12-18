@@ -28,29 +28,35 @@ export const getAccountMenuItems = (
 ): AccountMenuItem[] => {
   if (isLoggedIn) {
     // --- LOGGED IN MENU ---
-    const isAdmin = userRoles?.includes('admin')
+    // Check if user has admin panel access (same logic as Users collection access.admin)
+    const hasAdminAccess = !!(
+      userRoles?.includes('superadmin') ||
+      userRoles?.includes('admin') ||
+      userRoles?.includes('developer') ||
+      userRoles?.includes('seller')
+    )
 
     const menuItems: AccountMenuItem[] = [
       {
         href: '/account',
-        label: `Hello, ${userName || 'User'}`,
+        label: `سلام، ${userName || 'کاربر'}`,
         isBold: true,
       },
       { isDivider: true },
     ]
 
-    // Add admin panel link for admin users
-    if (isAdmin) {
-      menuItems.push({ href: '/admin', label: 'Admin Panel' })
+    // Add admin panel link for users with admin panel access
+    if (hasAdminAccess) {
+      menuItems.push({ href: '/admin', label: 'پنل مدیریت' })
       menuItems.push({ isDivider: true })
     }
 
     menuItems.push(
-      { href: '/account', label: 'Your Account' },
-      { href: '/account/orders', label: 'Your Orders' },
-      { href: '/account/wishlist', label: 'Your Wishlists' },
+      { href: '/account', label: 'حساب کاربری' },
+      { href: '/account/orders', label: 'سفارش‌های من' },
+      { href: '/account/wishlist', label: 'علاقه‌مندی‌ها' },
       { isDivider: true },
-      { href: '/auth/logout', label: 'Sign out' },
+      { href: '/auth/logout', label: 'خروج' },
     )
 
     return menuItems
@@ -61,11 +67,11 @@ export const getAccountMenuItems = (
   const loginUrl = buildLoginUrl(currentPath)
 
   return [
-    { href: loginUrl, label: 'Sign in', isBold: true },
-    { href: '/auth/register', label: 'New customer? Start here.' },
+    { href: loginUrl, label: 'ورود', isBold: true },
+    { href: '/auth/register', label: 'مشتری جدید؟ از اینجا شروع کنید.' },
     { isDivider: true },
-    { href: buildLoginUrl('/account/orders'), label: 'Your Orders' },
-    { href: buildLoginUrl('/account'), label: 'Your Account' },
-    { href: buildLoginUrl('/account/wishlist'), label: 'Your Wishlists' },
+    { href: buildLoginUrl('/account/orders'), label: 'سفارش‌های من' },
+    { href: buildLoginUrl('/account'), label: 'حساب کاربری' },
+    { href: buildLoginUrl('/account/wishlist'), label: 'علاقه‌مندی‌ها' },
   ]
 }

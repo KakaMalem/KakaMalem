@@ -3,11 +3,12 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingBag, Check, AlertTriangle, Clock } from 'lucide-react'
+import { ShoppingBag, Check, AlertTriangle, Clock, PackageX } from 'lucide-react'
 import { Product, Media } from '@/payload-types'
 import { useCart } from '@/providers'
 import { StarRating } from './StarRating'
 import { formatPrice } from '@/utilities/currency'
+import { getStockStatusLabel, getStockStatusTextClass } from '@/utilities/ui'
 
 interface ProductCardProps {
   product: Product
@@ -16,11 +17,29 @@ interface ProductCardProps {
 /**
  * EnrichedProduct: Product shape extended with fields that the search API
  * may inject at runtime (so we can avoid `any` and be explicit).
+ *
+ * The search API selects the "best" variant to display based on priority
+ * (blending availability with business logic):
+ *
+ * 1. Default variant (if AVAILABLE - in_stock, low_stock, on_backorder)
+ * 2. Best-selling AVAILABLE variant (if default unavailable/not set)
+ * 3. Default variant (even if unavailable - respects admin choice)
+ * 4. Best-selling variant (even if unavailable - shows popularity)
+ * 5. First AVAILABLE variant (new products with no sales)
+ * 6. First variant (fallback when all are unavailable)
+ * 7. Product data itself (if no variants exist)
+ *
+ * This ensures users see available products first while respecting admin
+ * preferences and falling back gracefully when stock is depleted.
  */
 type DefaultVariantImage = string | { url?: string | null } | Media
 
 type EnrichedProduct = Product & {
   defaultVariantId?: string
+  defaultVariantSku?: string
+  defaultVariantStockStatus?: string
+  defaultVariantTotalSold?: number
+  defaultVariantQuantity?: number
   defaultVariantImages?: DefaultVariantImage[]
   defaultVariantPrice?: number
   defaultVariantCompareAtPrice?: number
@@ -97,7 +116,7 @@ const getProductMedia = (product: Product): string => {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addItem } = useCart()
+  const { addItem, cart } = useCart()
   const [isAdding, setIsAdding] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
 
@@ -130,10 +149,50 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const oldPrice = hasDiscount ? (comparePrice ?? product.price) : null
 
   // -- STOCK LOGIC --
-  const stockStatus: string = product.stockStatus ?? 'in_stock'
+  // PRIORITY: Use variant stock status if available (for products with variants)
+  // Otherwise use product stock status (for products without variants)
+  const stockStatus: string =
+    product.hasVariants && enriched.defaultVariantStockStatus
+      ? enriched.defaultVariantStockStatus
+      : (product.stockStatus ?? 'in_stock')
   const isOutOfStock = stockStatus === 'out_of_stock' || stockStatus === 'discontinued'
   const isLowStock = stockStatus === 'low_stock'
   const isBackorder = stockStatus === 'on_backorder'
+
+  // Check quantity in cart (for products without variants or with default variant)
+  const getQuantityInCart = () => {
+    if (!cart?.items) return 0
+
+    // For products with variants, check default variant in cart
+    if (product.hasVariants && enriched.defaultVariantId) {
+      const variantCartItem = cart.items.find(
+        (item) => item.productId === product.id && item.variantId === enriched.defaultVariantId,
+      )
+      return variantCartItem?.quantity || 0
+    }
+
+    // For products without variants
+    const productCartItem = cart.items.find((item) => item.productId === product.id)
+    return productCartItem?.quantity || 0
+  }
+
+  const quantityInCart = getQuantityInCart()
+
+  // Calculate max quantity based on stock
+  // PRIORITY: Use variant quantity if available, otherwise use product quantity
+  const availableQuantity =
+    product.hasVariants && enriched.defaultVariantQuantity !== undefined
+      ? enriched.defaultVariantQuantity
+      : product.quantity
+
+  const trackQuantity = product.trackQuantity // Variants inherit this from product
+  const allowBackorders = product.allowBackorders // Variants inherit this from product
+
+  const maxQuantity =
+    trackQuantity && availableQuantity && !allowBackorders ? Math.min(99, availableQuantity) : 99
+
+  // Check if at max quantity
+  const isAtMaxQuantity = quantityInCart >= maxQuantity
 
   // -- MEDIA & IDENTITY --
   const imageUrl = getProductMedia(product)
@@ -146,10 +205,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const imageAlt: string = safeName || 'Product image'
 
   // Build product URL with variant parameter if available
-  const productUrl =
-    enriched.defaultVariantId
-      ? `/product/${encodeURIComponent(slug)}?variant=${enriched.defaultVariantId}`
-      : `/product/${encodeURIComponent(slug)}`
+  const productUrl = enriched.defaultVariantId
+    ? `/product/${encodeURIComponent(slug)}?variant=${enriched.defaultVariantId}`
+    : `/product/${encodeURIComponent(slug)}`
 
   // Play success sound - a pleasant two-tone beep
   const playSuccessSound = () => {
@@ -197,11 +255,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
-    if (isAdding || isOutOfStock) return
+    if (isAdding || isOutOfStock || isAtMaxQuantity) return
 
     setIsAdding(true)
     try {
-      await addItem(product.id, 1)
+      await addItem(product.id, 1, enriched.defaultVariantId)
       playSuccessSound()
       setJustAdded(true)
       setTimeout(() => setJustAdded(false), 2000)
@@ -222,29 +280,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             alt={imageAlt}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
-            className={`object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 ${
-              isOutOfStock ? 'opacity-50 grayscale' : ''
-            }`}
+            className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
           />
 
           {/* BADGES */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+          <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
             {hasDiscount && !isOutOfStock && (
               <span className="badge badge-error text-white font-bold border-none shadow-sm text-xs">
-                Sale
+                تخفیف
               </span>
             )}
-            {/* 'Hot' badge intentionally removed */}
           </div>
-
-          {/* STOCK OVERLAYS */}
-          {isOutOfStock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-base-100/60 backdrop-blur-[2px]">
-              <span className="badge badge-neutral badge-lg font-bold uppercase tracking-widest border-none">
-                {stockStatus === 'discontinued' ? 'Discontinued' : 'Sold Out'}
-              </span>
-            </div>
-          )}
         </figure>
 
         {/* CONTENT AREA */}
@@ -279,36 +325,75 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 </span>
               </div>
 
-              {/* Status Text (if critical) */}
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-wider min-h-[1.5em]">
-                {isLowStock && !isOutOfStock && (
-                  <span className="text-warning flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" /> Low Stock
+              {/* Status Text */}
+              <div className="mt-1 text-[10px] font-bold tracking-wider min-h-[1.5em]" dir="rtl">
+                {isOutOfStock ? (
+                  <span
+                    className={`${getStockStatusTextClass(stockStatus)} flex items-center gap-1`}
+                  >
+                    <PackageX className="w-3 h-3" />
+                    {getStockStatusLabel(stockStatus)}
                   </span>
-                )}
-                {isBackorder && (
-                  <span className="text-info flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Pre-order
+                ) : isLowStock ? (
+                  <span
+                    className={`${getStockStatusTextClass('low_stock')} flex items-center gap-1`}
+                  >
+                    <AlertTriangle className="w-3 h-3" />
+                    {product.trackQuantity && product.quantity
+                      ? `تنها ${product.quantity} عدد`
+                      : getStockStatusLabel('low_stock')}
                   </span>
-                )}
+                ) : isBackorder ? (
+                  <span
+                    className={`${getStockStatusTextClass('on_backorder')} flex items-center gap-1`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    {getStockStatusLabel('on_backorder')}
+                  </span>
+                ) : stockStatus === 'in_stock' ? (
+                  <span
+                    className={`${getStockStatusTextClass('in_stock')} flex items-center gap-1 opacity-60`}
+                  >
+                    <Check className="w-3 h-3" />
+                    {getStockStatusLabel('in_stock')}
+                  </span>
+                ) : null}
               </div>
             </div>
 
             {/* Action Button */}
             <button
               onClick={handleAddToCart}
-              disabled={isAdding || isOutOfStock}
+              disabled={isAdding || isOutOfStock || isAtMaxQuantity}
               className={`btn btn-ghost btn-circle btn-sm shadow-none border-none ${
                 justAdded
                   ? 'btn-success text-white'
-                  : 'btn-ghost bg-base-200 hover:bg-primary hover:text-white'
+                  : isOutOfStock || isAtMaxQuantity
+                    ? 'btn-disabled opacity-30'
+                    : 'btn-ghost bg-base-200 hover:bg-primary hover:text-white'
               } transition-all duration-300 transform active:scale-90`}
-              aria-label="Add to cart"
-              title="Add to cart"
+              aria-label={
+                isOutOfStock
+                  ? 'ناموجود'
+                  : isAtMaxQuantity
+                    ? 'حداکثر موجودی در سبد است'
+                    : 'افزودن به سبد'
+              }
+              title={
+                isOutOfStock
+                  ? 'ناموجود'
+                  : isAtMaxQuantity
+                    ? product.trackQuantity && product.quantity
+                      ? `حداکثر ${maxQuantity} عدد در گدام موجود است`
+                      : 'حداکثر مقدار مجاز'
+                    : 'افزودن به سبد'
+              }
             >
               {isAdding ? (
                 <span className="loading loading-spinner loading-xs"></span>
               ) : justAdded ? (
+                <Check className="w-4 h-4" />
+              ) : isAtMaxQuantity ? (
                 <Check className="w-4 h-4" />
               ) : (
                 <ShoppingBag className="w-4 h-4" />

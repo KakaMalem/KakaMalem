@@ -2,19 +2,19 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
 import { AddressForm } from '@/app/(frontend)/components/AddressForm'
+import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 
 type Address = NonNullable<User['addresses']>[number]
 
 interface AddAddressClientProps {
   user: User
+  redirectTo?: string
 }
 
-export default function AddAddressClient({ user }: AddAddressClientProps) {
+export default function AddAddressClient({ user, redirectTo }: AddAddressClientProps) {
   const router = useRouter()
 
   const handleSave = async (formData: Partial<Address>) => {
@@ -46,30 +46,35 @@ export default function AddAddressClient({ user }: AddAddressClientProps) {
       throw new Error('Failed to save address')
     }
 
-    toast.success('Address added successfully!')
-    router.push('/account/addresses')
+    toast.success('آدرس مؤفقانه ثبت شد!')
+    router.push(redirectTo || '/account/addresses')
   }
 
   const handleCancel = () => {
-    router.push('/account/addresses')
+    router.push(redirectTo || '/account/addresses')
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'حساب کاربری', href: '/account' },
+          { label: 'آدرس‌ها', href: '/account/addresses' },
+          { label: 'افزودن آدرس جدید', active: true },
+        ]}
+      />
+
       {/* Header */}
-      <div className="mb-6">
-        <Link href="/account/addresses" className="btn btn-ghost btn-sm gap-2 mb-4 -ml-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Addresses
-        </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold">Add New Address</h1>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold">افزودن آدرس جدید</h1>
         <p className="text-base-content/60 text-sm mt-1">
-          Add a delivery address with GPS location and landmark
+          یک آدرس تحویل با موقعیت GPS و نشانی اضافه کنید
         </p>
       </div>
 
       {/* Form Card */}
-      <div className="card bg-base-100 shadow-xl border border-base-300">
+      <div className="card bg-base-200 shadow-xl max-w-3xl">
         <div className="card-body p-4 sm:p-6">
           <AddressForm onSave={handleSave} onCancel={handleCancel} />
         </div>

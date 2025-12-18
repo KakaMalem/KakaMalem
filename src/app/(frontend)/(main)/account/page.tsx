@@ -1,9 +1,16 @@
 import React from 'react'
+import type { Metadata } from 'next'
 import { getMeUser } from '@/utilities/getMeUser'
 import type { Order } from '@/payload-types'
 import AccountClient from './page.client'
 import { getServerSideURL } from '@/utilities/getURL'
 import { cookies } from 'next/headers'
+
+export const metadata: Metadata = {
+  title: 'حساب کاربری',
+  description: 'مدیریت حساب کاربری، مشاهده سفارشات و تنظیمات در فروشگاه کاکا معلم',
+  robots: { index: false, follow: false },
+}
 
 // Force dynamic rendering since we use authentication (cookies)
 export const dynamic = 'force-dynamic'

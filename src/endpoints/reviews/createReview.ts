@@ -147,11 +147,12 @@ export const createReview: Endpoint = {
 
       // Format response
       const response = {
-        reviewId: review.id,
+        id: review.id,
         status: review.status || 'pending',
         verifiedPurchase: review.verifiedPurchase || false,
         rating: review.rating,
         title: review.title,
+        comment: review.comment,
         createdAt: review.createdAt,
       }
 

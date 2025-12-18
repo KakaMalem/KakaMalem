@@ -1,0 +1,42 @@
+.view-website-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--theme-elevation-800);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--theme-elevation-300);
+  background: var(--theme-elevation-0);
+  white-space: nowrap;
+}
+
+.view-website-action:hover {
+  background: var(--theme-elevation-100);
+  border-color: var(--theme-elevation-400);
+  color: var(--theme-elevation-900);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.view-website-action svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.view-website-action:hover svg {
+  opacity: 1;
+}
+
+/* Hide text on smaller screens, keep icon */
+@media (max-width: 768px) {
+  .view-website-text {
+    display: none;
+  }
+
+  .view-website-action {
+    padding: 0.5rem;
+  }
+}

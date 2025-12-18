@@ -43,11 +43,11 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
 
       const updatedData = await response.json()
       setUser(updatedData.doc || updatedData)
-      toast.success('Profile updated successfully!')
+      toast.success('تغیرات ثبت شد!')
       setEditMode(false)
     } catch (err: unknown) {
       console.error('Error updating profile:', err)
-      toast.error('Failed to update profile. Please try again.')
+      toast.error('تغیر پروفایل ناموفق بود. لطفاً دوباره امتحان کنید.')
     } finally {
       setSaving(false)
     }
@@ -66,14 +66,14 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: 'Account', active: true }]} />
+      <Breadcrumb items={[{ label: 'حساب کاربری', active: true }]} />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold">Account Overview</h2>
+          <h2 className="text-2xl md:text-3xl font-bold">خلاصه حساب کاربری</h2>
           <p className="text-base-content/70 mt-1 text-sm md:text-base">
-            Welcome back, {user.firstName || 'User'}!
+            خوش آمدید، {user.firstName || 'کاربر'}!
           </p>
         </div>
         {!editMode ? (
@@ -82,8 +82,8 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
             className="btn btn-outline btn-sm md:btn-md gap-2"
           >
             <Edit2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Edit Profile</span>
-            <span className="sm:hidden">Edit</span>
+            <span className="hidden sm:inline">ویرایش پروفایل</span>
+            <span className="sm:hidden">ویرایش</span>
           </button>
         ) : (
           <div className="flex gap-2">
@@ -97,7 +97,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              Save
+              ذخیره
             </button>
             <button
               onClick={() => {
@@ -112,7 +112,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               disabled={saving}
             >
               <X className="w-4 h-4" />
-              <span className="hidden sm:inline">Cancel</span>
+              <span className="hidden sm:inline">لغو</span>
             </button>
           </div>
         )}
@@ -121,68 +121,65 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
       {/* Profile Info */}
       <div className="card bg-base-200">
         <div className="card-body">
-          <h3 className="card-title text-lg mb-4">Personal Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">First Name</span>
-              </label>
-              {editMode ? (
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                />
-              ) : (
-                <p className="py-3">{user.firstName}</p>
-              )}
-            </div>
+          <h3 className="card-title text-lg mb-4">اطلاعات شخصی</h3>
+          <fieldset className="fieldset">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              <div>
+                <label className="label">نام</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    className="input w-full"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  />
+                ) : (
+                  <p className="py-3">{user.firstName}</p>
+                )}
+              </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Last Name</span>
-              </label>
-              {editMode ? (
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                />
-              ) : (
-                <p className="py-3">{user.lastName}</p>
-              )}
-            </div>
+              <div>
+                <label className="label">تخلص</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    className="input w-full"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  />
+                ) : (
+                  <p className="py-3">{user.lastName}</p>
+                )}
+              </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Email</span>
-              </label>
-              <p className="py-3 text-base-content/70">{user.email}</p>
-              {editMode && (
-                <span className="text-xs text-base-content/50 mt-1">
-                  Email cannot be changed from this page
-                </span>
-              )}
-            </div>
+              <div>
+                <label className="label">ایمیل</label>
+                <p className="py-3 text-base-content/70">{user.email}</p>
+                {editMode && (
+                  <span className="text-xs text-base-content/50">
+                    ایمیل از این صفحه قابل تغییر نیست
+                  </span>
+                )}
+              </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Phone</span>
-              </label>
-              {editMode ? (
-                <input
-                  type="tel"
-                  className="input input-bordered"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              ) : (
-                <p className="py-3">{user.phone || 'Not provided'}</p>
-              )}
+              <div>
+                <label className="label">شماره تماس</label>
+                {editMode ? (
+                  <input
+                    type="tel"
+                    className="input w-full"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    dir="ltr"
+                  />
+                ) : (
+                  <p className="py-3" dir="ltr">
+                    {user.phone || 'ارائه نشده'}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          </fieldset>
         </div>
       </div>
 
@@ -199,7 +196,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               </div>
               <div>
                 <div className="text-2xl md:text-3xl font-bold">{orders.length}</div>
-                <div className="text-xs md:text-sm text-base-content/70">Total Orders</div>
+                <div className="text-xs md:text-sm text-base-content/70">مجموع سفارشات</div>
               </div>
             </div>
           </div>
@@ -216,7 +213,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               </div>
               <div>
                 <div className="text-2xl md:text-3xl font-bold">0</div>
-                <div className="text-xs md:text-sm text-base-content/70">Wishlist Items</div>
+                <div className="text-xs md:text-sm text-base-content/70">اقلام علاقه‌مندی</div>
               </div>
             </div>
           </div>
@@ -233,7 +230,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               </div>
               <div>
                 <div className="text-2xl md:text-3xl font-bold">{user.addresses?.length || 0}</div>
-                <div className="text-xs md:text-sm text-base-content/70">Saved Addresses</div>
+                <div className="text-xs md:text-sm text-base-content/70">آدرس‌های ذخیره شده</div>
               </div>
             </div>
           </div>
@@ -247,9 +244,9 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               </div>
               <div>
                 <div className="text-xl font-bold">
-                  {user.roles?.includes('admin') ? 'Admin' : 'Customer'}
+                  {user.roles?.includes('admin') ? 'مدیر' : 'مشتری'}
                 </div>
-                <div className="text-xs md:text-sm text-base-content/70">Account Type</div>
+                <div className="text-xs md:text-sm text-base-content/70">نوع حساب</div>
               </div>
             </div>
           </div>
@@ -260,10 +257,10 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
       <div className="card bg-base-200">
         <div className="card-body">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title text-xl">Recent Orders</h3>
+            <h3 className="card-title text-xl">سفارشات اخیر</h3>
             {orders.length > 3 && (
               <Link href="/account/orders" className="btn btn-ghost btn-sm gap-2">
-                View All
+                مشاهده همه
                 <Package className="w-4 h-4" />
               </Link>
             )}
@@ -274,7 +271,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               {orders.slice(0, 3).map((order) => {
                 const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
-                  month: 'short',
+                  month: 'long',
                   day: 'numeric',
                 })
 
@@ -286,17 +283,17 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
                   >
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-base md:text-lg truncate">
-                        Order #{order.orderNumber || order.id.slice(-8)}
+                        سفارش #{order.orderNumber || order.id.slice(-8)}
                       </div>
                       <div className="text-sm text-base-content/70">{orderDate}</div>
                       <div className="text-xs text-base-content/50 mt-1">
-                        {order.items?.length || 0} item{order.items?.length !== 1 ? 's' : ''}
+                        {order.items?.length || 0} قلم
                       </div>
                     </div>
 
                     <div className="text-left sm:text-right w-full sm:w-auto">
                       <div className="font-bold text-base md:text-lg mb-1">
-                        {order.currency || 'USD'}{' '}
+                        {order.currency || 'AFN'}{' '}
                         {typeof order.total === 'number' ? order.total.toFixed(2) : '0.00'}
                       </div>
                       <span
@@ -312,10 +309,10 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
           ) : (
             <div className="text-center py-12">
               <Package className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-              <p className="text-base-content/70 mb-4">No orders yet</p>
+              <p className="text-base-content/70 mb-4">هنوز سفارشی ندارید</p>
               <Link href="/" className="btn btn-primary gap-2">
                 <ShoppingBag className="w-4 h-4" />
-                Start Shopping
+                شروع خرید
               </Link>
             </div>
           )}
@@ -330,8 +327,8 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
               <Eye className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Browsing History</h3>
-              <p className="text-sm text-base-content/70">Products you&apos;ve recently viewed</p>
+              <h3 className="text-xl font-bold">تاریخچه بازدید</h3>
+              <p className="text-sm text-base-content/70">محصولاتی که اخیراً مشاهده کرده‌اید</p>
             </div>
           </div>
           <RecentlyViewed showTitle={false} />

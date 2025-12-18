@@ -5,6 +5,9 @@ import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'r
 import type { LatLngExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+// Theme color for map elements - matches --color-map-marker in styles.css
+const MAP_MARKER_COLOR = '#3b82f6'
+
 // Fix for default marker icon in Leaflet with webpack
 import L from 'leaflet'
 
@@ -62,7 +65,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   height = '400px',
 }) => {
   // Default to Kabul, Afghanistan if no coordinates provided
-  const defaultPosition: LatLngExpression = [34.5553, 69.2075]
+  const defaultPosition: LatLngExpression = [34.542693, 69.169697]
   const initialPosition: LatLngExpression =
     latitude && longitude ? [latitude, longitude] : defaultPosition
 
@@ -99,11 +102,14 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   }
 
   return (
-    <div className="rounded-lg overflow-hidden border-2 border-base-300" style={{ height }}>
+    <div
+      className="rounded-lg overflow-hidden border-2 border-base-300 relative"
+      style={{ height, zIndex: 10 }}
+    >
       <MapContainer
         center={initialPosition}
         zoom={13}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', zIndex: 10 }}
         scrollWheelZoom={true}
       >
         <TileLayer
@@ -116,8 +122,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             center={position}
             radius={accuracy}
             pathOptions={{
-              color: '#3b82f6',
-              fillColor: '#3b82f6',
+              color: MAP_MARKER_COLOR,
+              fillColor: MAP_MARKER_COLOR,
               fillOpacity: 0.15,
               weight: 2,
             }}

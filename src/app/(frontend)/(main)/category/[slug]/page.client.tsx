@@ -159,12 +159,48 @@ export default function CategoryPageClient({
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
+
+          {/* Loading Skeletons - fill remaining columns in last row */}
+          {loading &&
+            (() => {
+              // Calculate how many skeletons needed to fill the row
+              // Using 4 columns (lg breakpoint) as the max
+              const cols = 4
+              const remainder = products.length % cols
+              const skeletonsNeeded = remainder === 0 ? cols : cols - remainder
+              return Array.from({ length: skeletonsNeeded }, (_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="card card-compact bg-base-100 border border-base-200 overflow-hidden h-full"
+                >
+                  {/* Image Skeleton */}
+                  <div className="skeleton w-full aspect-[4/5] rounded-b-none"></div>
+
+                  <div className="p-4 space-y-3">
+                    {/* Title Line */}
+                    <div className="skeleton h-4 w-3/4"></div>
+
+                    {/* Rating/Meta Line */}
+                    <div className="skeleton h-3 w-1/3"></div>
+
+                    {/* Price & Button Area */}
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="flex flex-col gap-1 w-1/2">
+                        <div className="skeleton h-5 w-16"></div>
+                        <div className="skeleton h-3 w-10"></div>
+                      </div>
+                      <div className="skeleton h-8 w-8 rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            })()}
         </div>
 
         {/* Infinite Scroll Sentinel */}
         {hasMore && (
           <div ref={ref} className="flex justify-center py-8">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
+            {!loading && <span className="loading loading-spinner loading-lg text-primary"></span>}
           </div>
         )}
 
@@ -172,7 +208,7 @@ export default function CategoryPageClient({
         {!hasMore && products.length > 0 && (
           <div className="text-center py-8">
             <p className="text-sm text-base-content/60">
-              You&apos;ve reached the end. Showing all {totalProducts} products.
+              به پایان رسیدید. نمایش همه {totalProducts} محصول.
             </p>
           </div>
         )}

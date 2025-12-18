@@ -1,11 +1,75 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import CategoryPageClient from './page.client'
-import type { Category, Product } from '@/payload-types'
+import type { Category, Product, Media } from '@/payload-types'
 
 // Force dynamic rendering since we use Payload which accesses cookies
 export const dynamic = 'force-dynamic'
+
+// Generate dynamic metadata for each category
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug: rawSlug } = await params
+  const slug = decodeURIComponent(rawSlug)
+
+  const payload = await getPayload({ config })
+  const categoryResult = await payload.find({
+    collection: 'categories',
+    where: { slug: { equals: slug } },
+    limit: 1,
+  })
+
+  if (!categoryResult.docs.length) {
+    return {
+      title: 'دسته‌بندی یافت نشد',
+      description: 'دسته‌بندی مورد نظر یافت نشد',
+    }
+  }
+
+  const category = categoryResult.docs[0] as Category
+
+  // Extract image URL if available (prefer heroImage, fallback to smallCategoryImage)
+  const imageUrl = category.heroImage
+    ? typeof category.heroImage === 'object'
+      ? (category.heroImage as Media).url
+      : null
+    : category.smallCategoryImage
+      ? typeof category.smallCategoryImage === 'object'
+        ? (category.smallCategoryImage as Media).url
+        : null
+      : null
+
+  return {
+    title: category.name,
+    description: category.description || `مشاهده محصولات ${category.name} در فروشگاه کاکا معلم`,
+    openGraph: {
+      title: `${category.name} | کاکا معلم`,
+      description: category.description || `مشاهده محصولات ${category.name} در فروشگاه کاکا معلم`,
+      type: 'website',
+      images: imageUrl
+        ? [
+            {
+              url: imageUrl,
+              width: 800,
+              height: 600,
+              alt: category.name,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${category.name} | کاکا معلم`,
+      description: category.description || `مشاهده محصولات ${category.name} در فروشگاه کاکا معلم`,
+      images: imageUrl ? [imageUrl] : [],
+    },
+  }
+}
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
@@ -30,7 +94,9 @@ export default async function CategoryPage({
   params,
   searchParams: _searchParams,
 }: CategoryPageProps) {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  // Decode the slug to handle Persian/Arabic characters
+  const slug = decodeURIComponent(rawSlug)
   const payload = await getPayload({ config })
 
   // Fetch the category

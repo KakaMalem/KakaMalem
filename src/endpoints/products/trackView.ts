@@ -95,10 +95,13 @@ export const trackProductView: Endpoint = {
         userId: string
         viewedAt: string
       }> = isUniqueView
-        ? [{ userId: user.id, viewedAt: new Date().toISOString() }, ...viewedByUsers.map(v => ({
-            userId: v.userId || '',
-            viewedAt: v.viewedAt || new Date().toISOString(),
-          }))].slice(0, 1000)
+        ? [
+            { userId: user.id, viewedAt: new Date().toISOString() },
+            ...viewedByUsers.map((v) => ({
+              userId: v.userId || '',
+              viewedAt: v.viewedAt || new Date().toISOString(),
+            })),
+          ].slice(0, 1000)
         : viewedByUsers.map((v) =>
             v.userId === user.id
               ? { userId: user.id, viewedAt: new Date().toISOString() }
@@ -109,7 +112,7 @@ export const trackProductView: Endpoint = {
       const viewCount = (analytics.viewCount || 0) + 1
       const uniqueViewCount = isUniqueView
         ? (analytics.uniqueViewCount || 0) + 1
-        : (analytics.uniqueViewCount || 0)
+        : analytics.uniqueViewCount || 0
 
       // Calculate conversion rates
       const totalSold = product.totalSold || 0

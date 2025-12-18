@@ -3,7 +3,65 @@ import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
 import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
 import { nobody } from '../access/nobody'
 import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
-import { isDeveloper } from '@/access/isDeveloper'
+
+/**
+ * PRODUCT VARIANTS COLLECTION
+ * ============================
+ *
+ * ## Overview
+ * Product variants represent different configurations of a product (e.g., sizes, colors).
+ * Each variant has INDEPENDENT inventory settings that can differ from the parent product.
+ *
+ * ## Variant Creation & Independence
+ * - Variants are AUTO-GENERATED when product.variantOptions are defined (via afterChange hook)
+ * - On creation, variants INHERIT initial settings from the product:
+ *   ├─ trackQuantity (copied from product)
+ *   ├─ quantity (copied from product)
+ *   ├─ stockStatus (copied from product)
+ *   ├─ lowStockThreshold (copied from product)
+ *   └─ allowBackorders (copied from product)
+ *
+ * - After creation, variants are INDEPENDENT entities:
+ *   ├─ Changing product settings does NOT update existing variants
+ *   ├─ Each variant can have different quantity, stock status, pricing
+ *   └─ Variants have their own beforeChange hooks for stock status calculation
+ *
+ * ## Hierarchical Stock Control
+ * Product-level stock status has PRIORITY over variant status:
+ * - If product.stockStatus === 'discontinued' → ALL variants blocked from purchase
+ * - If product.stockStatus === 'out_of_stock' → ALL variants blocked from purchase
+ * - If product is available → Each variant's status is checked independently
+ *
+ * Example scenarios:
+ * 1. Product: discontinued | Variant A: in_stock → Cannot purchase Variant A ❌
+ * 2. Product: in_stock | Variant A: discontinued → Cannot purchase Variant A ✓
+ * 3. Product: in_stock | Variant B: in_stock → Can purchase Variant B ✓
+ *
+ * ## Inventory Tracking
+ * Each variant has INDEPENDENT inventory tracking:
+ * - If variant.trackQuantity === true:
+ *   ├─ stockStatus is AUTO-CALCULATED based on quantity (read-only)
+ *   ├─ quantity decrements on order completion
+ *   ├─ Stock validation happens during add-to-cart and checkout
+ *   └─ lowStockThreshold triggers 'low_stock' status
+ *
+ * - If variant.trackQuantity === false:
+ *   ├─ stockStatus is MANUALLY EDITABLE by admins
+ *   ├─ quantity is hidden (not tracked)
+ *   ├─ No stock validation during purchase
+ *   └─ Ideal for digital products, services, unlimited availability
+ *
+ * ## Pricing Override
+ * Variants can override product pricing:
+ * - variant.price: Optional custom price (overrides product price)
+ * - variant.compareAtPrice: Optional sale pricing
+ * - If not set, product pricing is used
+ *
+ * ## Admin Access
+ * - Developers, Superadmins, Admins: Full access to all variants
+ * - Sellers: Can manage variants for their own products only
+ * - Customers: Cannot access variant admin (public can view via API)
+ */
 
 export const ProductVariants: CollectionConfig = {
   slug: 'product-variants',
@@ -14,32 +72,28 @@ export const ProductVariants: CollectionConfig = {
     group: 'E-commerce',
     description: 'Manage product variants (sizes, colors, etc.)',
     listSearchableFields: ['sku', 'product', 'title'],
-    hidden: () => {
-      return !isDeveloper
+    hidden: ({ user }) => {
+      // Allow admins, superadmins, developers, and sellers to access variants
+      const hasAccess =
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('superadmin') ||
+        user?.roles?.includes('developer') ||
+        user?.roles?.includes('seller')
+      return !hasAccess
     },
   },
   access: {
     /**
      * READ ACCESS
-     * - Same as Products: admins/sellers see all, customers see only published parent products
+     * - Admins/sellers/developers: Full access to all variants
+     * - Customers/public: Can see variants of published products
+     * - NOTE: We allow public read access since variants need to be visible in orders,
+     *   cart, and product pages. The parent product's publish status controls visibility.
      */
-    read: ({ req: { user } }) => {
-      // Technical staff and sellers have full access
-      if (
-        user?.roles?.includes('admin') ||
-        user?.roles?.includes('developer') ||
-        user?.roles?.includes('superadmin') ||
-        user?.roles?.includes('seller')
-      ) {
-        return true
-      }
-
-      // Public users can only see variants of published products
-      return {
-        '_product._status': {
-          equals: 'published',
-        },
-      }
+    read: () => {
+      // Allow anyone to read variants
+      // The parent product's draft/publish status and access control handles visibility
+      return true
     },
     /**
      * CREATE ACCESS
@@ -114,6 +168,133 @@ export const ProductVariants: CollectionConfig = {
         }
 
         return data
+      },
+      async ({ data, req, originalDoc }) => {
+        // Ensure only one variant is marked as default per product
+        // When this variant is set as default, unset all other variants for the same product
+        if (data.isDefault === true && data.product) {
+          const productId = typeof data.product === 'string' ? data.product : data.product.id
+
+          // Find all other variants for this product that are currently default
+          const otherDefaultVariants = await req.payload.find({
+            collection: 'product-variants',
+            where: {
+              and: [
+                {
+                  product: {
+                    equals: productId,
+                  },
+                },
+                {
+                  isDefault: {
+                    equals: true,
+                  },
+                },
+                {
+                  id: {
+                    not_equals: originalDoc?.id || '', // Exclude current variant
+                  },
+                },
+              ],
+            },
+            limit: 100,
+          })
+
+          // Unset isDefault for all other variants
+          if (otherDefaultVariants.docs.length > 0) {
+            await Promise.all(
+              otherDefaultVariants.docs.map((variant) =>
+                req.payload.update({
+                  collection: 'product-variants',
+                  id: variant.id,
+                  data: {
+                    isDefault: false,
+                  },
+                }),
+              ),
+            )
+            console.log(
+              `[ProductVariant Hook] Unset ${otherDefaultVariants.docs.length} other default variant(s) for product ${productId}`,
+            )
+          }
+        }
+
+        return data
+      },
+    ],
+    afterChange: [
+      async ({ doc, req, operation }) => {
+        // AUTO-UPDATE PRODUCT STOCK STATUS WHEN ALL VARIANTS UNAVAILABLE
+        // ================================================================
+        // When a variant's stock status changes, check if ALL variants are now unavailable
+        // If so, automatically update the parent product's stockStatus to 'out_of_stock'
+        // This ensures product cards and listings show accurate availability
+
+        // Only check on update operations (not create, to avoid race conditions during batch creation)
+        if (operation !== 'update') return doc
+
+        // Get the product ID
+        const productId = typeof doc.product === 'string' ? doc.product : doc.product?.id
+        if (!productId) return doc
+
+        try {
+          // Fetch all variants for this product
+          const allVariants = await req.payload.find({
+            collection: 'product-variants',
+            where: {
+              product: {
+                equals: productId,
+              },
+            },
+            limit: 100, // Reasonable limit for variants
+          })
+
+          // Check if ALL variants are unavailable
+          const allVariantsUnavailable =
+            allVariants.docs.length > 0 &&
+            allVariants.docs.every(
+              (v) => v.stockStatus === 'out_of_stock' || v.stockStatus === 'discontinued',
+            )
+
+          // Fetch the product to check current status
+          const product = await req.payload.findByID({
+            collection: 'products',
+            id: productId,
+          })
+
+          // Update product stock status if needed
+          if (allVariantsUnavailable && product.stockStatus !== 'out_of_stock') {
+            await req.payload.update({
+              collection: 'products',
+              id: productId,
+              data: {
+                stockStatus: 'out_of_stock',
+              },
+            })
+            console.log(
+              `[ProductVariant Hook] Updated product ${productId} to out_of_stock (all variants unavailable)`,
+            )
+          } else if (!allVariantsUnavailable && product.stockStatus === 'out_of_stock') {
+            // If at least one variant is available and product was marked as out_of_stock (by this hook)
+            // restore it to in_stock
+            // Note: This only triggers if product is 'out_of_stock', not if it's 'discontinued'
+            await req.payload.update({
+              collection: 'products',
+              id: productId,
+              data: {
+                stockStatus: 'in_stock',
+              },
+            })
+            console.log(
+              `[ProductVariant Hook] Updated product ${productId} to in_stock (variants available)`,
+            )
+          }
+        } catch (error) {
+          // Log error but don't fail the variant update
+          console.error('[ProductVariant Hook] Error updating product stock status:', error)
+        }
+
+        return doc
       },
     ],
   },
