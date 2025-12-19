@@ -23,7 +23,9 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state') || '/'
 
     if (!code) {
-      return NextResponse.redirect(new URL('/auth/login?error=no_code', request.url))
+      return NextResponse.redirect(
+        new URL('/auth/login?error=no_code', process.env.NEXT_PUBLIC_SERVER_URL),
+      )
     }
 
     // Exchange authorization code for access token
@@ -41,7 +43,9 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       console.error('OAuth: Failed to exchange code for token:', await tokenResponse.text())
-      return NextResponse.redirect(new URL('/auth/login?error=token_exchange_failed', request.url))
+      return NextResponse.redirect(
+        new URL('/auth/login?error=token_exchange_failed', process.env.NEXT_PUBLIC_SERVER_URL),
+      )
     }
 
     const { access_token } = await tokenResponse.json()
@@ -53,7 +57,9 @@ export async function GET(request: NextRequest) {
 
     if (!userInfoResponse.ok) {
       console.error('OAuth: Failed to get user info:', await userInfoResponse.text())
-      return NextResponse.redirect(new URL('/auth/login?error=userinfo_failed', request.url))
+      return NextResponse.redirect(
+        new URL('/auth/login?error=userinfo_failed', process.env.NEXT_PUBLIC_SERVER_URL),
+      )
     }
 
     const googleUser = await userInfoResponse.json()
@@ -134,7 +140,9 @@ export async function GET(request: NextRequest) {
 
       if (!loginResponse.ok) {
         console.error('OAuth: Login endpoint failed:', await loginResponse.text())
-        return NextResponse.redirect(new URL('/auth/login?error=login_failed', request.url))
+        return NextResponse.redirect(
+          new URL('/auth/login?error=login_failed', process.env.NEXT_PUBLIC_SERVER_URL),
+        )
       }
 
       setCookieHeader = loginResponse.headers.get('set-cookie')
@@ -197,7 +205,9 @@ export async function GET(request: NextRequest) {
         } catch (_) {
           // Ignore restoration error
         }
-        return NextResponse.redirect(new URL('/auth/login?error=login_failed', request.url))
+        return NextResponse.redirect(
+          new URL('/auth/login?error=login_failed', process.env.NEXT_PUBLIC_SERVER_URL),
+        )
       }
 
       setCookieHeader = loginResponse.headers.get('set-cookie')
@@ -218,7 +228,7 @@ export async function GET(request: NextRequest) {
 
     // Build success page URL with parameters
     const authType = isNewUser ? 'register' : 'login'
-    const successUrl = new URL('/auth/success', request.url)
+    const successUrl = new URL('/auth/success', process.env.NEXT_PUBLIC_SERVER_URL)
     successUrl.searchParams.set('type', authType)
     successUrl.searchParams.set('name', userName)
     successUrl.searchParams.set('redirect', state)
@@ -236,6 +246,8 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('OAuth callback error:', error)
-    return NextResponse.redirect(new URL('/auth/login?error=callback_failed', request.url))
+    return NextResponse.redirect(
+      new URL('/auth/login?error=callback_failed', process.env.NEXT_PUBLIC_SERVER_URL),
+    )
   }
 }
