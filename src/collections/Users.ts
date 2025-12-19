@@ -1,5 +1,4 @@
 import type { CollectionConfig } from 'payload'
-import { isAdmin } from '../access/isAdmin'
 import { isAdminOrSelf } from '../access/isAdminOrSelf'
 import { isDeveloperField } from '../access/isDeveloper'
 import {
@@ -61,11 +60,10 @@ export const Users: CollectionConfig = {
     update: isAdminOrSelf,
     /**
      * DELETE ACCESS
-     * - Only admins and superadmins can delete users
-     * - Prevents users from deleting their own accounts
-     * - Ensures proper user lifecycle management
+     * - Admins: Can delete any user
+     * - Users: Can delete their own account
      */
-    delete: isAdmin,
+    delete: isAdminOrSelf,
   },
   auth: {
     tokenExpiration: 60 * 60 * 24 * 7, // 7 days (when "remember me" is checked)
