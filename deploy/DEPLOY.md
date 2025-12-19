@@ -5,10 +5,65 @@ Deploy on Ubuntu 24.04 VPS with MongoDB Atlas, Nginx, and SSL.
 ## Prerequisites
 
 - Ubuntu 24.04 VPS with root/sudo access (HostHatch or similar)
-- Domain name pointed to your VPS IP (A record)
+- Domain name (Namecheap or similar)
 - MongoDB Atlas account with database created
 
-## Step 0: SSH into Your Server (Windows)
+---
+
+## Step 0A: Configure DNS on Namecheap
+
+Before deploying, point your domain to your VPS IP address.
+
+### 1. Log into Namecheap
+
+Go to https://www.namecheap.com and sign in.
+
+### 2. Go to Domain List
+
+Click **Domain List** in the left sidebar, then click **Manage** next to your domain.
+
+### 3. Set DNS to Namecheap BasicDNS
+
+Under the **Nameservers** section, make sure it's set to **Namecheap BasicDNS**.
+
+### 4. Configure DNS Records
+
+Click on the **Advanced DNS** tab and add these records:
+
+| Type     | Host  | Value         | TTL       |
+| -------- | ----- | ------------- | --------- |
+| A Record | `@`   | `YOUR_VPS_IP` | Automatic |
+| A Record | `www` | `YOUR_VPS_IP` | Automatic |
+
+**Example:** If your VPS IP is `185.199.110.50`:
+
+| Type     | Host  | Value            | TTL       |
+| -------- | ----- | ---------------- | --------- |
+| A Record | `@`   | `185.199.110.50` | Automatic |
+| A Record | `www` | `185.199.110.50` | Automatic |
+
+### 5. Delete Default Records (if any)
+
+Remove any existing `A Record` or `CNAME` for `@` or `www` that point elsewhere (like parking pages).
+
+### 6. Wait for DNS Propagation
+
+DNS changes can take **5 minutes to 48 hours** to propagate worldwide. Usually it's 10-30 minutes.
+
+**Check if it's working:**
+
+```powershell
+# On Windows (PowerShell)
+nslookup kakamalem.com
+
+# Or use online tool: https://dnschecker.org
+```
+
+You should see your VPS IP in the response.
+
+---
+
+## Step 0B: SSH into Your Server (Windows)
 
 After purchasing your VPS from HostHatch, you'll receive:
 
