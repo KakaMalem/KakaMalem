@@ -59,7 +59,7 @@ export function ShippingStep({
   setSelectedAddressIndex,
   guestForm,
   setGuestForm,
-  onValidationChange,
+  onValidationChange: _onValidationChange,
 }: ShippingStepProps) {
   const router = useRouter()
   const userAddresses = user?.addresses || []

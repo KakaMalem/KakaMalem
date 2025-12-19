@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Crown, Sparkles, X, Heart, Star, Gift } from 'lucide-react'
+import { Crown, Sparkles, X } from 'lucide-react'
 
 interface OgFanBadgeProps {
   variant: 'banner' | 'badge' | 'avatar-crown' | 'vip-tag'
