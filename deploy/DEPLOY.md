@@ -4,9 +4,88 @@ Deploy on Ubuntu 24.04 VPS with MongoDB Atlas, Nginx, and SSL.
 
 ## Prerequisites
 
-- Ubuntu 24.04 VPS with root/sudo access
+- Ubuntu 24.04 VPS with root/sudo access (HostHatch or similar)
 - Domain name pointed to your VPS IP (A record)
 - MongoDB Atlas account with database created
+
+## Step 0: SSH into Your Server (Windows)
+
+After purchasing your VPS from HostHatch, you'll receive:
+
+- **Server IP address** (e.g., `203.0.113.50`)
+- **Root password** (via email or control panel)
+
+### Option A: Using Windows Terminal / PowerShell (Recommended)
+
+Windows 10/11 has SSH built-in. Open **Windows Terminal** or **PowerShell** and run:
+
+```powershell
+ssh root@YOUR_SERVER_IP
+```
+
+**Example:**
+
+```powershell
+ssh root@203.0.113.50
+```
+
+First time connecting, you'll see:
+
+```
+The authenticity of host '203.0.113.50' can't be established.
+ED25519 key fingerprint is SHA256:xxxxx...
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
+
+Type `yes` and press Enter. Then enter your root password when prompted.
+
+### Option B: Using PuTTY
+
+1. Download PuTTY from https://www.putty.org/
+2. Open PuTTY
+3. Enter your server IP in "Host Name"
+4. Port: `22`
+5. Connection type: `SSH`
+6. Click "Open"
+7. Login as: `root`
+8. Enter your password
+
+### Option C: Using VS Code (Best for Development)
+
+1. Install "Remote - SSH" extension in VS Code
+2. Press `Ctrl+Shift+P` → "Remote-SSH: Connect to Host"
+3. Enter: `root@YOUR_SERVER_IP`
+4. Select Linux when prompted
+5. Enter password
+
+This lets you edit files directly on the server with VS Code.
+
+### After First Login: Set Up SSH Keys (Recommended)
+
+For passwordless login, generate and copy SSH keys:
+
+**On your Windows machine (PowerShell):**
+
+```powershell
+# Generate SSH key (if you don't have one)
+ssh-keygen -t ed25519 -C "your-email@example.com"
+
+# Copy key to server
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@YOUR_SERVER_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+```
+
+Now you can SSH without a password.
+
+### HostHatch Control Panel
+
+Access your VPS management at: https://cloud.hosthatch.com
+
+- View/reset root password
+- Access VNC console (if SSH fails)
+- Reboot server
+- View server IP and specs
+
+---
 
 ## Step 1: Initial Server Setup
 
@@ -14,7 +93,7 @@ SSH into your server and run:
 
 ```bash
 # Download and run setup script
-curl -O https://raw.githubusercontent.com/YOUR_REPO/main/deploy/setup-vps.sh
+curl -O https://raw.githubusercontent.com/KakaMalem/main/deploy/setup-vps.sh
 chmod +x setup-vps.sh
 ./setup-vps.sh
 ```
