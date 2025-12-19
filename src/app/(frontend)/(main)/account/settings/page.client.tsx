@@ -11,6 +11,7 @@ import {
   EyeOff,
   AlertTriangle,
   CheckCircle,
+  Settings,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
@@ -181,9 +182,14 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       />
 
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold">تنظیمات حساب کاربری</h2>
-        <p className="text-base-content/70 mt-1">مدیریت ترجیحات و امنیت حساب کاربری</p>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+          <Settings className="w-6 h-6 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold">تنظیمات حساب کاربری</h2>
+          <p className="text-base-content/70 mt-0.5">مدیریت ترجیحات و امنیت حساب کاربری</p>
+        </div>
       </div>
 
       {/* Preferences */}

@@ -99,11 +99,16 @@ export default function AddressesClient({ user: initialUser, redirectTo }: Addre
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold">آدرس‌های تحویل</h2>
-          <p className="text-base-content/60 text-sm mt-1">
-            {addresses.length > 0 ? `${addresses.length} آدرس ذخیره شده` : 'هنوز آدرسی ندارید'}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <MapPin className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold">آدرس‌های تحویل</h2>
+            <p className="text-base-content/60 text-sm mt-0.5">
+              {addresses.length > 0 ? `${addresses.length} آدرس ذخیره شده` : 'هنوز آدرسی ندارید'}
+            </p>
+          </div>
         </div>
         <Link
           href={`/account/addresses/add${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}

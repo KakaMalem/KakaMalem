@@ -242,7 +242,7 @@ Custom endpoints defined in `src/endpoints/`:
 
 ### Styling System
 
-**DaisyUI Custom Theme (`kakamalem`):**
+**DaisyUI Custom Theme (`KakaMalem`):**
 
 - Defined in `src/app/(frontend)/styles.css`
 - Always use DaisyUI's semantic color classes: `primary`, `secondary`, `accent`, `base-100`, `base-200`, `base-content`, etc.

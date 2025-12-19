@@ -18,7 +18,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://kakamalem.com'
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'کاکا معلم | فروشگاه اینترنتی',
+    default: 'کاکا معلم',
     template: '%s | کاکا معلم',
   },
   description: 'فروشگاه اینترنتی کاکا معلم - خرید آنلاین محصولات با کیفیت با ارسال سریع در کابل',

@@ -2,7 +2,7 @@
 @plugin "daisyui";
 
 @plugin "daisyui/theme" {
-  name: 'kakamalem';
+  name: 'KakaMalem';
   default: true;
   prefersdark: false;
   color-scheme: light;
@@ -235,23 +235,6 @@ html[dir='rtl'] textarea {
   direction: rtl;
 }
 
-/* Fix Persian/Arabic letter cutoff in inputs */
-/* Persian characters have descenders (dots below baseline) that get clipped */
-input,
-textarea,
-select,
-.input,
-.textarea,
-.select {
-  line-height: 1.7;
-}
-
-/* Ensure placeholders also have proper line-height */
-input::placeholder,
-textarea::placeholder {
-  line-height: 1.7;
-}
-
 /* Font rendering improvements */
 body {
   -webkit-font-smoothing: antialiased;
@@ -276,4 +259,38 @@ html[lang='fa'] {
 
 .leaflet-map-pane {
   z-index: 1 !important;
+}
+
+/* OG Fan animations */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
 }

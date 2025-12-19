@@ -344,7 +344,7 @@ export default function RegisterPage() {
                     type="text"
                     name="firstName"
                     className="grow"
-                    placeholder="احمد"
+                    placeholder="مطیع"
                     value={formData.firstName}
                     onChange={handleChange}
                     onBlur={() => handleBlur('firstName')}

@@ -6,11 +6,24 @@ export interface MobileMenuItem {
   isSignIn?: boolean
 }
 
+export type IconType =
+  | 'user'
+  | 'orders'
+  | 'heart'
+  | 'settings'
+  | 'logout'
+  | 'login'
+  | 'register'
+  | 'admin'
+
 export interface AccountMenuItem {
   href?: string
   label?: string
   isBold?: boolean
   isDivider?: boolean
+  icon?: IconType
+  isHeader?: boolean
+  subtitle?: string
 }
 
 /**
@@ -25,6 +38,7 @@ export const getAccountMenuItems = (
   userName?: string,
   currentPath?: string,
   userRoles?: string[],
+  userEmail?: string,
 ): AccountMenuItem[] => {
   if (isLoggedIn) {
     // --- LOGGED IN MENU ---
@@ -38,8 +52,9 @@ export const getAccountMenuItems = (
 
     const menuItems: AccountMenuItem[] = [
       {
-        href: '/account',
-        label: `سلام، ${userName || 'کاربر'}`,
+        label: userName || 'کاربر',
+        subtitle: userEmail,
+        isHeader: true,
         isBold: true,
       },
       { isDivider: true },
@@ -47,16 +62,17 @@ export const getAccountMenuItems = (
 
     // Add admin panel link for users with admin panel access
     if (hasAdminAccess) {
-      menuItems.push({ href: '/admin', label: 'پنل مدیریت' })
+      menuItems.push({ href: '/admin', label: 'پنل مدیریت', icon: 'admin' })
       menuItems.push({ isDivider: true })
     }
 
     menuItems.push(
-      { href: '/account', label: 'حساب کاربری' },
-      { href: '/account/orders', label: 'سفارش‌های من' },
-      { href: '/account/wishlist', label: 'علاقه‌مندی‌ها' },
+      { href: '/account', label: 'حساب کاربری', icon: 'user' },
+      { href: '/account/orders', label: 'سفارش‌های من', icon: 'orders' },
+      { href: '/account/wishlist', label: 'علاقه‌مندی‌ها', icon: 'heart' },
+      { href: '/account/settings', label: 'تنظیمات', icon: 'settings' },
       { isDivider: true },
-      { href: '/auth/logout', label: 'خروج' },
+      { href: '/auth/logout', label: 'خروج از حساب', icon: 'logout' },
     )
 
     return menuItems
@@ -67,11 +83,10 @@ export const getAccountMenuItems = (
   const loginUrl = buildLoginUrl(currentPath)
 
   return [
-    { href: loginUrl, label: 'ورود', isBold: true },
-    { href: '/auth/register', label: 'مشتری جدید؟ از اینجا شروع کنید.' },
+    { href: loginUrl, label: 'ورود به حساب', icon: 'login', isBold: true },
+    { href: '/auth/register', label: 'ایجاد حساب جدید', icon: 'register' },
     { isDivider: true },
-    { href: buildLoginUrl('/account/orders'), label: 'سفارش‌های من' },
-    { href: buildLoginUrl('/account'), label: 'حساب کاربری' },
-    { href: buildLoginUrl('/account/wishlist'), label: 'علاقه‌مندی‌ها' },
+    { href: buildLoginUrl('/account/orders'), label: 'سفارش‌های من', icon: 'orders' },
+    { href: buildLoginUrl('/account/wishlist'), label: 'علاقه‌مندی‌ها', icon: 'heart' },
   ]
 }

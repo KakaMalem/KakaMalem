@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Check, ShoppingCart } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
-import { ShippingStep } from '@/app/(frontend)/components/checkout/ShippingStep'
+import { ShippingStep, type GuestFormData } from '@/app/(frontend)/components/checkout/ShippingStep'
 import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
-import { PaymentStep } from '@/app/(frontend)/components/checkout/PaymentStep'
+import {
+  PaymentStep,
+  type PaymentMethodType,
+} from '@/app/(frontend)/components/checkout/PaymentStep'
 import { ReviewStep } from '@/app/(frontend)/components/checkout/ReviewStep'
 
 interface FreeDeliverySettings {
@@ -23,24 +26,6 @@ interface CheckoutClientProps {
   freeDelivery: FreeDeliverySettings
 }
 
-interface GuestFormData {
-  email: string
-  firstName: string
-  lastName: string
-  state: string
-  country: string
-  phone: string
-  nearbyLandmark: string
-  detailedDirections: string
-  coordinates: {
-    latitude: number | null
-    longitude: number | null
-    accuracy?: number | null
-    source?: 'gps' | 'ip' | 'manual' | 'map' | null
-    ip?: string | null
-  }
-}
-
 export default function CheckoutClient({ user, shippingCost, freeDelivery }: CheckoutClientProps) {
   const { cart: cartData, loading: cartLoading, clearCart } = useCart()
   const router = useRouter()
@@ -48,7 +33,7 @@ export default function CheckoutClient({ user, shippingCost, freeDelivery }: Che
   const [processing, setProcessing] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bank_transfer' | 'credit_card'>('cod')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('cod')
   const [guestForm, setGuestForm] = useState<GuestFormData>({
     email: '',
     firstName: '',
@@ -138,13 +123,33 @@ export default function CheckoutClient({ user, shippingCost, freeDelivery }: Che
             return false
           }
         } else {
-          if (
-            !guestForm.email ||
-            !guestForm.firstName ||
-            !guestForm.lastName ||
-            !guestForm.country
-          ) {
-            toast.error('لطفاً تمام فیلدهای الزامی را پر کنید')
+          // Validate all required guest form fields
+          const requiredFields: { field: keyof GuestFormData; label: string }[] = [
+            { field: 'firstName', label: 'نام' },
+            { field: 'lastName', label: 'تخلص' },
+            { field: 'email', label: 'ایمیل' },
+            { field: 'phone', label: 'شماره تماس' },
+            { field: 'nearbyLandmark', label: 'نشانی نزدیک' },
+            { field: 'detailedDirections', label: 'توضیحات مسیر' },
+          ]
+
+          for (const { field, label } of requiredFields) {
+            const value = guestForm[field]
+            if (typeof value === 'string' && !value.trim()) {
+              toast.error(`لطفاً ${label} را وارد کنید`)
+              return false
+            }
+          }
+
+          // Validate email format
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestForm.email)) {
+            toast.error('فرمت ایمیل نامعتبر است')
+            return false
+          }
+
+          // Validate phone format
+          if (!/^[+\d\s()-]+$/.test(guestForm.phone)) {
+            toast.error('فرمت شماره تماس نامعتبر است')
             return false
           }
         }

@@ -1,7 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
-import { MapPin, Plus, Check, User, LogIn, UserPlus, Mail, Phone } from 'lucide-react'
+import React, { useState, useCallback } from 'react'
+import {
+  MapPin,
+  Plus,
+  Check,
+  User,
+  LogIn,
+  UserPlus,
+  Mail,
+  Phone,
+  Navigation,
+  AlertCircle,
+} from 'lucide-react'
 import Link from 'next/link'
 import type { User as UserType } from '@/payload-types'
 import { LocationPicker, type LocationData } from '../LocationPicker'
@@ -9,7 +20,11 @@ import { AddressForm } from '../AddressForm'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
-interface GuestFormData {
+// Constants for location defaults
+const DEFAULT_STATE = 'کابل'
+const DEFAULT_COUNTRY = 'افغانستان'
+
+export interface GuestFormData {
   email: string
   firstName: string
   lastName: string
@@ -27,12 +42,15 @@ interface GuestFormData {
   }
 }
 
+type GuestFormErrors = Partial<Record<keyof GuestFormData, string>>
+
 interface ShippingStepProps {
   user: UserType | null
   selectedAddressIndex: number | null
   setSelectedAddressIndex: (index: number | null) => void
   guestForm: GuestFormData
   setGuestForm: (form: GuestFormData) => void
+  onValidationChange?: (isValid: boolean) => void
 }
 
 export function ShippingStep({
@@ -41,10 +59,60 @@ export function ShippingStep({
   setSelectedAddressIndex,
   guestForm,
   setGuestForm,
+  onValidationChange,
 }: ShippingStepProps) {
   const router = useRouter()
   const userAddresses = user?.addresses || []
   const [showAddressForm, setShowAddressForm] = useState(userAddresses.length === 0)
+  const [errors, setErrors] = useState<GuestFormErrors>({})
+  const [touched, setTouched] = useState<Set<string>>(new Set())
+
+  // Validate a single field
+  const validateField = useCallback((field: keyof GuestFormData, value: string): string => {
+    switch (field) {
+      case 'email':
+        if (!value.trim()) return 'ایمیل الزامی است'
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'فرمت ایمیل نامعتبر است'
+        return ''
+      case 'firstName':
+        if (!value.trim()) return 'نام الزامی است'
+        return ''
+      case 'lastName':
+        if (!value.trim()) return 'تخلص الزامی است'
+        return ''
+      case 'phone':
+        if (!value.trim()) return 'شماره تماس الزامی است'
+        if (!/^[+\d\s()-]+$/.test(value)) return 'فرمت شماره تماس نامعتبر است'
+        return ''
+      case 'nearbyLandmark':
+        if (!value.trim()) return 'نشانی نزدیک الزامی است'
+        return ''
+      case 'detailedDirections':
+        if (!value.trim()) return 'توضیحات مسیر الزامی است'
+        return ''
+      default:
+        return ''
+    }
+  }, [])
+
+  // Handle field blur for validation
+  const handleBlur = (field: keyof GuestFormData) => {
+    setTouched((prev) => new Set(prev).add(field))
+    const value = guestForm[field]
+    if (typeof value === 'string') {
+      const error = validateField(field, value)
+      setErrors((prev) => ({ ...prev, [field]: error }))
+    }
+  }
+
+  // Handle field change with live validation for touched fields
+  const handleFieldChange = (field: keyof GuestFormData, value: string) => {
+    setGuestForm({ ...guestForm, [field]: value })
+    if (touched.has(field)) {
+      const error = validateField(field, value)
+      setErrors((prev) => ({ ...prev, [field]: error }))
+    }
+  }
 
   const handleSaveAddress = async (
     addressData: Partial<NonNullable<UserType['addresses']>[number]>,
@@ -96,11 +164,31 @@ export function ShippingStep({
     }
   }
 
+  // Helper to render field error
+  const renderFieldError = (field: keyof GuestFormData) => {
+    const error = errors[field]
+    if (!error || !touched.has(field)) return null
+    return (
+      <div className="flex items-center gap-1.5 mt-1.5 text-error text-sm">
+        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+        <span>{error}</span>
+      </div>
+    )
+  }
+
+  // Get input class based on error state
+  const getInputClass = (field: keyof GuestFormData, baseClass: string = 'input w-full') => {
+    const hasError = errors[field] && touched.has(field)
+    return `${baseClass} ${hasError ? 'input-error' : ''} focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all`
+  }
+
   return (
-    <div className="card bg-base-200">
+    <div className="card bg-base-200 shadow-sm">
       <div className="card-body">
-        <h2 className="card-title text-2xl mb-4 flex items-center gap-2">
-          <MapPin className="w-6 h-6 text-primary" />
+        <h2 className="card-title text-2xl mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <MapPin className="w-5 h-5 text-primary" />
+          </div>
           آدرس تحویل گیرنده
         </h2>
 
@@ -112,50 +200,53 @@ export function ShippingStep({
                 <div className="space-y-3">
                   {userAddresses.map((address, index) => (
                     <div
-                      key={index}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      key={address.id || index}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                         selectedAddressIndex === index
-                          ? 'border-primary bg-primary/5'
-                          : 'border-base-300 hover:border-base-content/20'
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-base-300 hover:border-primary/40 hover:bg-base-100'
                       }`}
                       onClick={() => setSelectedAddressIndex(index)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && setSelectedAddressIndex(index)}
                     >
                       <div className="flex items-start gap-3">
                         <input
                           type="radio"
+                          name="selected-address"
                           className="radio radio-primary mt-1"
                           checked={selectedAddressIndex === index}
                           onChange={() => setSelectedAddressIndex(index)}
+                          aria-label={`انتخاب ${address.label}`}
                         />
-                        <div>
-                          <div className="font-semibold flex items-center gap-2">
-                            {address.label}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold flex items-center gap-2 flex-wrap">
+                            <span>{address.label}</span>
                             {address.isDefault && (
                               <span className="badge badge-primary badge-sm">آدرس اصلی</span>
                             )}
                           </div>
-                          <div className="text-sm mt-1">
+                          <div className="text-sm mt-1.5 text-base-content/80">
                             {address.firstName} {address.lastName}
                           </div>
-                          {address.state && (
-                            <div className="text-sm opacity-70">{address.state}</div>
-                          )}
-                          <div className="text-sm opacity-70">{address.country}</div>
+                          <div className="text-sm text-base-content/60 mt-1">
+                            {address.state}، {address.country}
+                          </div>
                           {address.phone && (
-                            <div className="text-sm opacity-70">
-                              شماره تماس:
-                              <span dir="ltr">{address.phone}</span>
+                            <div className="text-sm text-base-content/60 mt-1">
+                              شماره تماس: <span dir="ltr">{address.phone}</span>
                             </div>
                           )}
                           {address.nearbyLandmark && (
-                            <div className="text-sm opacity-70 flex items-center gap-1 mt-1">
-                              <MapPin className="w-3 h-3" />
-                              <span>{address.nearbyLandmark}</span>
+                            <div className="text-sm text-base-content/60 flex items-center gap-1.5 mt-2">
+                              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="truncate">{address.nearbyLandmark}</span>
                             </div>
                           )}
                           {address.coordinates?.latitude && address.coordinates?.longitude && (
-                            <div className="text-xs text-success mt-1 flex items-center gap-1">
-                              <Check className="w-3 h-3" />
+                            <div className="text-xs text-success mt-2 flex items-center gap-1.5">
+                              <Check className="w-3.5 h-3.5" />
                               موقعیت GPS ثبت شده
                             </div>
                           )}
@@ -167,7 +258,7 @@ export function ShippingStep({
 
                 <button
                   onClick={() => setShowAddressForm(true)}
-                  className="btn btn-primary btn-sm mt-4"
+                  className="btn btn-outline btn-primary btn-sm mt-4 gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   افزودن آدرس جدید
@@ -175,7 +266,7 @@ export function ShippingStep({
               </>
             ) : (
               <>
-                <div className="alert alert-info mb-4">
+                <div className="alert alert-info mb-6">
                   <span>
                     لطفاً آدرس تحویل خود را وارد کنید. این آدرس برای سفارش‌های آینده شما ذخیره خواهد
                     شد.
@@ -200,9 +291,9 @@ export function ShippingStep({
           // Guest user - show login prompt and checkout form
           <div className="space-y-6">
             {/* Login/Register Prompt */}
-            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-5 border border-primary/20">
+            <div className="bg-base-100 rounded-2xl p-5 border border-base-300 shadow-sm">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <User className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
@@ -210,20 +301,20 @@ export function ShippingStep({
                   <p className="text-sm text-base-content/70 mb-4">
                     با ورود به حساب کاربری، آدرس‌های ذخیره شده و پیگیری سفارشات را خواهید داشت.
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3">
                     <Link
                       href="/auth/login?redirect=/checkout"
                       className="btn btn-primary btn-sm gap-2"
                     >
                       <LogIn className="w-4 h-4" />
-                      ورود
+                      ورود به حساب
                     </Link>
                     <Link
                       href="/auth/register?redirect=/checkout"
-                      className="btn btn-ghost btn-sm gap-2"
+                      className="btn btn-outline btn-sm gap-2"
                     >
                       <UserPlus className="w-4 h-4" />
-                      ثبت‌نام
+                      ایجاد حساب جدید
                     </Link>
                   </div>
                 </div>
@@ -231,89 +322,106 @@ export function ShippingStep({
             </div>
 
             {/* Divider */}
-            <div className="divider text-sm text-base-content/50">یا ادامه به عنوان مهمان</div>
+            <div className="divider text-sm text-base-content/60 font-medium">
+              یا ادامه به عنوان مهمان
+            </div>
 
             {/* Guest Form */}
             <div className="space-y-5">
               {/* Contact Information */}
               <div className="bg-base-100 rounded-xl p-5 border border-base-300">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-primary" />
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="w-3.5 h-3.5 text-primary" />
+                  </div>
                   اطلاعات تماس
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="fieldset">
-                    <label className="label">
+                    <label className="label" htmlFor="guest-firstName">
                       <span className="label-text font-medium">
                         نام <span className="text-error">*</span>
                       </span>
                     </label>
                     <input
+                      id="guest-firstName"
                       type="text"
                       placeholder="احمد"
                       autoComplete="given-name"
-                      className="input w-full"
+                      className={getInputClass('firstName')}
                       value={guestForm.firstName}
-                      onChange={(e) => setGuestForm({ ...guestForm, firstName: e.target.value })}
-                      required
+                      onChange={(e) => handleFieldChange('firstName', e.target.value)}
+                      onBlur={() => handleBlur('firstName')}
                     />
+                    {renderFieldError('firstName')}
                   </div>
 
                   <div className="fieldset">
-                    <label className="label">
+                    <label className="label" htmlFor="guest-lastName">
                       <span className="label-text font-medium">
                         تخلص <span className="text-error">*</span>
                       </span>
                     </label>
                     <input
+                      id="guest-lastName"
                       type="text"
                       placeholder="احمدی"
                       autoComplete="family-name"
-                      className="input w-full"
+                      className={getInputClass('lastName')}
                       value={guestForm.lastName}
-                      onChange={(e) => setGuestForm({ ...guestForm, lastName: e.target.value })}
-                      required
+                      onChange={(e) => handleFieldChange('lastName', e.target.value)}
+                      onBlur={() => handleBlur('lastName')}
                     />
+                    {renderFieldError('lastName')}
                   </div>
 
                   <div className="fieldset">
-                    <label className="label">
+                    <label className="label" htmlFor="guest-email">
                       <span className="label-text font-medium">
                         ایمیل <span className="text-error">*</span>
                       </span>
                     </label>
                     <input
+                      id="guest-email"
                       type="email"
                       placeholder="your@email.com"
                       autoComplete="email"
-                      className="input w-full"
+                      className={getInputClass('email')}
                       value={guestForm.email}
-                      onChange={(e) => setGuestForm({ ...guestForm, email: e.target.value })}
-                      required
+                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      onBlur={() => handleBlur('email')}
                       dir="ltr"
                       style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}
                     />
+                    {renderFieldError('email')}
                   </div>
 
                   <div className="fieldset">
-                    <label className="label">
+                    <label className="label" htmlFor="guest-phone">
                       <span className="label-text font-medium">
                         شماره تماس <span className="text-error">*</span>
                       </span>
                     </label>
-                    <label className="input w-full flex items-center gap-2" dir="ltr">
-                      <Phone className="w-4 h-4 opacity-50" />
+                    <label
+                      className={`input w-full flex items-center gap-2 ${errors.phone && touched.has('phone') ? 'input-error' : ''} focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all`}
+                      dir="ltr"
+                    >
+                      <Phone
+                        className={`w-4 h-4 flex-shrink-0 ${errors.phone && touched.has('phone') ? 'text-error' : 'opacity-50'}`}
+                      />
                       <input
+                        id="guest-phone"
                         type="tel"
                         placeholder="0712345678"
                         autoComplete="tel"
-                        className="grow"
+                        className="grow bg-transparent focus:outline-none"
                         value={guestForm.phone}
-                        onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
-                        required
+                        onChange={(e) => handleFieldChange('phone', e.target.value)}
+                        onBlur={() => handleBlur('phone')}
                         style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}
                       />
                     </label>
+                    {renderFieldError('phone')}
                   </div>
                 </div>
               </div>
@@ -321,7 +429,9 @@ export function ShippingStep({
               {/* Delivery Address */}
               <div className="bg-base-100 rounded-xl p-5 border border-base-300">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
+                  </div>
                   آدرس تحویل
                 </h3>
                 <div className="space-y-4">
@@ -332,8 +442,8 @@ export function ShippingStep({
                       </label>
                       <input
                         type="text"
-                        className="input w-full bg-base-200"
-                        value="کابل"
+                        className="input w-full bg-base-200 cursor-not-allowed opacity-70"
+                        value={DEFAULT_STATE}
                         disabled
                         readOnly
                       />
@@ -345,8 +455,8 @@ export function ShippingStep({
                       </label>
                       <input
                         type="text"
-                        className="input w-full bg-base-200"
-                        value="افغانستان"
+                        className="input w-full bg-base-200 cursor-not-allowed opacity-70"
+                        value={DEFAULT_COUNTRY}
                         disabled
                         readOnly
                       />
@@ -354,48 +464,58 @@ export function ShippingStep({
                   </div>
 
                   <div className="fieldset">
-                    <label className="label">
+                    <label className="label" htmlFor="guest-nearbyLandmark">
                       <span className="label-text font-medium">
                         نشانی نزدیک <span className="text-error">*</span>
                       </span>
                     </label>
                     <input
+                      id="guest-nearbyLandmark"
                       type="text"
                       placeholder="مثلاً چهارراهی شهید، نزدیک مسجد جامع"
-                      className="input w-full"
+                      className={getInputClass('nearbyLandmark')}
                       value={guestForm.nearbyLandmark}
-                      onChange={(e) =>
-                        setGuestForm({ ...guestForm, nearbyLandmark: e.target.value })
-                      }
-                      required
+                      onChange={(e) => handleFieldChange('nearbyLandmark', e.target.value)}
+                      onBlur={() => handleBlur('nearbyLandmark')}
                     />
+                    {renderFieldError('nearbyLandmark')}
                   </div>
 
                   <div className="fieldset">
-                    <label className="label">
+                    <label className="label" htmlFor="guest-detailedDirections">
                       <span className="label-text font-medium">
                         توضیحات مسیر <span className="text-error">*</span>
                       </span>
                     </label>
                     <textarea
+                      id="guest-detailedDirections"
                       placeholder="مسیر دقیق را بیان کنید، مثلاً از چهارراهی شهید به طرف لیسه زرغونه بروید، بعد از 50 متر کوچه سمت راست، خانه شماره 306"
-                      className="textarea w-full h-20"
+                      className={`textarea w-full h-24 ${errors.detailedDirections && touched.has('detailedDirections') ? 'textarea-error' : ''} focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all`}
                       value={guestForm.detailedDirections}
-                      onChange={(e) =>
-                        setGuestForm({ ...guestForm, detailedDirections: e.target.value })
-                      }
-                      required
+                      onChange={(e) => handleFieldChange('detailedDirections', e.target.value)}
+                      onBlur={() => handleBlur('detailedDirections')}
                     />
+                    {renderFieldError('detailedDirections')}
                   </div>
                 </div>
               </div>
 
               {/* GPS Location */}
               <div className="bg-base-100 rounded-xl p-5 border border-base-300">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  موقعیت GPS
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Navigation className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    موقعیت GPS
+                  </h3>
+                  {guestForm.coordinates.latitude && guestForm.coordinates.longitude && (
+                    <span className="badge badge-success badge-sm gap-1">
+                      <Check className="w-3 h-3" />
+                      ثبت شده
+                    </span>
+                  )}
+                </div>
                 <LocationPicker
                   onLocationSelect={(locationData: LocationData) => {
                     setGuestForm({

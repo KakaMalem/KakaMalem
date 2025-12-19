@@ -808,8 +808,8 @@ export const Orders: CollectionConfig = {
         },
       ],
       access: {
-        // Only admins and developers can update payment method after creation
-        update: isAdminField,
+        // Until we add online payment features it will be fixed on COD method
+        update: nobody,
       },
       admin: {
         position: 'sidebar',

@@ -167,7 +167,8 @@ export const Users: CollectionConfig = {
       type: 'checkbox',
       defaultValue: false,
       access: {
-        // Only developers can update this field (super exclusive!)
+        // Only developers can create/update this field (super exclusive!)
+        create: isDeveloperField,
         update: isDeveloperField,
       },
       admin: {

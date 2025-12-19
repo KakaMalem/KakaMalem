@@ -44,7 +44,8 @@ interface OrderDetailsClientProps {
 }
 
 export default function OrderDetailsClient({ order, user }: OrderDetailsClientProps) {
-  const currency = order.currency || user.preferences?.currency || 'AFN'
+  const currencyCode = order.currency || user.preferences?.currency || 'AFN'
+  const currency = currencyCode === 'USD' ? '$' : '؋'
 
   // Build breadcrumb items
   const breadcrumbItems: BreadcrumbItem[] = [
@@ -83,7 +84,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
     const badge = badges[status] || badges.pending
 
     return (
-      <div className={`badge ${badge.color} gap-2`}>
+      <div className={`badge ${badge.color} gap-2 whitespace-nowrap flex-shrink-0`}>
         {badge.icon}
         {badge.label}
       </div>
@@ -106,7 +107,9 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
     }
 
     return (
-      <span className={`badge ${colors[status] || 'badge-neutral'}`}>
+      <span
+        className={`badge ${colors[status] || 'badge-neutral'} whitespace-nowrap flex-shrink-0`}
+      >
         {labels[status] || status}
       </span>
     )

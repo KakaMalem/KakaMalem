@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   // Validate email format
   const validateEmail = (email: string): boolean => {
@@ -97,8 +98,9 @@ export default function LoginPage() {
             setFieldErrors({ email: 'کاربری با این ایمیل یافت نشد' })
             break
           case 401:
-            // Wrong password - show on password field
+            // Wrong password - show on password field and reveal forgot password link
             setFieldErrors({ password: 'رمز عبور اشتباه است' })
+            setShowForgotPassword(true)
             break
           case 403:
             // Account locked - show toast
@@ -278,9 +280,9 @@ export default function LoginPage() {
               </CapsLockDetector>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="label cursor-pointer gap-2">
+            {/* Remember Me */}
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+              <label className="label cursor-pointer gap-2 p-0">
                 <input
                   type="checkbox"
                   className="checkbox checkbox-sm checkbox-primary"
@@ -289,9 +291,11 @@ export default function LoginPage() {
                 />
                 <span className="label-text">مرا به خاطر بسپار</span>
               </label>
-              <Link href="/auth/forgot-password" className="link link-primary text-sm">
-                رمز عبور را فراموش کرده‌اید؟
-              </Link>
+              {showForgotPassword && (
+                <Link href="/auth/forgot-password" className="link link-primary text-sm">
+                  رمز عبور را فراموش کرده‌اید؟
+                </Link>
+              )}
             </div>
 
             {/* Submit Button */}
