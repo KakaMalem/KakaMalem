@@ -1,67 +1,86 @@
-# Payload Blank Template
+# Kaka Malem
 
-This template comes configured with the bare minimum to get started on anything you need.
+![Deploy](https://github.com/KakaMalem/KakaMalem/actions/workflows/deploy.yml/badge.svg)
 
-## Quick start
+E-commerce platform built with Payload CMS 3.x, Next.js 15, and TailwindCSS.
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+## Tech Stack
 
-## Quick Start - local setup
+- **Framework**: Next.js 15 (App Router)
+- **CMS**: Payload CMS 3.x
+- **Database**: MongoDB
+- **Styling**: TailwindCSS + DaisyUI
+- **Auth**: Email/Password + Google OAuth
+- **Deployment**: Ubuntu VPS with Nginx
 
-To spin up this template locally, follow these steps:
+## Getting Started
 
-### Clone
+### Prerequisites
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+- Node.js 20+
+- pnpm 9+
+- MongoDB (local or Atlas)
 
-### Development
+### Setup
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URI` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+```bash
+# Clone repository
+git clone https://github.com/KakaMalem/KakaMalem.git
+cd KakaMalem
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+# Install dependencies
+pnpm install
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+# Configure environment
+cp .env.example .env
+# Edit .env with your values
 
-#### Docker (Optional)
+# Start development server
+pnpm dev
+```
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+Open [http://localhost:3000](http://localhost:3000)
 
-To do so, follow these steps:
+### Environment Variables
 
-- Modify the `MONGODB_URI` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URI` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+```env
+DATABASE_URI=mongodb://localhost:27017/kakamalem
+PAYLOAD_SECRET=your-secret-key
+NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+```
 
-## How it works
+## Commands
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+| Command               | Description               |
+| --------------------- | ------------------------- |
+| `pnpm dev`            | Start development server  |
+| `pnpm build`          | Build for production      |
+| `pnpm start`          | Start production server   |
+| `pnpm lint`           | Run ESLint                |
+| `pnpm generate:types` | Generate TypeScript types |
+| `pnpm devsafe`        | Clean cache and start dev |
 
-### Collections
+## Deployment
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+See [deploy/DEPLOY.md](deploy/DEPLOY.md) for complete deployment guide.
 
-- #### Users (Authentication)
+**Quick deploy** (after initial setup):
 
-  Users are auth-enabled collections that have access to the admin panel.
+```bash
+git push origin main
+```
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+GitHub Actions automatically builds, tests, and deploys to production.
 
-- #### Media
+## Project Structure
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+```
+src/
+├── app/                    # Next.js app router
+│   ├── (frontend)/         # Public pages
+│   └── (payload)/          # Admin panel
+├── collections/            # Payload collections
+├── globals/                # Payload globals
+├── endpoints/              # Custom API endpoints
+└── access/                 # Access control
+```

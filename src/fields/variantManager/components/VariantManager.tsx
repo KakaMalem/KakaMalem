@@ -261,7 +261,7 @@ export const VariantManager: React.FC<VariantManagerProps> = ({
         header: 'Price',
         cell: (info) => {
           const price = info.getValue()
-          return price ? `$${price.toFixed(2)}` : '-'
+          return price ? `${price.toFixed(2)}` : '-'
         },
         size: 100,
       }),
