@@ -10,9 +10,9 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # First job: Build and test
-  build-and-test:
-    name: Build & Test
+  # First job: Lint and validate
+  lint:
+    name: Lint & Validate
     runs-on: ubuntu-latest
 
     steps:
@@ -36,23 +36,13 @@ jobs:
       - name: Run linting
         run: pnpm lint
 
-      - name: Generate Payload types
-        run: pnpm generate:types
-        env:
-          DATABASE_URI: ${{ secrets.DATABASE_URI }}
-          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+      # Note: Build is done on VPS where MongoDB Atlas is accessible
+      # CI cannot connect to MongoDB Atlas due to IP restrictions
 
-      - name: Build application
-        run: pnpm build
-        env:
-          DATABASE_URI: ${{ secrets.DATABASE_URI }}
-          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
-          NEXT_PUBLIC_SERVER_URL: ${{ secrets.NEXT_PUBLIC_SERVER_URL }}
-
-  # Second job: Deploy (only runs if build-and-test passes AND it's a push to main)
+  # Second job: Deploy (only runs if lint passes AND it's a push to main)
   deploy:
     name: Deploy to VPS
-    needs: build-and-test
+    needs: lint
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 

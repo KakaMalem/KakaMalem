@@ -177,6 +177,11 @@ export default async function CategoryPage({
 }
 
 export async function generateStaticParams() {
+  // Skip pre-rendering in CI environments (GitHub Actions can't connect to MongoDB Atlas)
+  if (process.env.CI) {
+    return []
+  }
+
   const payload = await getPayload({ config })
 
   const categories = await payload.find({
