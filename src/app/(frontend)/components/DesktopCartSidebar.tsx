@@ -10,6 +10,7 @@ import {
   calculateSubtotal,
   useSiteSettings,
   getRemainingForFreeShipping,
+  FREE_DELIVERY_BADGE_TEXT,
 } from '@/providers'
 import Image from 'next/image'
 
@@ -20,7 +21,7 @@ interface DesktopCartSidebarProps {
 
 export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSidebarProps) {
   const { cart, loading, error, removeItem, updateQuantity } = useCart()
-  const { freeDelivery } = useSiteSettings()
+  const { shipping } = useSiteSettings()
   const items = cart?.items || []
   const subtotal = calculateSubtotal(items)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -29,8 +30,8 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
   // Always use AFN for display since calculateSubtotal converts everything to AFN
   const cartCurrency: 'USD' | 'AFN' = 'AFN'
 
-  // Get remaining amount for free shipping (null if disabled or already qualified)
-  const remainingForFree = getRemainingForFreeShipping(subtotal, freeDelivery)
+  // Get remaining amount for free shipping (null if not applicable or already qualified)
+  const remainingForFree = getRemainingForFreeShipping(subtotal, shipping)
 
   // Handle mounting
   useEffect(() => {
@@ -360,7 +361,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                 {remainingForFree !== null && (
                   <div className="mb-6 p-4 bg-info/10 rounded-xl border border-info/20">
                     <p className="text-sm font-medium mb-2">
-                      برای {freeDelivery.badgeText}{' '}
+                      برای {FREE_DELIVERY_BADGE_TEXT}{' '}
                       <span className="font-bold text-info">
                         {formatCurrency(remainingForFree, cartCurrency)}
                       </span>{' '}
@@ -370,7 +371,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                       <div
                         className="bg-gradient-to-r from-primary to-info h-2.5 rounded-full transition-all duration-500"
                         style={{
-                          width: `${Math.min((subtotal / freeDelivery.threshold) * 100, 100)}%`,
+                          width: `${Math.min((subtotal / shipping.freeThreshold) * 100, 100)}%`,
                         }}
                       />
                     </div>

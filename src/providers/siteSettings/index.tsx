@@ -2,24 +2,26 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
-interface FreeDeliverySettings {
-  enabled: boolean
-  threshold: number
-  badgeText: string
+export type ShippingMode = 'always_free' | 'free_above_threshold' | 'always_charged'
+
+export interface ShippingSettings {
+  mode: ShippingMode
+  cost: number
+  freeThreshold: number
 }
 
+export const FREE_DELIVERY_BADGE_TEXT = 'ارسال رایگان'
+
 interface SiteSettings {
-  shippingCost: number
-  freeDelivery: FreeDeliverySettings
+  shipping: ShippingSettings
   loading: boolean
 }
 
 const defaultSettings: SiteSettings = {
-  shippingCost: 50,
-  freeDelivery: {
-    enabled: true,
-    threshold: 1000,
-    badgeText: 'ارسال رایگان',
+  shipping: {
+    mode: 'free_above_threshold',
+    cost: 50,
+    freeThreshold: 1000,
   },
   loading: true,
 }
@@ -35,12 +37,12 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
         const res = await fetch('/api/globals/site-settings')
         if (res.ok) {
           const data = await res.json()
+
           setSettings({
-            shippingCost: data.shippingCost ?? 50,
-            freeDelivery: {
-              enabled: data.freeDeliveryEnabled ?? true,
-              threshold: data.freeDeliveryThreshold ?? 1000,
-              badgeText: data.freeDeliveryBadgeText ?? 'ارسال رایگان',
+            shipping: {
+              mode: data.shippingMode ?? 'free_above_threshold',
+              cost: data.shippingCost ?? 50,
+              freeThreshold: data.freeDeliveryThreshold ?? 1000,
             },
             loading: false,
           })
@@ -65,36 +67,39 @@ export function useSiteSettings() {
 }
 
 /**
- * Calculate shipping cost based on subtotal and site settings
+ * Calculate shipping cost based on subtotal and shipping settings
  */
 export function calculateShipping(
   subtotal: number,
-  freeDelivery: FreeDeliverySettings,
-  shippingCost: number = 50,
+  shipping: ShippingSettings,
 ): { cost: number; isFree: boolean } {
-  if (!freeDelivery.enabled) {
-    // If free delivery is disabled, always charge shipping
-    return { cost: shippingCost, isFree: false }
+  switch (shipping.mode) {
+    case 'always_free':
+      return { cost: 0, isFree: true }
+    case 'always_charged':
+      return { cost: shipping.cost, isFree: false }
+    case 'free_above_threshold':
+    default:
+      if (subtotal >= shipping.freeThreshold) {
+        return { cost: 0, isFree: true }
+      }
+      return { cost: shipping.cost, isFree: false }
   }
-
-  if (subtotal >= freeDelivery.threshold) {
-    return { cost: 0, isFree: true }
-  }
-
-  // Charge shipping when below threshold
-  return { cost: shippingCost, isFree: false }
 }
 
 /**
  * Get the remaining amount needed for free shipping
+ * Returns null if shipping is already free or no threshold applies
  */
 export function getRemainingForFreeShipping(
   subtotal: number,
-  freeDelivery: FreeDeliverySettings,
+  shipping: ShippingSettings,
 ): number | null {
-  if (!freeDelivery.enabled) return null
-  if (subtotal >= freeDelivery.threshold) return null
-  return freeDelivery.threshold - subtotal
+  // Only show remaining for threshold mode
+  if (shipping.mode !== 'free_above_threshold') return null
+  // If already qualified for free delivery
+  if (subtotal >= shipping.freeThreshold) return null
+  return shipping.freeThreshold - subtotal
 }
 
 export default SiteSettingsProvider

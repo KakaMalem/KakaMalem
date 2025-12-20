@@ -14,19 +14,20 @@ import {
 } from '@/app/(frontend)/components/checkout/PaymentStep'
 import { ReviewStep } from '@/app/(frontend)/components/checkout/ReviewStep'
 
-interface FreeDeliverySettings {
-  enabled: boolean
-  threshold: number
-  badgeText: string
+type ShippingMode = 'always_free' | 'free_above_threshold' | 'always_charged'
+
+interface ShippingSettings {
+  mode: ShippingMode
+  cost: number
+  freeThreshold: number
 }
 
-interface CheckoutClientProps {
+export interface CheckoutClientProps {
   user: User | null
-  shippingCost: number
-  freeDelivery: FreeDeliverySettings
+  shipping: ShippingSettings
 }
 
-export default function CheckoutClient({ user, shippingCost, freeDelivery }: CheckoutClientProps) {
+export default function CheckoutClient({ user, shipping }: CheckoutClientProps) {
   const { cart: cartData, loading: cartLoading, clearCart } = useCart()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
@@ -105,9 +106,20 @@ export default function CheckoutClient({ user, shippingCost, freeDelivery }: Che
     return sum + price * item.quantity
   }, 0)
 
-  // Calculate shipping based on free delivery settings
-  const shipping = freeDelivery.enabled && subtotal >= freeDelivery.threshold ? 0 : shippingCost
-  const total = subtotal + shipping
+  // Calculate shipping cost based on mode
+  const calculateShippingCost = (): number => {
+    switch (shipping.mode) {
+      case 'always_free':
+        return 0
+      case 'always_charged':
+        return shipping.cost
+      case 'free_above_threshold':
+      default:
+        return subtotal >= shipping.freeThreshold ? 0 : shipping.cost
+    }
+  }
+  const shippingCost = calculateShippingCost()
+  const total = subtotal + shippingCost
 
   const validateStep = (step: number): boolean => {
     switch (step) {
@@ -324,9 +336,9 @@ export default function CheckoutClient({ user, shippingCost, freeDelivery }: Che
             guestForm={guestForm}
             paymentMethod={paymentMethod}
             subtotal={subtotal}
-            shipping={shipping}
+            shippingCost={shippingCost}
             total={total}
-            freeDelivery={freeDelivery}
+            shippingSettings={shipping}
           />
         )}
 

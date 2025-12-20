@@ -33,5 +33,6 @@ export {
   useSiteSettings,
   calculateShipping,
   getRemainingForFreeShipping,
+  FREE_DELIVERY_BADGE_TEXT,
 } from './siteSettings'
 export * from './cart/shared'

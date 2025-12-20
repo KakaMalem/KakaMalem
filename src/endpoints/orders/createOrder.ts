@@ -335,22 +335,30 @@ export const createOrder: Endpoint = {
       }
 
       // Fetch site settings for delivery configuration
+      let shippingMode = 'free_above_threshold' as NonNullable<SiteSetting['shippingMode']>
       let shippingCost = 50
-      let freeDeliveryEnabled = true
       let freeDeliveryThreshold = 1000
       try {
-        const siteSettings = (await payload.findGlobal({
+        const siteSettings = await payload.findGlobal({
           slug: 'site-settings',
-        })) as SiteSetting
+        })
+        shippingMode = siteSettings.shippingMode ?? 'free_above_threshold'
         shippingCost = siteSettings.shippingCost ?? 50
-        freeDeliveryEnabled = siteSettings.freeDeliveryEnabled ?? true
         freeDeliveryThreshold = siteSettings.freeDeliveryThreshold ?? 1000
       } catch (error) {
         console.error('Error fetching site settings, using defaults:', error)
       }
 
-      // Calculate shipping based on site settings
-      const shipping = freeDeliveryEnabled && subtotal >= freeDeliveryThreshold ? 0 : shippingCost
+      // Calculate shipping based on mode
+      let shipping: number
+      if (shippingMode === 'always_free') {
+        shipping = 0
+      } else if (shippingMode === 'always_charged') {
+        shipping = shippingCost
+      } else {
+        // free_above_threshold (default)
+        shipping = subtotal >= freeDeliveryThreshold ? 0 : shippingCost
+      }
       const total = subtotal + shipping
 
       // Create order

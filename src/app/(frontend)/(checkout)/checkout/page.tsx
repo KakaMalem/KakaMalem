@@ -7,50 +7,39 @@ import type { SiteSetting } from '@/payload-types'
 // Force dynamic rendering since we use authentication (cookies)
 export const dynamic = 'force-dynamic'
 
-interface FreeDeliverySettings {
-  enabled: boolean
-  threshold: number
-  badgeText: string
+type ShippingMode = 'always_free' | 'free_above_threshold' | 'always_charged'
+
+interface ShippingSettings {
+  mode: ShippingMode
+  cost: number
+  freeThreshold: number
 }
 
-interface DeliverySettings {
-  shippingCost: number
-  freeDelivery: FreeDeliverySettings
-}
-
-async function getDeliverySettings(): Promise<DeliverySettings> {
+async function getShippingSettings(): Promise<ShippingSettings> {
   try {
     const payload = await getPayload({ config })
     const settings = (await payload.findGlobal({ slug: 'site-settings' })) as SiteSetting
 
     return {
-      shippingCost: settings.shippingCost ?? 50,
-      freeDelivery: {
-        enabled: settings.freeDeliveryEnabled ?? true,
-        threshold: settings.freeDeliveryThreshold ?? 1000,
-        badgeText: settings.freeDeliveryBadgeText ?? 'ارسال رایگان',
-      },
+      mode: (settings.shippingMode as ShippingMode) ?? 'free_above_threshold',
+      cost: settings.shippingCost ?? 50,
+      freeThreshold: settings.freeDeliveryThreshold ?? 1000,
     }
   } catch (error) {
     console.error('Error fetching site settings:', error)
     return {
-      shippingCost: 50,
-      freeDelivery: { enabled: true, threshold: 1000, badgeText: 'ارسال رایگان' },
+      mode: 'free_above_threshold',
+      cost: 50,
+      freeThreshold: 1000,
     }
   }
 }
 
 export default async function CheckoutPage() {
-  const [{ user }, deliverySettings] = await Promise.all([
+  const [{ user }, shipping] = await Promise.all([
     getMeUser({ nullUserRedirect: undefined }),
-    getDeliverySettings(),
+    getShippingSettings(),
   ])
 
-  return (
-    <CheckoutClient
-      user={user || null}
-      shippingCost={deliverySettings.shippingCost}
-      freeDelivery={deliverySettings.freeDelivery}
-    />
-  )
+  return <CheckoutClient user={user || null} shipping={shipping} />
 }

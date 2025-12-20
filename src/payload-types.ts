@@ -1483,20 +1483,15 @@ export interface Faq {
  */
 export interface SiteSetting {
   id: string;
-  freeDeliveryEnabled?: boolean | null;
+  shippingMode?: ('always_free' | 'free_above_threshold' | 'always_charged') | null;
+  /**
+   * The shipping fee charged to customers
+   */
+  shippingCost?: number | null;
   /**
    * Orders above this amount qualify for free delivery
    */
   freeDeliveryThreshold?: number | null;
-  freeDeliveryCurrency?: ('AFN' | 'USD') | null;
-  /**
-   * Text shown in the free delivery badge
-   */
-  freeDeliveryBadgeText?: string | null;
-  /**
-   * Shipping cost charged when free delivery is disabled
-   */
-  shippingCost?: number | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1587,11 +1582,9 @@ export interface FaqsSelect<T extends boolean = true> {
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
-  freeDeliveryEnabled?: T;
-  freeDeliveryThreshold?: T;
-  freeDeliveryCurrency?: T;
-  freeDeliveryBadgeText?: T;
+  shippingMode?: T;
   shippingCost?: T;
+  freeDeliveryThreshold?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

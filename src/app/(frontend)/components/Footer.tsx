@@ -43,10 +43,12 @@ async function getFooterData(): Promise<FooterData> {
 export const Footer: React.FC = async () => {
   const { categories, siteSettings } = await getFooterData()
 
-  // Free delivery settings with defaults
-  const freeDeliveryEnabled = siteSettings?.freeDeliveryEnabled ?? false
+  // Shipping settings with defaults
+  const shippingMode = siteSettings?.shippingMode ?? 'free_above_threshold'
   const freeDeliveryThreshold = siteSettings?.freeDeliveryThreshold ?? 1000
-  const freeDeliveryBadgeText = siteSettings?.freeDeliveryBadgeText ?? 'ارسال رایگان'
+  const FREE_DELIVERY_BADGE_TEXT = 'ارسال رایگان'
+  // Show badge for both always_free and free_above_threshold modes
+  const showFreeDeliveryBadge = shippingMode !== 'always_charged'
 
   return (
     <footer className="bg-base-200 text-base-content mt-16">
@@ -168,12 +170,14 @@ export const Footer: React.FC = async () => {
             <Link href="/privacy" className="hover:text-primary">
               حریم خصوصی
             </Link>
-            {freeDeliveryEnabled && (
+            {showFreeDeliveryBadge && (
               <div className="flex items-center gap-2 text-xs bg-base-100 px-3 py-1 rounded-full border border-base-300">
-                <span className="font-semibold text-primary">{freeDeliveryBadgeText}</span>
-                <span className="opacity-60">
-                  بالای {formatPrice(freeDeliveryThreshold, 'AFN')}
-                </span>
+                <span className="font-semibold text-primary">{FREE_DELIVERY_BADGE_TEXT}</span>
+                {shippingMode === 'free_above_threshold' && (
+                  <span className="opacity-60">
+                    بالای {formatPrice(freeDeliveryThreshold, 'AFN')}
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -20,10 +20,14 @@ import { formatPrice } from '@/utilities/currency'
 import type { GuestFormData } from './ShippingStep'
 import type { PaymentMethodType } from './PaymentStep'
 
-interface FreeDeliverySettings {
-  enabled: boolean
-  threshold: number
-  badgeText: string
+type ShippingMode = 'always_free' | 'free_above_threshold' | 'always_charged'
+
+const FREE_DELIVERY_BADGE_TEXT = 'ارسال رایگان'
+
+interface ShippingSettings {
+  mode: ShippingMode
+  cost: number
+  freeThreshold: number
 }
 
 interface ReviewStepProps {
@@ -34,9 +38,9 @@ interface ReviewStepProps {
   guestForm: GuestFormData
   paymentMethod: PaymentMethodType
   subtotal: number
-  shipping: number
+  shippingCost: number
   total: number
-  freeDelivery: FreeDeliverySettings
+  shippingSettings: ShippingSettings
 }
 
 // Payment method display labels
@@ -54,9 +58,9 @@ export function ReviewStep({
   guestForm,
   paymentMethod,
   subtotal,
-  shipping,
+  shippingCost,
   total,
-  freeDelivery,
+  shippingSettings,
 }: ReviewStepProps) {
   const userAddresses = user?.addresses || []
   const shippingAddress = user
@@ -283,13 +287,13 @@ export function ReviewStep({
                 هزینه ارسال
               </span>
               <span className="font-medium">
-                {shipping === 0 ? (
+                {shippingCost === 0 ? (
                   <span className="badge badge-success gap-1">
                     <Check className="w-3 h-3" />
                     رایگان
                   </span>
                 ) : (
-                  formatPrice(shipping, currency)
+                  formatPrice(shippingCost, currency)
                 )}
               </span>
             </div>
@@ -303,18 +307,18 @@ export function ReviewStep({
           </div>
         </div>
 
-        {/* Free Delivery Info */}
-        {freeDelivery.enabled && (
+        {/* Free Delivery Info - only show for threshold mode */}
+        {shippingSettings.mode === 'free_above_threshold' && (
           <div className="mt-4 p-4 bg-success/5 rounded-xl border border-success/20">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
                 <Truck className="w-5 h-5 text-success" />
               </div>
               <div>
-                <div className="font-semibold text-success">{freeDelivery.badgeText}</div>
+                <div className="font-semibold text-success">{FREE_DELIVERY_BADGE_TEXT}</div>
                 <p className="text-sm text-base-content/70 mt-0.5">
-                  سفارش‌های بالای {formatPrice(freeDelivery.threshold, 'AFN')} از{' '}
-                  {freeDelivery.badgeText} برخوردارند
+                  سفارش‌های بالای {formatPrice(shippingSettings.freeThreshold, 'AFN')} از{' '}
+                  {FREE_DELIVERY_BADGE_TEXT} برخوردارند
                 </p>
               </div>
             </div>
