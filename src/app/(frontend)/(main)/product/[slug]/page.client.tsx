@@ -44,7 +44,7 @@ export default function ProductDetailsClient({
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { addItem, loading: cartLoading, cart } = useCart()
+  const { addItem, cart } = useCart()
   const { trackView } = useRecentlyViewed()
 
   // State declarations - must be at the top before any usage
@@ -52,6 +52,7 @@ export default function ProductDetailsClient({
   const [qty, setQty] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   // Variant state - initialize with server-fetched variants
   const [variants] = useState<ProductVariant[]>(initialVariants)
@@ -284,7 +285,7 @@ export default function ProductDetailsClient({
   }
 
   const addToCart = async () => {
-    if (justAdded || cartLoading) return
+    if (justAdded || isAddingToCart) return
 
     // Check if variant is required but not selected
     if (product.hasVariants && !selectedVariant) {
@@ -303,6 +304,7 @@ export default function ProductDetailsClient({
     }
 
     setError(null)
+    setIsAddingToCart(true)
 
     try {
       await addItem(product.id, qty, selectedVariant?.id)
@@ -324,6 +326,8 @@ export default function ProductDetailsClient({
       if (error?.message?.includes('available in stock')) {
         setQty(1)
       }
+    } finally {
+      setIsAddingToCart(false)
     }
   }
 
@@ -749,7 +753,7 @@ export default function ProductDetailsClient({
                   <button
                     onClick={decrease}
                     className="btn btn-sm join-item border-none"
-                    disabled={qty <= 1 || isOutOfStock || cartLoading}
+                    disabled={qty <= 1 || isOutOfStock || isAddingToCart}
                     aria-label="کاهش تعداد"
                   >
                     <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -760,7 +764,7 @@ export default function ProductDetailsClient({
                   <button
                     onClick={increase}
                     className="btn btn-sm join-item border-none"
-                    disabled={qty >= maxQuantity || isOutOfStock || cartLoading}
+                    disabled={qty >= maxQuantity || isOutOfStock || isAddingToCart}
                     aria-label="افزایش تعداد"
                   >
                     <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -776,7 +780,7 @@ export default function ProductDetailsClient({
                         ? 'btn-disabled'
                         : 'btn-primary'
                   } px-4 sm:px-6 transition-all duration-300 flex-1 sm:flex-initial`}
-                  disabled={cartLoading || justAdded || isOutOfStock || maxQuantity === 0}
+                  disabled={isAddingToCart || justAdded || isOutOfStock || maxQuantity === 0}
                   aria-label={
                     isOutOfStock
                       ? stockStatus === 'discontinued'
@@ -789,7 +793,7 @@ export default function ProductDetailsClient({
                           : 'افزودن به سبد'
                   }
                 >
-                  {cartLoading ? (
+                  {isAddingToCart ? (
                     <span className="loading loading-spinner loading-sm"></span>
                   ) : justAdded ? (
                     <>

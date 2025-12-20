@@ -92,9 +92,9 @@ export type StockStatus =
  */
 export function getStockStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    in_stock: 'موجود در گدام',
+    in_stock: 'موجود',
     out_of_stock: 'ناموجود',
-    low_stock: 'موجودی محدود',
+    low_stock: 'محدود',
     on_backorder: 'پیش‌سفارش',
     discontinued: 'توقف تولید',
   }

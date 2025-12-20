@@ -132,9 +132,9 @@ export default function CategoryPageClient({
 
         <div className="max-w-7xl mx-auto px-4 pb-8">
           <div className="text-center py-16">
-            <p className="text-lg text-base-content/70 mb-4">No products found in this category.</p>
+            <p className="text-lg text-base-content/70 mb-4">محصولی در این دسته‌بندی یافت نشد.</p>
             <Link href="/" className="btn btn-primary">
-              Browse All Products
+              مشاهده همه محصولات
             </Link>
           </div>
         </div>

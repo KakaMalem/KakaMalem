@@ -68,7 +68,7 @@ export const Categories: CollectionConfig = {
       type: 'text',
       required: true,
     },
-    ...slugField('name'),
+    ...slugField('name', { collectionSlug: 'categories' }),
     {
       name: 'smallCategoryImage',
       type: 'upload',

@@ -31,7 +31,7 @@ export const formatSlugHook =
 
         // Check for uniqueness and append number if needed
         if (operation === 'create' || operation === 'update') {
-          return await ensureUniqueSlug(formattedSlug, req, operation, originalDoc)
+          return await ensureUniqueSlug(formattedSlug, req, operation, originalDoc, collectionSlug)
         }
         return formattedSlug
       }

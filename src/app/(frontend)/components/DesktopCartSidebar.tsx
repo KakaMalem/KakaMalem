@@ -315,6 +315,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                                       item.quantity - 1,
                                     )
                                   }
+                                  disabled={item.quantity <= 1}
                                   className="btn btn-ghost btn-sm btn-square rounded-l-none"
                                   aria-label="کاهش تعداد"
                                 >

@@ -128,7 +128,7 @@ export const Products: CollectionConfig = {
     useAsTitle: 'name',
     defaultColumns: ['name', 'price', 'quantity', '_status', 'stockStatus', 'updatedAt'],
     group: 'E-commerce',
-    preview: (doc) => `${process.env.NEXT_PUBLIC_SERVER_URL}/products/${doc.slug}`,
+    preview: (doc) => `${process.env.NEXT_PUBLIC_SERVER_URL}/product/${doc.slug}`,
   },
   access: {
     /**
