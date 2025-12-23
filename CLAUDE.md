@@ -350,6 +350,46 @@ The application uses a comprehensive role-based access control system defined in
 - Plus button on product cards accounts for existing cart quantity
 - Checkout pages are in separate route group without navbar/footer
 
+### Custom Endpoint Path Pattern (CRITICAL)
+
+**⚠️ IMPORTANT: Payload CMS custom endpoints must use FLAT paths, not nested paths.**
+
+When defining custom endpoints in `src/endpoints/`, the `path` property must be a single segment without nested slashes. Nested paths like `/affiliates/apply` will result in 404 errors from the browser (even though they may work in Postman).
+
+**❌ WRONG - Will cause 404 errors:**
+
+```typescript
+export const myEndpoint: Endpoint = {
+  path: '/affiliates/apply', // WRONG: nested path
+  path: '/promo-codes/validate', // WRONG: nested path
+  // ...
+}
+```
+
+**✅ CORRECT - Use flat paths with hyphens:**
+
+```typescript
+export const myEndpoint: Endpoint = {
+  path: '/apply-affiliate', // CORRECT: flat path
+  path: '/validate-promo-code', // CORRECT: flat path
+  // ...
+}
+```
+
+**Current endpoint naming convention:**
+
+- `/apply-affiliate` - Apply to become an affiliate
+- `/affiliate-dashboard` - Get affiliate dashboard data
+- `/seller-affiliate-dashboard` - Get seller affiliate dashboard
+- `/seller-affiliate-update` - Update seller affiliate settings
+- `/affiliate-request-payout` - Request affiliate payout
+- `/affiliate-track-click` - Track affiliate link click
+- `/validate-promo-code` - Validate a promo code
+- `/create-order` - Create a new order
+- `/register`, `/login`, `/set-password` - Auth endpoints
+
+All endpoints are accessible at `/api/{path}` (e.g., `/api/apply-affiliate`).
+
 ### Email Integration
 
 Email is configured via `@payloadcms/email-nodemailer` in `src/payload.config.ts:131-142`. Send emails using:

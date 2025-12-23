@@ -183,19 +183,21 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-          <Settings className="w-6 h-6 text-primary" />
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Settings className="w-5 h-5 md:w-6 md:h-6 text-primary" />
         </div>
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold">تنظیمات حساب کاربری</h2>
-          <p className="text-base-content/70 mt-0.5">مدیریت ترجیحات و امنیت حساب کاربری</p>
+        <div className="min-w-0">
+          <h2 className="text-xl md:text-3xl font-bold">تنظیمات حساب کاربری</h2>
+          <p className="text-sm md:text-base text-base-content/70 mt-0.5">
+            مدیریت ترجیحات و امنیت حساب کاربری
+          </p>
         </div>
       </div>
 
       {/* Preferences */}
       <div className="card bg-base-100 border-2 border-base-300">
-        <div className="card-body">
-          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-6">
+        <div className="card-body p-4 md:p-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-4 md:mb-6">
             <Bell className="w-5 h-5 text-primary" />
             <h3 className="card-title text-lg">ترجیحات</h3>
           </div>
@@ -203,19 +205,19 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
           <div className="space-y-6">
             {/* Newsletter Toggle */}
             <div>
-              <label className="label cursor-pointer justify-start gap-4 bg-base-200 hover:bg-base-300/50 transition-colors rounded-lg p-4 border-2 border-base-300">
+              <label className="flex items-start cursor-pointer gap-3 bg-base-200 hover:bg-base-300/50 transition-colors rounded-lg p-3 md:p-4 border-2 border-base-300">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary"
+                  className="checkbox checkbox-primary flex-shrink-0 mt-0.5"
                   checked={newsletter}
                   onChange={(e) => setNewsletter(e.target.checked)}
                 />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">اشتراک خبرنامه</span>
                     {newsletter && <span className="badge badge-primary badge-sm">فعال</span>}
                   </div>
-                  <p className="text-sm text-base-content/60 mt-1">
+                  <p className="text-xs md:text-sm text-base-content/60 mt-1 break-words">
                     دریافت ثبت‌ها درباره محصولات جدید، پیشنهادات ویژه، و تخفیف‌های انحصاری
                   </p>
                 </div>
@@ -234,7 +236,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
-                  className={`label cursor-pointer justify-start gap-3 rounded-lg p-4 border-2 transition-all ${
+                  className={`label cursor-pointer justify-start gap-3 rounded-lg p-3 md:p-4 border-2 transition-all ${
                     currency === 'AFN'
                       ? 'border-primary bg-primary/5'
                       : 'border-base-300 hover:border-primary/50 bg-base-200'
@@ -244,34 +246,38 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     type="radio"
                     name="currency"
                     value="AFN"
-                    className="radio radio-primary"
+                    className="radio radio-primary flex-shrink-0"
                     checked={currency === 'AFN'}
                     onChange={(e) => setCurrency(e.target.value as 'USD' | 'AFN')}
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="font-medium">افغانی</div>
                     <div className="text-xs text-base-content/60">AFN - ؋</div>
                   </div>
-                  {currency === 'AFN' && <CheckCircle className="w-5 h-5 text-primary" />}
+                  {currency === 'AFN' && (
+                    <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                  )}
                 </label>
 
                 <label
-                  className={`label cursor-not-allowed justify-start gap-3 rounded-lg p-4 border-2 transition-all opacity-50 border-base-300 bg-base-200`}
+                  className={`label cursor-not-allowed justify-start gap-3 rounded-lg p-3 md:p-4 border-2 transition-all opacity-50 border-base-300 bg-base-200`}
                 >
                   <input
                     type="radio"
                     name="currency"
                     value="USD"
-                    className="radio radio-primary"
+                    className="radio radio-primary flex-shrink-0"
                     checked={currency === 'USD'}
                     onChange={(e) => setCurrency(e.target.value as 'USD' | 'AFN')}
                     disabled
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="font-medium">دلار امریکا</div>
                     <div className="text-xs text-base-content/60">USD - $ (به زودی)</div>
                   </div>
-                  {currency === 'USD' && <CheckCircle className="w-5 h-5 text-primary" />}
+                  {currency === 'USD' && (
+                    <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                  )}
                 </label>
               </div>
               <label className="label pt-2">
@@ -307,8 +313,8 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
       {/* Security */}
       <div className="card bg-base-100 border-2 border-base-300">
-        <div className="card-body">
-          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-6">
+        <div className="card-body p-4 md:p-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-4 md:mb-6">
             <Lock className="w-5 h-5 text-primary" />
             <h3 className="card-title text-lg">امنیت</h3>
           </div>
@@ -318,10 +324,10 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               {needsToSetPassword ? (
                 <div className="space-y-4">
                   <div className="alert alert-success">
-                    <CheckCircle className="w-5 h-5" />
-                    <div className="flex-1">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
                       <div className="font-medium">شما با گوگل وارد شده‌اید</div>
-                      <p className="text-sm opacity-90 mt-1">
+                      <p className="text-xs md:text-sm opacity-90 mt-1">
                         یک رمز عبور ایجاد کنید تا بتوانید با گوگل و ایمیل/رمز عبور وارد شوید
                       </p>
                     </div>
@@ -336,12 +342,12 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-base-200 rounded-lg p-4 border-2 border-base-300">
+                  <div className="bg-base-200 rounded-lg p-3 md:p-4 border-2 border-base-300">
                     <div className="flex items-start gap-3">
-                      <Lock className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
+                      <Lock className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
                         <div className="font-medium mb-1">رمز عبور حساب کاربری</div>
-                        <p className="text-sm text-base-content/60">
+                        <p className="text-xs md:text-sm text-base-content/60">
                           با استفاده از یک رمز عبور قوی و منحصر به فرد، حساب خود را امن نگه دارید
                         </p>
                       </div>
@@ -361,15 +367,15 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
             <div className="space-y-4">
               {passwordError && (
                 <div className="alert alert-error">
-                  <AlertTriangle className="w-5 h-5" />
-                  <span>{passwordError}</span>
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm">{passwordError}</span>
                 </div>
               )}
 
               {needsToSetPassword && (
                 <div className="alert alert-info">
-                  <CheckCircle className="w-5 h-5" />
-                  <span>
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-xs md:text-sm">
                     تنظیم رمز عبور به شما اجازه می‌دهد با گوگل یا ایمیل/رمز عبور وارد شوید.
                   </span>
                 </div>
@@ -510,20 +516,20 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
 
       {/* Danger Zone */}
       <div className="card bg-error/5 border-2 border-error">
-        <div className="card-body">
-          <div className="flex items-center gap-2 pb-3 border-b border-error/30 mb-6">
+        <div className="card-body p-4 md:p-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-error/30 mb-4 md:mb-6">
             <AlertTriangle className="w-5 h-5 text-error" />
             <h3 className="card-title text-lg text-error">منطقه خطرناک</h3>
           </div>
 
           {!showDeleteConfirm ? (
             <div className="space-y-4">
-              <div className="bg-base-100 rounded-lg p-4 border-2 border-error/30">
+              <div className="bg-base-100 rounded-lg p-3 md:p-4 border-2 border-error/30">
                 <div className="flex items-start gap-3">
                   <Trash2 className="w-5 h-5 text-error mt-0.5 flex-shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-medium mb-1 text-error">حذف دائمی حساب کاربری</div>
-                    <p className="text-sm text-base-content/60">
+                    <p className="text-xs md:text-sm text-base-content/60">
                       پس از حذف حساب کاربری، راه بازگشتی وجود ندارد. تمام داده‌ها، سفارشات، و
                       آدرس‌های شما برای همیشه حذف می‌شوند.
                     </p>
@@ -542,9 +548,9 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
             <div className="space-y-4">
               <div className="alert alert-warning">
                 <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="font-bold mb-1">آیا کاملاً مطمئن هستید؟</div>
-                  <p className="text-sm opacity-90">
+                  <p className="text-xs md:text-sm opacity-90">
                     این عمل قابل بازگشت نیست. این کار حساب شما را برای همیشه حذف کرده و تمام
                     اطلاعاتتان را از سرورهای ما پاک خواهد کرد.
                   </p>

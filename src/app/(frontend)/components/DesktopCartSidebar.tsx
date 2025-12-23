@@ -88,20 +88,27 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-[9998] transition-opacity duration-300 ease-in-out ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className="fixed inset-0 bg-black/50 z-[9998] transition-opacity duration-300 ease-in-out"
         onClick={onClose}
         aria-label="Close cart"
-        style={{ isolation: 'isolate' }}
+        style={{
+          isolation: 'isolate',
+          opacity: isOpen ? 1 : 0,
+          visibility: isOpen ? 'visible' : 'hidden',
+          pointerEvents: isOpen ? 'auto' : 'none',
+        }}
       />
 
       {/* Sidebar - Full width on mobile, 450px on larger screens */}
       <div
-        className={`fixed left-0 top-0 h-full w-full max-w-full sm:max-w-[450px] bg-base-100 z-[9999] shadow-2xl transform transition-all duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ isolation: 'isolate' }}
+        data-cart-sidebar
+        className={`fixed left-0 top-0 h-full w-full max-w-full sm:max-w-[450px] bg-base-100 z-[9999] shadow-2xl transition-transform duration-300 ease-in-out`}
+        style={{
+          isolation: 'isolate',
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+          visibility: isOpen ? 'visible' : 'hidden',
+          transitionProperty: 'transform, visibility',
+        }}
       >
         <div className="h-full flex flex-col">
           {/* Header */}
