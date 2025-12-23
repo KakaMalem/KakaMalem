@@ -25,6 +25,9 @@ import { SiteSettings } from './globals/SiteSettings'
 import { registerUser } from './endpoints/users/registerUser'
 import { loginUser } from './endpoints/users/loginUser'
 import { setPassword } from './endpoints/users/setPassword'
+import { resendVerification } from './endpoints/users/resendVerification'
+import { verifyEmail } from './endpoints/users/verifyEmail'
+import { checkVerification } from './endpoints/users/checkVerification'
 import { getProducts } from './endpoints/getProducts'
 import { trackProductView } from './endpoints/products/trackView'
 import { getRecentlyViewed } from './endpoints/products/getRecentlyViewed'
@@ -95,6 +98,9 @@ export default buildConfig({
     registerUser,
     loginUser,
     setPassword,
+    resendVerification,
+    verifyEmail,
+    checkVerification,
     getProducts,
     trackProductView,
     getRecentlyViewed,

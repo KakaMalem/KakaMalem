@@ -39,7 +39,45 @@ export const loginUser: Endpoint = {
         return Response.json({ error: 'کاربری با این ایمیل یافت نشد' }, { status: 404 })
       }
 
-      // User exists, try to login
+      const existingUser = existingUsers.docs[0]
+      const authMethods = (existingUser.authMethods as string[]) || []
+      const hasPasswordAuth = authMethods.includes('password')
+      const hasGoogleAuth = authMethods.includes('google')
+
+      // Check if user has password authentication enabled
+      if (!hasPasswordAuth) {
+        // User registered with OAuth only
+        if (hasGoogleAuth) {
+          return Response.json(
+            {
+              error:
+                'این حساب با گوگل ثبت شده است. لطفاً با گوگل وارد شوید یا یک رمز عبور تنظیم کنید.',
+              code: 'OAUTH_ONLY',
+              authMethods: authMethods,
+            },
+            { status: 400 },
+          )
+        }
+        // Edge case: user has no auth methods (shouldn't happen)
+        return Response.json(
+          { error: 'خطا در احراز هویت. لطفاً با پشتیبانی تماس بگیرید.' },
+          { status: 500 },
+        )
+      }
+
+      // Check if email is verified (only for password-based users)
+      if (!existingUser._verified) {
+        return Response.json(
+          {
+            error: 'لطفاً ابتدا ایمیل خود را تأیید کنید',
+            requiresVerification: true,
+            email: existingUser.email,
+          },
+          { status: 403 },
+        )
+      }
+
+      // User exists and has password auth, try to login
       const result = await payload.login({
         collection: 'users',
         data: { email, password },
@@ -136,6 +174,18 @@ export const loginUser: Endpoint = {
         if (errorMessage.includes('locked')) {
           return Response.json(
             { error: 'حساب کاربری قفل شده است. لطفاً با پشتیبانی تماس بگیرید.' },
+            { status: 403 },
+          )
+        }
+
+        // Handle unverified email error from Payload's internal check
+        if (errorMessage.includes('verify') || errorMessage.includes('unverified')) {
+          return Response.json(
+            {
+              error: 'لطفاً ابتدا ایمیل خود را تأیید کنید',
+              requiresVerification: true,
+              email: email,
+            },
             { status: 403 },
           )
         }

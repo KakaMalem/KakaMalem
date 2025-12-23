@@ -12,10 +12,33 @@ import {
   AlertTriangle,
   CheckCircle,
   Settings,
+  Shield,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
 import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
+
+// Google icon component
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+)
 
 interface SettingsClientProps {
   user: User
@@ -29,8 +52,13 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Check if user needs to set a password (OAuth users who haven't set one yet)
-  const needsToSetPassword = !!user.sub && !user.hasPassword
+  // Auth methods from the new field
+  const authMethods = (user.authMethods as string[]) || []
+  const hasPasswordAuth = authMethods.includes('password')
+  const hasGoogleAuth = authMethods.includes('google')
+
+  // User needs to set password if they have Google auth but no password auth
+  const needsToSetPassword = hasGoogleAuth && !hasPasswordAuth
 
   // Preferences state
   const [newsletter, setNewsletter] = useState(user.preferences?.newsletter || false)
@@ -87,7 +115,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
     // Validation - Users setting password for first time don't need current password
     if (needsToSetPassword) {
       if (!passwordData.newPassword || !passwordData.confirmPassword) {
-        setPasswordError('Please enter and confirm your new password')
+        setPasswordError('لطفاً رمز عبور جدید را وارد و تأیید کنید')
         return
       }
     } else {
@@ -96,18 +124,18 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
         !passwordData.newPassword ||
         !passwordData.confirmPassword
       ) {
-        setPasswordError('All fields are required')
+        setPasswordError('تمام فیلدها الزامی است')
         return
       }
     }
 
     if (passwordData.newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters')
+      setPasswordError('رمز عبور جدید باید حداقل ۸ کاراکتر باشد')
       return
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('New passwords do not match')
+      setPasswordError('رمز عبور جدید و تأیید آن یکسان نیستند')
       return
     }
 
@@ -128,20 +156,22 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to set password')
+        throw new Error(data.error || 'تنظیم رمز عبور ناموفق بود')
       }
 
       toast.success(data.message || 'رمز عبور با موفقیت ثبت شد!')
 
-      // Update user state to reflect that they now have a password
-      setUser({ ...user, hasPassword: true })
+      // Update user state to reflect the new auth methods
+      if (data.authMethods) {
+        setUser({ ...user, authMethods: data.authMethods })
+      }
 
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setShowPasswordForm(false)
     } catch (err: unknown) {
       console.error('Error setting password:', err)
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to set password. Please try again.'
+        err instanceof Error ? err.message : 'تنظیم رمز عبور ناموفق بود. لطفاً دوباره امتحان کنید.'
       setPasswordError(errorMessage)
     } finally {
       setSavingPassword(false)
@@ -172,6 +202,12 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
     }
   }
 
+  const resetPasswordForm = () => {
+    setShowPasswordForm(false)
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setPasswordError(null)
+  }
+
   return (
     <div className="space-y-6">
       <Breadcrumb
@@ -191,6 +227,247 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
           <p className="text-sm md:text-base text-base-content/70 mt-0.5">
             مدیریت ترجیحات و امنیت حساب کاربری
           </p>
+        </div>
+      </div>
+
+      {/* Security & Auth Methods */}
+      <div className="card bg-base-100 border-2 border-base-300">
+        <div className="card-body p-4 md:p-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-4 md:mb-6">
+            <Shield className="w-5 h-5 text-primary" />
+            <h3 className="card-title text-lg">امنیت و روش‌های ورود</h3>
+          </div>
+
+          {/* Auth Methods List */}
+          <div className="space-y-3 mb-6">
+            {/* Google Auth */}
+            <div
+              className={`flex items-center gap-3 p-3 md:p-4 rounded-lg border-2 transition-colors ${
+                hasGoogleAuth
+                  ? 'bg-success/5 border-success/30'
+                  : 'bg-base-200 border-base-300 opacity-60'
+              }`}
+            >
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-base-300 flex-shrink-0">
+                <GoogleIcon className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">ورود با گوگل</div>
+                <p className="text-xs text-base-content/60">
+                  {hasGoogleAuth ? 'حساب گوگل شما متصل است' : 'برای اتصال، با گوگل وارد شوید'}
+                </p>
+              </div>
+              {hasGoogleAuth && (
+                <span className="badge badge-success gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  متصل
+                </span>
+              )}
+            </div>
+
+            {/* Password Auth */}
+            <div
+              className={`flex items-center gap-3 p-3 md:p-4 rounded-lg border-2 transition-colors ${
+                hasPasswordAuth ? 'bg-success/5 border-success/30' : 'bg-base-200 border-base-300'
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  hasPasswordAuth ? 'bg-success/10' : 'bg-primary/10'
+                }`}
+              >
+                <Lock className={`w-5 h-5 ${hasPasswordAuth ? 'text-success' : 'text-primary'}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">ورود با رمز عبور</div>
+                <p className="text-xs text-base-content/60">
+                  {hasPasswordAuth
+                    ? 'می‌توانید با ایمیل و رمز عبور وارد شوید'
+                    : 'رمز عبور تنظیم نشده است'}
+                </p>
+              </div>
+              {hasPasswordAuth ? (
+                <button
+                  onClick={() => setShowPasswordForm(true)}
+                  className="btn btn-ghost btn-sm"
+                  disabled={showPasswordForm}
+                >
+                  تغییر
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowPasswordForm(true)}
+                  className="btn btn-primary btn-sm"
+                  disabled={showPasswordForm}
+                >
+                  فعال‌سازی
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* No auth methods warning */}
+          {authMethods.length === 0 && (
+            <div className="alert alert-warning mb-6">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm">
+                هیچ روش ورودی فعال نیست. لطفاً با پشتیبانی تماس بگیرید.
+              </span>
+            </div>
+          )}
+
+          {/* Password Form */}
+          {showPasswordForm && (
+            <div className="border-t border-base-300 pt-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="w-5 h-5 text-primary" />
+                <h4 className="font-semibold">
+                  {needsToSetPassword ? 'تنظیم رمز عبور' : 'تغییر رمز عبور'}
+                </h4>
+              </div>
+
+              {passwordError && (
+                <div className="alert alert-error">
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm">{passwordError}</span>
+                </div>
+              )}
+
+              {needsToSetPassword && (
+                <div className="alert alert-info">
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-xs md:text-sm">
+                    با تنظیم رمز عبور، می‌توانید علاوه بر گوگل با ایمیل و رمز عبور هم وارد شوید.
+                  </span>
+                </div>
+              )}
+
+              {/* Current Password - Only show if user already has a password */}
+              {!needsToSetPassword && (
+                <div className="fieldset">
+                  <label className="label pb-1">
+                    <span className="label-text font-medium">رمز عبور فعلی</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      className="input input-bordered w-full pl-12"
+                      placeholder="رمز عبور فعلی را وارد کنید"
+                      value={passwordData.currentPassword}
+                      onChange={(e) =>
+                        setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPasswords({ ...showPasswords, current: !showPasswords.current })
+                      }
+                      className="btn btn-ghost btn-sm absolute left-1 top-1/2 -translate-y-1/2"
+                    >
+                      {showPasswords.current ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* New Password */}
+              <div className="fieldset">
+                <label className="label pb-1">
+                  <span className="label-text font-medium">
+                    {needsToSetPassword ? 'رمز عبور' : 'رمز عبور جدید'}
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.new ? 'text' : 'password'}
+                    className="input input-bordered w-full pl-12"
+                    placeholder="حداقل ۸ کاراکتر"
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, newPassword: e.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                    className="btn btn-ghost btn-sm absolute left-1 top-1/2 -translate-y-1/2"
+                  >
+                    {showPasswords.new ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="fieldset">
+                <label className="label pb-1">
+                  <span className="label-text font-medium">
+                    {needsToSetPassword ? 'تأیید رمز عبور' : 'تأیید رمز عبور جدید'}
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.confirm ? 'text' : 'password'}
+                    className="input input-bordered w-full pl-12"
+                    placeholder="رمز عبور را دوباره وارد کنید"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
+                    }
+                    className="btn btn-ghost btn-sm absolute left-1 top-1/2 -translate-y-1/2"
+                  >
+                    {showPasswords.confirm ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={handleChangePassword}
+                  className="btn btn-primary gap-2"
+                  disabled={savingPassword}
+                >
+                  {savingPassword ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      {needsToSetPassword ? 'در حال تنظیم...' : 'در حال تغییر...'}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      {needsToSetPassword ? 'تنظیم رمز عبور' : 'ذخیره رمز عبور جدید'}
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={resetPasswordForm}
+                  className="btn btn-ghost"
+                  disabled={savingPassword}
+                >
+                  انصراف
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -218,7 +495,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     {newsletter && <span className="badge badge-primary badge-sm">فعال</span>}
                   </div>
                   <p className="text-xs md:text-sm text-base-content/60 mt-1 break-words">
-                    دریافت ثبت‌ها درباره محصولات جدید، پیشنهادات ویژه، و تخفیف‌های انحصاری
+                    دریافت اطلاعیه‌ها درباره محصولات جدید، پیشنهادات ویژه، و تخفیف‌های انحصاری
                   </p>
                 </div>
               </label>
@@ -259,9 +536,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                   )}
                 </label>
 
-                <label
-                  className={`label cursor-not-allowed justify-start gap-3 rounded-lg p-3 md:p-4 border-2 transition-all opacity-50 border-base-300 bg-base-200`}
-                >
+                <label className="label cursor-not-allowed justify-start gap-3 rounded-lg p-3 md:p-4 border-2 transition-all opacity-50 border-base-300 bg-base-200">
                   <input
                     type="radio"
                     name="currency"
@@ -275,16 +550,11 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                     <div className="font-medium">دلار امریکا</div>
                     <div className="text-xs text-base-content/60">USD - $ (به زودی)</div>
                   </div>
-                  {currency === 'USD' && (
-                    <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
-                  )}
                 </label>
               </div>
-              <label className="label pt-2">
-                <span className="label-text-alt text-base-content/60">
-                  این واحد برای نمایش قیمت‌ها در سراسر سایت استفاده می‌شود
-                </span>
-              </label>
+              <p className="text-xs text-base-content/60 mt-2">
+                این واحد برای نمایش قیمت‌ها در سراسر سایت استفاده می‌شود
+              </p>
             </div>
 
             {/* Save Button */}
@@ -308,209 +578,6 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Security */}
-      <div className="card bg-base-100 border-2 border-base-300">
-        <div className="card-body p-4 md:p-8">
-          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-4 md:mb-6">
-            <Lock className="w-5 h-5 text-primary" />
-            <h3 className="card-title text-lg">امنیت</h3>
-          </div>
-
-          {!showPasswordForm ? (
-            <div>
-              {needsToSetPassword ? (
-                <div className="space-y-4">
-                  <div className="alert alert-success">
-                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium">شما با گوگل وارد شده‌اید</div>
-                      <p className="text-xs md:text-sm opacity-90 mt-1">
-                        یک رمز عبور ایجاد کنید تا بتوانید با گوگل و ایمیل/رمز عبور وارد شوید
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowPasswordForm(true)}
-                    className="btn btn-primary gap-2"
-                  >
-                    <Lock className="w-4 h-4" />
-                    تنظیم رمز عبور
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-base-200 rounded-lg p-3 md:p-4 border-2 border-base-300">
-                    <div className="flex items-start gap-3">
-                      <Lock className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <div className="font-medium mb-1">رمز عبور حساب کاربری</div>
-                        <p className="text-xs md:text-sm text-base-content/60">
-                          با استفاده از یک رمز عبور قوی و منحصر به فرد، حساب خود را امن نگه دارید
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowPasswordForm(true)}
-                    className="btn btn-primary gap-2"
-                  >
-                    <Lock className="w-4 h-4" />
-                    تغییر رمز عبور
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {passwordError && (
-                <div className="alert alert-error">
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">{passwordError}</span>
-                </div>
-              )}
-
-              {needsToSetPassword && (
-                <div className="alert alert-info">
-                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-xs md:text-sm">
-                    تنظیم رمز عبور به شما اجازه می‌دهد با گوگل یا ایمیل/رمز عبور وارد شوید.
-                  </span>
-                </div>
-              )}
-
-              {/* Current Password - Only show if user already has a password */}
-              {!needsToSetPassword && (
-                <div className="fieldset">
-                  <label className="label pb-1">
-                    <span className="label-text font-medium">رمز عبور فعلی</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPasswords.current ? 'text' : 'password'}
-                      className="input w-full pl-12"
-                      value={passwordData.currentPassword}
-                      onChange={(e) =>
-                        setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPasswords({ ...showPasswords, current: !showPasswords.current })
-                      }
-                      className="btn btn-ghost btn-sm absolute left-1 top-1"
-                    >
-                      {showPasswords.current ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* New Password */}
-              <div className="fieldset">
-                <label className="label pb-1">
-                  <span className="label-text font-medium">
-                    {needsToSetPassword ? 'رمز عبور' : 'رمز عبور جدید'}
-                  </span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.new ? 'text' : 'password'}
-                    className="input w-full pl-12"
-                    value={passwordData.newPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, newPassword: e.target.value })
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                    className="btn btn-ghost btn-sm absolute left-1 top-1"
-                  >
-                    {showPasswords.new ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-                <label className="label pt-1">
-                  <span className="label-text-alt text-base-content/60">حداقل 8 حرف</span>
-                </label>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="fieldset">
-                <label className="label pb-1">
-                  <span className="label-text font-medium">
-                    {needsToSetPassword ? 'تأیید رمز عبور' : 'تأیید رمز عبور جدید'}
-                  </span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.confirm ? 'text' : 'password'}
-                    className="input w-full pl-12"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
-                    }
-                    className="btn btn-ghost btn-sm absolute left-1 top-1"
-                  >
-                    {showPasswords.confirm ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  onClick={handleChangePassword}
-                  className="btn btn-primary gap-2 order-1"
-                  disabled={savingPassword}
-                >
-                  {savingPassword ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      {needsToSetPassword ? 'در حال تنظیم...' : 'در حال تغییر...'}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      {needsToSetPassword ? 'تنظیم رمز عبور' : 'تغییر رمز عبور'}
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowPasswordForm(false)
-                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
-                    setPasswordError(null)
-                  }}
-                  className="btn btn-ghost order-2"
-                  disabled={savingPassword}
-                >
-                  لغو
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -560,7 +627,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleDeleteAccount}
-                  className="btn btn-error gap-2 order-1"
+                  className="btn btn-error gap-2"
                   disabled={deletingAccount}
                 >
                   {deletingAccount ? (
@@ -577,10 +644,10 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="btn btn-ghost order-2"
+                  className="btn btn-ghost"
                   disabled={deletingAccount}
                 >
-                  لغو
+                  انصراف
                 </button>
               </div>
             </div>

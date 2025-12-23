@@ -61,8 +61,9 @@ The app follows **Next.js 15 App Router** with route groups:
 **Collections:**
 
 - `Users` - Auth-enabled with roles (customer, seller, admin, superadmin, developer), addresses, shopping cart, wishlist
-  - OAuth support (Google Sign-In) with profile picture and sub fields
-  - `hasPassword` flag to track if OAuth users have set a custom password
+  - OAuth support (Google Sign-In) with `googleSub` and `picture` fields
+  - `authMethods` array field tracks authentication methods: `['password']`, `['google']`, or `['password', 'google']`
+  - Email verification via Payload's built-in `_verified` and `_verificationToken` fields (OAuth users auto-verified)
   - Sellers have limited admin panel access (products, orders, media only)
 - `Products` - E-commerce items with `stockStatus` auto-updated via `beforeChange` hook
   - Auto-assign seller field when created by seller role
@@ -104,9 +105,14 @@ Custom endpoints defined in `src/endpoints/`:
 
 **Authentication:**
 
-- `POST /api/register` - User registration
-- `POST /api/login` - User login
+- `POST /api/register` - User registration (sends verification email)
+- `POST /api/login` - User login (returns error if email not verified)
 - `POST /api/set-password` - Set password for OAuth users (allows OAuth users to enable password login)
+- `POST /api/verify-email` - Verify email and auto-login user
+- `POST /api/check-verification` - Poll verification status (auto-logs in when verified)
+- `POST /api/resend-verification` - Resend verification email
+- `POST /api/users/forgot-password` - Request password reset email (Payload built-in)
+- `POST /api/users/reset-password` - Reset password with token (Payload built-in)
 - `GET /api/oauth/google` - Initiate Google OAuth flow
 - `GET /api/oauth/google/callback` - Google OAuth callback handler
 
@@ -159,6 +165,21 @@ Custom endpoints defined in `src/endpoints/`:
 - Product reviews with verified purchase badges
 - Star ratings displayed for all products (gray when no reviews)
 - Recently viewed products tracking (localStorage for guests, database for authenticated users)
+
+**Authentication Flow:**
+
+- All auth pages use consistent animated gradient blob background with glassmorphism cards
+- Auth pages located in `src/app/(frontend)/auth/`:
+  - `/auth/login` - Login with email/password or Google OAuth
+  - `/auth/register` - Registration (redirects to success page with verification pending)
+  - `/auth/success` - Success page with polling for email verification status
+  - `/auth/verify-email` - Email verification (auto-login on success, countdown redirect)
+  - `/auth/forgot-password` - Request password reset email
+  - `/auth/reset-password` - Set new password with token
+  - `/auth/logout` - Logout with countdown redirect
+- Email verification uses "password swap" technique: saves hash/salt → sets temp password → logs in → restores hash/salt
+- Success page polls `/api/check-verification` every 3 seconds until email is verified
+- React useEffect separation pattern to avoid "Cannot update component while rendering" errors
 
 **Review Submission Flow:**
 
@@ -349,6 +370,7 @@ The application uses a comprehensive role-based access control system defined in
 - Product cards always show star ratings, even with 0 reviews
 - Plus button on product cards accounts for existing cart quantity
 - Checkout pages are in separate route group without navbar/footer
+- The form-control classes aren't doing anything, make sure to use fieldset classes from daisyui
 
 ### Custom Endpoint Path Pattern (CRITICAL)
 
@@ -378,6 +400,8 @@ export const myEndpoint: Endpoint = {
 
 **Current endpoint naming convention:**
 
+- `/register`, `/login`, `/set-password` - Auth endpoints
+- `/verify-email`, `/check-verification`, `/resend-verification` - Email verification endpoints
 - `/apply-affiliate` - Apply to become an affiliate
 - `/affiliate-dashboard` - Get affiliate dashboard data
 - `/seller-affiliate-dashboard` - Get seller affiliate dashboard
@@ -386,7 +410,6 @@ export const myEndpoint: Endpoint = {
 - `/affiliate-track-click` - Track affiliate link click
 - `/validate-promo-code` - Validate a promo code
 - `/create-order` - Create a new order
-- `/register`, `/login`, `/set-password` - Auth endpoints
 
 All endpoints are accessible at `/api/{path}` (e.g., `/api/apply-affiliate`).
 

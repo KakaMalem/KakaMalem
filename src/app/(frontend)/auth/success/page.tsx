@@ -1,62 +1,125 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { CheckCircle, ShoppingBag, Sparkles } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { CheckCircle, ArrowLeft, Mail, Loader2, Sparkles } from 'lucide-react'
 import { safeRedirect } from '@/utilities/redirect'
+import Logo from '../../components/Logo'
 
 export default function AuthSuccessPage() {
   const searchParams = useSearchParams()
-  const type = searchParams.get('type') || 'login' // 'login' or 'register'
+  const router = useRouter()
+  const type = searchParams.get('type') || 'login'
   const name = searchParams.get('name') || ''
+  const email = searchParams.get('email') || ''
   const redirect = searchParams.get('redirect') || '/'
+  const verificationPending = searchParams.get('verification') === 'pending'
   const [countdown, setCountdown] = useState(3)
+  const [isVerified, setIsVerified] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
 
-  useEffect(() => {
-    // Set flag to trigger cart merge
-    sessionStorage.setItem('justLoggedIn', 'true')
+  // Check verification status
+  const checkVerificationStatus = useCallback(async () => {
+    if (!email || isVerified) return false
 
-    // Dispatch custom event for cart merge
-    window.dispatchEvent(new Event('userLoggedIn'))
-
-    // Countdown timer
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          // Safely redirect
-          const safeUrl = safeRedirect(redirect, '/')
-          window.location.href = safeUrl
-          return 0
-        }
-        return prev - 1
+    setIsChecking(true)
+    try {
+      const response = await fetch('/api/check-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
       })
+
+      const data = await response.json()
+
+      if (data.verified) {
+        setIsVerified(true)
+        // Trigger cart merge since user is now logged in
+        sessionStorage.setItem('justLoggedIn', 'true')
+        window.dispatchEvent(new Event('userLoggedIn'))
+        return true
+      }
+    } catch (error) {
+      console.error('Error checking verification:', error)
+    } finally {
+      setIsChecking(false)
+    }
+    return false
+  }, [email, isVerified])
+
+  // Poll for verification status when pending
+  useEffect(() => {
+    if (!verificationPending || !email || isVerified) return
+
+    // Check immediately
+    checkVerificationStatus()
+
+    // Then poll every 3 seconds
+    const pollInterval = setInterval(() => {
+      checkVerificationStatus()
+    }, 3000)
+
+    return () => clearInterval(pollInterval)
+  }, [verificationPending, email, isVerified, checkVerificationStatus])
+
+  // Countdown and redirect after verification or login
+  useEffect(() => {
+    // Don't start countdown if verification is pending and not yet verified
+    if (verificationPending && !isVerified) {
+      return
+    }
+
+    // Set flag to trigger cart merge (for non-verification flows)
+    if (!verificationPending) {
+      sessionStorage.setItem('justLoggedIn', 'true')
+      window.dispatchEvent(new Event('userLoggedIn'))
+    }
+
+    // Start countdown
+    setCountdown(3)
+  }, [verificationPending, isVerified])
+
+  // Countdown timer
+  useEffect(() => {
+    if (verificationPending && !isVerified) return
+    if (countdown <= 0) return
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => prev - 1)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [redirect])
+  }, [verificationPending, isVerified, countdown])
+
+  // Handle redirect when countdown reaches 0
+  useEffect(() => {
+    if (verificationPending && !isVerified) return
+    if (countdown !== 0) return
+
+    const safeUrl = safeRedirect(redirect, '/')
+    router.push(safeUrl)
+  }, [countdown, redirect, router, verificationPending, isVerified])
 
   const isRegister = type === 'register'
+  const safeUrl = safeRedirect(redirect, '/')
+
+  // Determine current state
+  const showVerificationPending = verificationPending && !isVerified
+  const showVerificationSuccess = verificationPending && isVerified
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-base-200">
       {/* Animated gradient mesh background */}
       <div className="absolute inset-0 overflow-hidden">
         <div
-          className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full auth-blob-success-1 blur-3xl animate-pulse"
+          className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full auth-blob-1 blur-3xl animate-pulse"
           style={{ animationDuration: '8s' }}
         />
         <div
-          className="absolute -bottom-40 -right-40 w-[550px] h-[550px] rounded-full auth-blob-success-2 blur-3xl animate-pulse"
+          className="absolute -bottom-40 -right-40 w-[550px] h-[550px] rounded-full auth-blob-2 blur-3xl animate-pulse"
           style={{ animationDuration: '10s', animationDelay: '1s' }}
-        />
-        <div
-          className="absolute top-1/3 right-1/4 w-[400px] h-[400px] rounded-full auth-blob-success-3 blur-3xl animate-pulse"
-          style={{ animationDuration: '12s', animationDelay: '2s' }}
-        />
-        <div
-          className="absolute bottom-1/4 left-1/3 w-[300px] h-[300px] rounded-full auth-blob-success-4 blur-3xl animate-pulse"
-          style={{ animationDuration: '9s', animationDelay: '3s' }}
         />
       </div>
 
@@ -71,74 +134,127 @@ export default function AuthSuccessPage() {
 
       {/* Centered Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-base-100/70 backdrop-blur-xl rounded-3xl p-8 shadow-xl shadow-base-300/50 border border-base-100/80 text-center">
-          {/* Success Animation */}
-          <div className="relative mb-8 h-32 flex items-center justify-center">
-            {/* Animated circles */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full bg-success/20 animate-ping" />
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full bg-success/30 animate-pulse" />
-            </div>
+        <div className="w-full max-w-md bg-base-100/70 backdrop-blur-xl rounded-3xl p-8 shadow-xl shadow-base-300/50 border border-base-100/80">
+          {/* Logo */}
+          <div className="mb-6 flex justify-center">
+            <Logo />
+          </div>
 
-            {/* Icon */}
-            <div className="relative z-10 flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full bg-success flex items-center justify-center shadow-lg shadow-success/30 animate-bounce">
-                <CheckCircle className="w-12 h-12 text-success-content" />
-              </div>
+          {/* Icon */}
+          <div className="mb-6 flex justify-center">
+            <div
+              className={`w-20 h-20 rounded-full flex items-center justify-center ${
+                showVerificationPending
+                  ? 'bg-warning/10'
+                  : showVerificationSuccess
+                    ? 'bg-success/10'
+                    : 'bg-success/10'
+              }`}
+            >
+              {showVerificationPending ? (
+                <Mail className="w-10 h-10 text-warning" />
+              ) : (
+                <div className="relative">
+                  <CheckCircle className="w-10 h-10 text-success" />
+                  {isRegister && !showVerificationSuccess && (
+                    <Sparkles className="w-5 h-5 text-primary absolute -top-1 -right-1" />
+                  )}
+                </div>
+              )}
             </div>
-
-            {/* Sparkles */}
-            <Sparkles className="absolute top-0 right-1/4 w-6 h-6 text-warning animate-pulse" />
-            <Sparkles className="absolute bottom-0 left-1/4 w-4 h-4 text-warning animate-pulse delay-150" />
-            <Sparkles className="absolute top-1/4 left-0 w-5 h-5 text-warning animate-pulse delay-300" />
           </div>
 
           {/* Message */}
-          <h1 className="text-3xl font-bold mb-3 text-base-content">
-            {isRegister ? 'خوش آمدید!' : 'ورود موفق!'}
-          </h1>
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-base-content mb-2">
+              {showVerificationSuccess
+                ? 'ایمیل تأیید شد!'
+                : showVerificationPending
+                  ? 'یک قدم دیگر!'
+                  : isRegister
+                    ? 'خوش آمدید!'
+                    : 'ورود موفق'}
+            </h1>
 
-          {name && <p className="text-xl text-primary font-semibold mb-2">{name} عزیز</p>}
+            {name && !showVerificationPending && (
+              <p className="text-xl text-primary font-semibold">{name} عزیز</p>
+            )}
+          </div>
 
-          <p className="text-base-content/70 mb-6">
-            {isRegister
-              ? 'حساب کاربری شما با موفقیت ایجاد شد. از خرید در کاکا مالم لذت ببرید!'
-              : 'با موفقیت وارد حساب کاربری خود شدید.'}
-          </p>
+          {/* Verification Pending State */}
+          {showVerificationPending && (
+            <div className="space-y-4">
+              <p className="text-base-content/70 text-center">
+                حساب کاربری شما با موفقیت ایجاد شد.
+              </p>
 
-          {/* Features for new users */}
-          {isRegister && (
-            <div className="bg-white/50 rounded-2xl p-6 mb-6 border border-white/80">
-              <div className="flex items-center gap-3 text-right">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ShoppingBag className="w-5 h-5 text-primary" />
+              <div className="bg-warning/10 border border-warning/20 rounded-2xl p-5">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  {isChecking && <Loader2 className="w-4 h-4 text-warning animate-spin" />}
+                  <p className="text-warning font-semibold">لطفاً ایمیل خود را تأیید کنید</p>
                 </div>
-                <div>
-                  <p className="font-medium text-base-content">آماده خرید هستید!</p>
-                  <p className="text-sm text-base-content/70">هزاران محصول منتظر شماست</p>
-                </div>
+                <p className="text-base-content/60 text-sm text-center leading-relaxed">
+                  یک ایمیل تأیید به آدرس{' '}
+                  <span className="font-medium text-base-content" dir="ltr">
+                    {email}
+                  </span>{' '}
+                  ارسال شد.
+                </p>
+                <p className="text-base-content/60 text-sm text-center mt-2">
+                  لطفاً روی لینک موجود در ایمیل کلیک کنید.
+                </p>
+              </div>
+
+              <div className="bg-base-200/50 rounded-xl p-3 text-center">
+                <p className="text-base-content/50 text-xs flex items-center justify-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  این صفحه بعد از تأیید ایمیل به‌روز می‌شود...
+                </p>
               </div>
             </div>
           )}
 
-          {/* Countdown */}
-          <div className="flex items-center justify-center gap-2 text-base-content/50">
-            <div className="loading loading-spinner loading-sm" />
-            <span>انتقال به صفحه اصلی در {countdown} ثانیه...</span>
-          </div>
+          {/* Verification Success State */}
+          {showVerificationSuccess && (
+            <div className="space-y-4">
+              <div className="bg-success/10 border border-success/20 rounded-2xl p-5 text-center">
+                <p className="text-success font-semibold mb-1">حساب شما فعال شد!</p>
+                <p className="text-base-content/60 text-sm">
+                  ایمیل شما با موفقیت تأیید شد و وارد حساب کاربری شدید.
+                </p>
+              </div>
 
-          {/* Manual redirect link */}
-          <button
-            onClick={() => {
-              const safeUrl = safeRedirect(redirect, '/')
-              window.location.href = safeUrl
-            }}
-            className="btn btn-link btn-sm mt-4 text-primary"
-          >
-            همین حالی برو
-          </button>
+              <div className="bg-base-200 rounded-xl p-3 text-center">
+                <p className="text-sm text-base-content/70">
+                  به صفحه اصلی منتقل می‌شوید... ({countdown})
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Normal Login/Register Success State */}
+          {!showVerificationPending && !showVerificationSuccess && (
+            <div className="space-y-4">
+              <p className="text-base-content/70 text-center">
+                {isRegister ? 'حساب کاربری شما با موفقیت ایجاد شد.' : 'با موفقیت وارد شدید.'}
+              </p>
+
+              <div className="bg-base-200 rounded-xl p-3 text-center">
+                <p className="text-sm text-base-content/70">در حال انتقال... ({countdown})</p>
+              </div>
+            </div>
+          )}
+
+          {/* Action Button */}
+          <div className="mt-6">
+            <Link
+              href={showVerificationPending ? '/auth/login' : safeUrl}
+              className="btn btn-primary w-full gap-2"
+            >
+              {showVerificationPending ? 'بازگشت به صفحه ورود' : 'ادامه'}
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>

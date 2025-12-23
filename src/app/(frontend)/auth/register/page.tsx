@@ -231,46 +231,10 @@ export default function RegisterPage() {
         return
       }
 
-      // Registration successful, now login automatically
-      try {
-        // Call custom login endpoint
-        const loginResponse = await fetch('/api/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-            stayLoggedIn: false, // Default session for auto-login
-          }),
-        })
-
-        const loginData = await loginResponse.json()
-
-        if (loginResponse.ok && loginData.user) {
-          // Get redirect URL from query params
-          const redirectUrl = getRedirectUrl(searchParams) || '/'
-
-          // Redirect to success page
-          const successUrl = `/auth/success?type=register&name=${encodeURIComponent(formData.firstName)}&redirect=${encodeURIComponent(redirectUrl)}`
-          window.location.href = successUrl
-        } else {
-          // Login failed, redirect to login page
-          toast.success('حساب کاربری ایجاد شد! لطفاً وارد شوید.')
-          setTimeout(() => {
-            window.location.href = '/auth/login'
-          }, 1500)
-        }
-      } catch (loginError) {
-        console.error('Auto-login failed:', loginError)
-        // Login failed, redirect to login page
-        toast.success('حساب کاربری ایجاد شد! لطفاً وارد شوید.')
-        setTimeout(() => {
-          window.location.href = '/auth/login'
-        }, 1500)
-      }
+      // Registration successful - redirect to success page with verification pending
+      // Don't auto-login since email needs to be verified first
+      const successUrl = `/auth/success?type=register&name=${encodeURIComponent(formData.firstName)}&email=${encodeURIComponent(formData.email)}&verification=pending`
+      window.location.href = successUrl
     } catch (err: unknown) {
       if (err instanceof TypeError && err.message === 'Failed to fetch') {
         toast.error('خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.')
@@ -390,7 +354,7 @@ export default function RegisterPage() {
             {/* Email */}
             <div className="fieldset">
               <label className="label">
-                <span className="label-text font-medium">آدرس ایمیل</span>
+                <span className="label-text font-medium">ایمیل آدرس</span>
               </label>
               <label
                 className={`input flex items-center gap-2 w-full ${fieldErrors.email ? 'input-error' : ''}`}

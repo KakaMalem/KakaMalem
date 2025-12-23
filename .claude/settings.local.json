@@ -6,7 +6,8 @@
       "Bash(xargs:*)",
       "Bash(pnpm generate:types:*)",
       "Bash(pnpm build:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

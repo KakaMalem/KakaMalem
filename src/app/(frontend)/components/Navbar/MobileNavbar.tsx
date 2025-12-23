@@ -103,13 +103,6 @@ const MenuIcon = ({ type, className = 'w-5 h-5' }: { type: IconType; className?:
   return <>{icons[type]}</>
 }
 
-// Generate Gravatar URL from email using a simple hash
-// d=404 returns 404 if no gravatar exists, allowing proper fallback to initials
-const getGravatarUrl = (email: string, size: number = 80): string => {
-  const hash = email.trim().toLowerCase()
-  return `https://www.gravatar.com/avatar/${btoa(hash).slice(0, 32)}?s=${size}&d=404`
-}
-
 const UserAvatar = ({
   user,
   size = 'md',
@@ -120,7 +113,6 @@ const UserAvatar = ({
   showRing?: boolean
 }) => {
   const [imgError, setImgError] = useState(false)
-  const [gravatarError, setGravatarError] = useState(false)
 
   const sizeClasses = {
     xs: 'w-6 h-6 text-[10px]',
@@ -131,21 +123,17 @@ const UserAvatar = ({
 
   const sizePx = { xs: 24, sm: 32, md: 40, lg: 48 }
 
-  // Priority: 1. OAuth picture, 2. Gravatar, 3. Initials
   const oauthPicture = user?.picture
-  const email = user?.email
-  const gravatarUrl = email ? getGravatarUrl(email, sizePx[size] * 2) : null
   const initial = (user?.firstName?.[0] || user?.email?.[0] || 'U').toUpperCase()
 
   const ringClasses = showRing ? 'ring-2 ring-base-200 ring-offset-1 ring-offset-base-100' : ''
 
-  // Reset error states when user changes
+  // Reset error state when user changes
   useEffect(() => {
     setImgError(false)
-    setGravatarError(false)
-  }, [user?.id, user?.picture, user?.email])
+  }, [user?.id, user?.picture])
 
-  // Try OAuth picture first
+  // Try OAuth picture first, fallback to initials
   if (oauthPicture && !imgError) {
     return (
       <div
@@ -158,25 +146,6 @@ const UserAvatar = ({
           height={sizePx[size]}
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
-        />
-      </div>
-    )
-  }
-
-  // Try Gravatar second
-  if (gravatarUrl && !gravatarError) {
-    return (
-      <div
-        className={`${sizeClasses[size]} rounded-full overflow-hidden flex-shrink-0 ${ringClasses}`}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={gravatarUrl}
-          alt={user?.firstName || 'User'}
-          width={sizePx[size]}
-          height={sizePx[size]}
-          className="w-full h-full object-cover"
-          onError={() => setGravatarError(true)}
         />
       </div>
     )

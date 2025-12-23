@@ -4,7 +4,7 @@ import { Product } from '@/payload-types'
 import HomeClient from './page.client'
 
 export const metadata: Metadata = {
-  title: 'صفحه اصلی',
+  title: 'Kaka Malem',
   description:
     'فروشگاه اینترنتی کاکا معلم - مرور و خرید آنلاین محصولات متنوع با کیفیت بالا و ارسال سریع در کابل',
   openGraph: {

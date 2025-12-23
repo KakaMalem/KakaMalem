@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-base-content mb-2">بازیابی رمز عبور</h1>
             <p className="text-base-content/70">
-              آدرس ایمیل خود را وارد کنید تا لینک بازیابی رمز عبور برایتان ارسال شود.
+              ایمیل آدرس خود را وارد کنید تا لینک بازیابی رمز عبور برایتان ارسال شود.
             </p>
           </div>
 
@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
                 {/* Email */}
                 <div className="fieldset">
                   <label className="label">
-                    <span className="label-text font-medium">آدرس ایمیل</span>
+                    <span className="label-text font-medium">ایمیل آدرس</span>
                   </label>
                   <label className="input w-full flex items-center gap-2">
                     <Mail className="w-4 h-4 opacity-70 text-secondary" />

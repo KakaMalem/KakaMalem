@@ -164,17 +164,17 @@ export interface User {
   firstName?: string | null;
   lastName?: string | null;
   /**
-   * OAuth provider subject ID (system-managed)
+   * Available authentication methods (system-managed)
    */
-  sub?: string | null;
+  authMethods?: ('password' | 'google')[] | null;
   /**
-   * OAuth provider profile picture URL (system-managed)
+   * Google OAuth subject ID (system-managed)
+   */
+  googleSub?: string | null;
+  /**
+   * Profile picture URL (system-managed)
    */
   picture?: string | null;
-  /**
-   * Indicates if user has set a custom password (system-managed)
-   */
-  hasPassword?: boolean | null;
   /**
    * Original Fan - Early supporter badge
    */
@@ -274,6 +274,8 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -900,9 +902,9 @@ export interface UsersSelect<T extends boolean = true> {
   password?: T;
   firstName?: T;
   lastName?: T;
-  sub?: T;
+  authMethods?: T;
+  googleSub?: T;
   picture?: T;
-  hasPassword?: T;
   ogfan?: T;
   phone?: T;
   roles?: T;
@@ -952,6 +954,8 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  _verified?: T;
+  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:

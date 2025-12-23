@@ -6,9 +6,9 @@ interface SetPasswordRequest {
 }
 
 /**
- * Set password for OAuth users who don't have a custom password yet
- * This endpoint is specifically for users who signed up via OAuth (Google, etc.)
- * and want to create a password to enable password-based login
+ * Set or change password for users
+ * - OAuth-only users can set a password to enable password login
+ * - Users with password auth can change their password (requires current password)
  */
 export const setPassword: Endpoint = {
   path: '/set-password',
@@ -35,20 +35,19 @@ export const setPassword: Endpoint = {
       return Response.json({ error: 'رمز عبور جدید باید حداقل ۸ کاراکتر باشد' }, { status: 400 })
     }
 
-    // If user has a sub field (OAuth user) and hasn't set a password yet,
-    // allow them to set password without verification
-    const needsToSetPassword = !!user.sub && !user.hasPassword
+    const authMethods = (user.authMethods as string[]) || []
+    const hasPasswordAuth = authMethods.includes('password')
 
-    if (!needsToSetPassword && !currentPassword) {
-      // User trying to change password without current password
-      return Response.json(
-        { error: 'رمز عبور فعلی برای تغییر رمز عبور الزامی است' },
-        { status: 400 },
-      )
-    }
+    // If user already has password auth, require current password
+    if (hasPasswordAuth) {
+      if (!currentPassword) {
+        return Response.json(
+          { error: 'رمز عبور فعلی برای تغییر رمز عبور الزامی است' },
+          { status: 400 },
+        )
+      }
 
-    if (!needsToSetPassword && currentPassword) {
-      // Verify current password for users who already have one
+      // Verify current password
       try {
         await payload.login({
           collection: 'users',
@@ -71,21 +70,36 @@ export const setPassword: Endpoint = {
     }
 
     try {
-      // Update password and mark that user now has a password
+      // Update password
       await payload.update({
         collection: 'users',
         id: user.id,
         data: {
           password: newPassword,
-          hasPassword: true,
         },
       })
 
+      // If user didn't have password auth before, add it to authMethods
+      if (!hasPasswordAuth) {
+        // @ts-expect-error - accessing internal MongoDB connection
+        const db = payload.db?.connection?.db || payload.db?.client?.db()
+        if (db) {
+          const mongoose = await import('mongoose')
+          await db
+            .collection('users')
+            .updateOne(
+              { _id: new mongoose.Types.ObjectId(user.id) },
+              { $addToSet: { authMethods: 'password' } },
+            )
+        }
+      }
+
       return Response.json({
         success: true,
-        message: needsToSetPassword
-          ? 'رمز عبور با موفقیت ایجاد شد'
-          : 'رمز عبور با موفقیت تغییر کرد',
+        message: hasPasswordAuth
+          ? 'رمز عبور با موفقیت تغییر کرد'
+          : 'رمز عبور با موفقیت ایجاد شد. اکنون می‌توانید با ایمیل و رمز عبور وارد شوید.',
+        authMethods: hasPasswordAuth ? authMethods : [...authMethods, 'password'],
       })
     } catch (error) {
       console.error('Error setting password:', error)

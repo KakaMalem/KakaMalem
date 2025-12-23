@@ -73,7 +73,157 @@ export const Users: CollectionConfig = {
       // Only enforce secure cookies in production on public domains
       secure: false, // Let individual endpoints handle security based on host
     },
-    // verify: false, // Disable email verification for OAuth users
+    // Password reset functionality
+    forgotPassword: {
+      generateEmailHTML: (args) => {
+        const { token, user } = args || {}
+        const resetUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}/auth/reset-password?token=${token}`
+        const firstName = (user as { firstName?: string }).firstName || 'کاربر'
+
+        return `
+          <!DOCTYPE html>
+          <html dir="rtl" lang="fa">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; direction: rtl;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f5f5f5;" dir="rtl">
+              <tr>
+                <td style="padding: 40px 20px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" dir="rtl">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background-color: #dc2626; padding: 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">کاکا معلم</h1>
+                      </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                      <td style="padding: 40px 30px; text-align: right;" dir="rtl">
+                        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px; text-align: right;">سلام ${firstName} عزیز،</h2>
+
+                        <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; text-align: right;">
+                          درخواست بازیابی رمز عبور برای حساب کاربری شما دریافت شد. برای تنظیم رمز عبور جدید روی دکمه زیر کلیک کنید.
+                        </p>
+
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 30px 0;" dir="rtl">
+                          <tr>
+                            <td style="background-color: #dc2626; border-radius: 8px;">
+                              <a href="${resetUrl}" style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold;">
+                                تنظیم رمز عبور جدید
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: right;">
+                          اگر دکمه بالا کار نمی‌کند، لینک زیر را در مرورگر خود کپی و جایگذاری کنید:
+                        </p>
+                        <p style="color: #dc2626; font-size: 14px; word-break: break-all; margin: 10px 0 0 0; text-align: left; direction: ltr;">
+                          <a href="${resetUrl}" style="color: #dc2626;">${resetUrl}</a>
+                        </p>
+
+                        <p style="color: #9ca3af; font-size: 13px; margin: 30px 0 0 0; text-align: right;">
+                          این لینک تا ۱ ساعت معتبر است.
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                      <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                          اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید. رمز عبور شما تغییر نخواهد کرد.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `
+      },
+      generateEmailSubject: () => 'بازیابی رمز عبور - کاکا معلم',
+    },
+    // Email verification for password-based users (OAuth users are auto-verified)
+    verify: {
+      generateEmailHTML: ({ token, user }) => {
+        const verificationUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}/auth/verify-email?token=${token}`
+        const firstName = (user as { firstName?: string }).firstName || 'کاربر'
+
+        return `
+          <!DOCTYPE html>
+          <html dir="rtl" lang="fa">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; direction: rtl;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f5f5f5;" dir="rtl">
+              <tr>
+                <td style="padding: 40px 20px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" dir="rtl">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background-color: #dc2626; padding: 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">کاکا معلم</h1>
+                      </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                      <td style="padding: 40px 30px; text-align: right;" dir="rtl">
+                        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px; text-align: right;">سلام ${firstName} عزیز،</h2>
+
+                        <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; text-align: right;">
+                          از ثبت‌نام شما در کاکا معلم متشکریم! لطفاً برای تأیید ایمیل آدرس خود روی دکمه زیر کلیک کنید.
+                        </p>
+
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 30px 0;" dir="rtl">
+                          <tr>
+                            <td style="background-color: #dc2626; border-radius: 8px;">
+                              <a href="${verificationUrl}" style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold;">
+                                تأیید ایمیل
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: right;">
+                          اگر دکمه بالا کار نمی‌کند، لینک زیر را در مرورگر خود کپی و جایگذاری کنید:
+                        </p>
+                        <p style="color: #dc2626; font-size: 14px; word-break: break-all; margin: 10px 0 0 0; text-align: left; direction: ltr;">
+                          <a href="${verificationUrl}" style="color: #dc2626;">${verificationUrl}</a>
+                        </p>
+
+                        <p style="color: #9ca3af; font-size: 13px; margin: 30px 0 0 0; text-align: right;">
+                          این لینک تا ۲۴ ساعت معتبر است.
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                      <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                          اگر شما این درخواست را نداده‌اید، لطفاً این ایمیل را نادیده بگیرید.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `
+      },
+      generateEmailSubject: () => 'تأیید ایمیل - کاکا معلم',
+    },
   },
   fields: [
     /**
@@ -111,10 +261,31 @@ export const Users: CollectionConfig = {
       required: false, // Allow OAuth users without lastName
     },
     {
-      name: 'sub',
+      name: 'authMethods',
+      type: 'select',
+      hasMany: true,
+      defaultValue: [],
+      options: [
+        { label: 'Password', value: 'password' },
+        { label: 'Google', value: 'google' },
+      ],
+      access: {
+        // System-managed field, no manual updates
+        create: nobody,
+        update: nobody,
+      },
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: 'Available authentication methods (system-managed)',
+      },
+    },
+    {
+      name: 'googleSub',
       type: 'text',
       access: {
         // OAuth field - system managed, no manual updates
+        create: nobody,
         update: nobody,
       },
       admin: {
@@ -123,7 +294,7 @@ export const Users: CollectionConfig = {
         condition: (data, siblingData, { user }) => {
           return !!user?.roles?.includes('developer')
         },
-        description: 'OAuth provider subject ID (system-managed)',
+        description: 'Google OAuth subject ID (system-managed)',
       },
       index: true,
     },
@@ -132,6 +303,7 @@ export const Users: CollectionConfig = {
       type: 'text',
       access: {
         // OAuth field - system managed, no manual updates
+        create: nobody,
         update: nobody,
       },
       admin: {
@@ -140,24 +312,7 @@ export const Users: CollectionConfig = {
         condition: (data, siblingData, { user }) => {
           return !!user?.roles?.includes('developer')
         },
-        description: 'OAuth provider profile picture URL (system-managed)',
-      },
-    },
-    {
-      name: 'hasPassword',
-      type: 'checkbox',
-      defaultValue: false,
-      access: {
-        // System-managed field, no manual updates
-        update: nobody,
-      },
-      admin: {
-        readOnly: true,
-        // Hidden from non-developers
-        condition: (data, siblingData, { user }) => {
-          return !!user?.roles?.includes('developer')
-        },
-        description: 'Indicates if user has set a custom password (system-managed)',
+        description: 'Profile picture URL (system-managed)',
       },
     },
     {

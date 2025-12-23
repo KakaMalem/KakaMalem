@@ -49,10 +49,27 @@ export const registerUser: Endpoint = {
       })
 
       if (existingUsers.docs.length > 0) {
+        const existingUser = existingUsers.docs[0]
+        const authMethods = (existingUser.authMethods as string[]) || []
+
+        // Provide helpful error message based on how they registered
+        if (authMethods.includes('google') && !authMethods.includes('password')) {
+          return Response.json(
+            {
+              error: 'این ایمیل با گوگل ثبت شده است. لطفاً با گوگل وارد شوید.',
+              code: 'EMAIL_EXISTS_GOOGLE',
+            },
+            { status: 409 },
+          )
+        }
+
         return Response.json({ error: 'این ایمیل قبلاً ثبت شده است' }, { status: 409 })
       }
 
-      // Create user
+      // Create user - Payload CMS will automatically:
+      // 1. Set _verified to false
+      // 2. Generate _verificationToken
+      // 3. Send verification email (using generateEmailHTML from auth.verify config)
       const user = await payload.create({
         collection: 'users',
         data: {
@@ -62,9 +79,21 @@ export const registerUser: Endpoint = {
           lastName: lastName.trim(),
           phone: phone?.trim() || undefined,
           roles: ['customer'],
-          hasPassword: true,
         },
       })
+
+      // Update authMethods directly in MongoDB (system-managed field)
+      // @ts-expect-error - accessing internal MongoDB connection
+      const db = payload.db?.connection?.db || payload.db?.client?.db()
+      if (db) {
+        const mongoose = await import('mongoose')
+        await db
+          .collection('users')
+          .updateOne(
+            { _id: new mongoose.Types.ObjectId(user.id) },
+            { $set: { authMethods: ['password'] } },
+          )
+      }
 
       console.log('User created successfully:', user.id)
 
@@ -77,13 +106,12 @@ export const registerUser: Endpoint = {
               equals: email.toLowerCase().trim(),
             },
           },
-          limit: 100, // Adjust if needed
+          limit: 100,
         })
 
         if (guestOrders.docs.length > 0) {
           console.log(`Found ${guestOrders.docs.length} guest orders to migrate for ${email}`)
 
-          // Update each guest order to link to the new user
           await Promise.all(
             guestOrders.docs.map((order) =>
               payload.update({
@@ -91,7 +119,7 @@ export const registerUser: Endpoint = {
                 id: order.id,
                 data: {
                   customer: user.id,
-                  guestEmail: undefined, // Clear guest email since it's now linked to user
+                  guestEmail: undefined,
                 },
               }),
             ),
@@ -100,15 +128,15 @@ export const registerUser: Endpoint = {
           console.log(`Successfully migrated ${guestOrders.docs.length} orders to user ${user.id}`)
         }
       } catch (migrationError) {
-        // Log error but don't fail registration
         console.error('Error migrating guest orders:', migrationError)
       }
 
-      // Return success - frontend will handle login
+      // Return success - frontend will show verification message
       return Response.json(
         {
           success: true,
-          message: 'ثبت‌نام با موفقیت انجام شد',
+          message: 'ثبت‌نام با موفقیت انجام شد. لطفاً ایمیل خود را تأیید کنید.',
+          requiresVerification: true,
           user: {
             id: user.id,
             email: user.email,
@@ -123,7 +151,6 @@ export const registerUser: Endpoint = {
     } catch (error: unknown) {
       console.error('Registration error:', error)
 
-      // Handle specific PayloadCMS validation errors
       if (error && typeof error === 'object' && 'name' in error) {
         if (error.name === 'ValidationError') {
           const validationError = error as { data?: unknown; message?: string }

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -24,7 +24,9 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
-  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [requiresVerification, setRequiresVerification] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const [resendingVerification, setResendingVerification] = useState(false)
 
   // Validate email format
   const validateEmail = (email: string): boolean => {
@@ -98,15 +100,20 @@ export default function LoginPage() {
             setFieldErrors({ email: 'کاربری با این ایمیل یافت نشد' })
             break
           case 401:
-            // Wrong password - show on password field and reveal forgot password link
+            // Wrong password - show on password field
             setFieldErrors({ password: 'رمز عبور اشتباه است' })
-            setShowForgotPassword(true)
             break
           case 403:
-            // Account locked - show toast
-            toast.error('حساب کاربری قفل شده است. لطفاً با پشتیبانی تماس بگیرید.', {
-              duration: 5000,
-            })
+            // Check if it's verification required or account locked
+            if (data.requiresVerification) {
+              setRequiresVerification(true)
+              setVerificationEmail(data.email || email)
+            } else {
+              // Account locked - show toast
+              toast.error('حساب کاربری قفل شده است. لطفاً با پشتیبانی تماس بگیرید.', {
+                duration: 5000,
+              })
+            }
             break
           default:
             toast.error(data.error || 'ورود ناموفق بود')
@@ -131,6 +138,39 @@ export default function LoginPage() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (!verificationEmail) return
+
+    setResendingVerification(true)
+    try {
+      const response = await fetch('/api/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: verificationEmail }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        if (data.alreadyVerified) {
+          toast.success('ایمیل شما قبلاً تأیید شده است. لطفاً دوباره وارد شوید.')
+          setRequiresVerification(false)
+        } else {
+          toast.success('ایمیل تأیید ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.')
+        }
+      } else {
+        toast.error(data.error || 'خطا در ارسال ایمیل تأیید')
+      }
+    } catch (error) {
+      console.error('Resend verification error:', error)
+      toast.error('خطا در اتصال به سرور')
+    } finally {
+      setResendingVerification(false)
     }
   }
 
@@ -182,12 +222,49 @@ export default function LoginPage() {
             <p className="text-base-content/70">وارد حساب کاربری خود شوید</p>
           </div>
 
+          {/* Verification Required Message */}
+          {requiresVerification && (
+            <div className="mb-6 bg-warning/10 border border-warning/20 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-warning font-medium mb-1">ایمیل تأیید نشده است</p>
+                  <p className="text-base-content/60 text-sm mb-3">
+                    لطفاً ابتدا ایمیل خود را تأیید کنید. یک ایمیل تأیید به{' '}
+                    <span className="font-medium text-base-content" dir="ltr">
+                      {verificationEmail}
+                    </span>{' '}
+                    ارسال شده است.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendingVerification}
+                    className="btn btn-sm btn-warning gap-2"
+                  >
+                    {resendingVerification ? (
+                      <>
+                        <span className="loading loading-spinner loading-xs" />
+                        در حال ارسال...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        ارسال مجدد ایمیل تأیید
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div className="fieldset">
               <label className="label">
-                <span className="label-text font-medium">آدرس ایمیل</span>
+                <span className="label-text font-medium">ایمیل آدرس</span>
               </label>
               <label
                 className={`input w-full flex items-center gap-2 ${fieldErrors.email ? 'input-error' : ''}`}
@@ -280,7 +357,7 @@ export default function LoginPage() {
               </CapsLockDetector>
             </div>
 
-            {/* Remember Me */}
+            {/* Remember Me & Forgot Password */}
             <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
               <label className="label cursor-pointer gap-2 p-0">
                 <input
@@ -291,11 +368,9 @@ export default function LoginPage() {
                 />
                 <span className="label-text">مرا به خاطر بسپار</span>
               </label>
-              {showForgotPassword && (
-                <Link href="/auth/forgot-password" className="link link-primary text-sm">
-                  رمز عبور را فراموش کرده‌اید؟
-                </Link>
-              )}
+              <Link href="/auth/forgot-password" className="link link-primary text-sm">
+                رمز عبور را فراموش کرده‌اید؟
+              </Link>
             </div>
 
             {/* Submit Button */}

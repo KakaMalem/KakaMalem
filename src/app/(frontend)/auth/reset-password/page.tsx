@@ -1,11 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Lock, Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle, XCircle, ArrowLeft, Loader2, KeyRound } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Logo from '../../components/Logo'
 import { CapsLockDetector } from '../../components/CapsLockDetector'
+
+type ResetStatus = 'form' | 'loading' | 'success' | 'error' | 'no_token'
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams()
@@ -16,33 +18,51 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [status, setStatus] = useState<ResetStatus>('form')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [countdown, setCountdown] = useState(3)
 
   useEffect(() => {
     if (!token) {
-      setError('لینک بازیابی نامعتبر است. لطفاً مجدداً درخواست بازیابی رمز عبور دهید.')
+      setStatus('no_token')
     }
   }, [token])
 
+  // Countdown timer after success
+  useEffect(() => {
+    if (status !== 'success') return
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => prev - 1)
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [status])
+
+  // Handle redirect when countdown reaches 0
+  useEffect(() => {
+    if (status === 'success' && countdown === 0) {
+      router.push('/auth/login')
+    }
+  }, [status, countdown, router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setErrorMessage('')
 
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError('رمز عبور و تکرار آن یکسان نیستند')
+      setErrorMessage('رمز عبور و تکرار آن یکسان نیستند')
       return
     }
 
     // Validate password strength
     if (password.length < 8) {
-      setError('رمز عبور باید حداقل ۸ کاراکتر باشد')
+      setErrorMessage('رمز عبور باید حداقل ۸ کاراکتر باشد')
       return
     }
 
-    setLoading(true)
+    setStatus('loading')
 
     try {
       const response = await fetch('/api/users/reset-password', {
@@ -59,116 +79,139 @@ export default function ResetPasswordPage() {
         throw new Error(data.errors?.[0]?.message || 'خطایی در تغییر رمز عبور رخ داد')
       }
 
-      setSuccess(true)
-
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        router.push('/auth/login')
-      }, 3000)
+      setStatus('success')
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'خطایی در تغییر رمز عبور رخ داد'
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
+      const message = err instanceof Error ? err.message : 'خطایی در تغییر رمز عبور رخ داد'
+      setErrorMessage(message)
+      setStatus('error')
     }
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-base-100">
-        <div className="w-full max-w-md">
+    <div className="min-h-screen relative overflow-hidden bg-base-200">
+      {/* Animated gradient mesh background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full auth-blob-1 blur-3xl animate-pulse"
+          style={{ animationDuration: '8s' }}
+        />
+        <div
+          className="absolute -bottom-40 -right-40 w-[550px] h-[550px] rounded-full auth-blob-2 blur-3xl animate-pulse"
+          style={{ animationDuration: '10s', animationDelay: '1s' }}
+        />
+        <div
+          className="absolute top-1/3 right-1/4 w-[400px] h-[400px] rounded-full auth-blob-3 blur-3xl animate-pulse"
+          style={{ animationDuration: '12s', animationDelay: '2s' }}
+        />
+        <div
+          className="absolute bottom-1/4 left-1/3 w-[300px] h-[300px] rounded-full auth-blob-4 blur-3xl animate-pulse"
+          style={{ animationDuration: '9s', animationDelay: '3s' }}
+        />
+      </div>
+
+      {/* Dot grid overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.4]"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, oklch(40% 0.01 264 / 0.3) 1px, transparent 0)`,
+          backgroundSize: '32px 32px',
+        }}
+      />
+
+      {/* Centered Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-md bg-base-100/70 backdrop-blur-xl rounded-3xl p-8 shadow-xl shadow-base-300/50 border border-base-100/80">
           {/* Logo */}
-          <div className="mb-6">
+          <div className="mb-6 flex justify-center">
             <Logo />
           </div>
 
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">تنظیم رمز عبور جدید</h1>
-            <p className="text-base-content/70">رمز عبور جدید خود را وارد کنید.</p>
-          </div>
-
-          {/* Success Message */}
-          {success ? (
-            <div className="space-y-6">
-              <div className="alert alert-success">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div>
-                  <h3 className="font-bold">رمز عبور تغییر کرد!</h3>
-                  <div className="text-sm">
-                    رمز عبور شما با موفقیت تغییر کرد. در حال انتقال به صفحه ورود...
-                  </div>
-                </div>
+          {/* Loading State */}
+          {status === 'loading' && (
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
-
-              <div className="text-center">
-                <Link href="/auth/login" className="btn btn-primary">
-                  <ArrowLeft className="w-4 h-4" />
-                  رفتن به صفحه ورود
-                </Link>
-              </div>
+              <h1 className="text-2xl font-bold text-base-content mb-2">
+                در حال تغییر رمز عبور...
+              </h1>
+              <p className="text-base-content/60">لطفاً صبر کنید</p>
             </div>
-          ) : !token ? (
-            // Invalid Token Message
-            <div className="space-y-6">
-              <div className="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div>
-                  <h3 className="font-bold">لینک نامعتبر</h3>
-                  <div className="text-sm">لینک بازیابی رمز عبور نامعتبر است یا منقضی شده است.</div>
-                </div>
-              </div>
+          )}
 
-              <div className="text-center">
-                <Link href="/auth/forgot-password" className="btn btn-primary">
+          {/* Success State */}
+          {status === 'success' && (
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-success" />
+              </div>
+              <h1 className="text-2xl font-bold text-base-content mb-2">رمز عبور تغییر کرد!</h1>
+              <p className="text-base-content/60 mb-6">
+                رمز عبور شما با موفقیت تغییر کرد. اکنون می‌توانید با رمز عبور جدید وارد شوید.
+              </p>
+              <div className="bg-base-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-base-content/70">
+                  به صفحه ورود منتقل می‌شوید... ({countdown})
+                </p>
+              </div>
+              <Link href="/auth/login" className="btn btn-primary w-full gap-2">
+                رفتن به صفحه ورود
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+
+          {/* No Token State */}
+          {status === 'no_token' && (
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-warning/10 flex items-center justify-center">
+                <KeyRound className="w-8 h-8 text-warning" />
+              </div>
+              <h1 className="text-2xl font-bold text-base-content mb-2">لینک نامعتبر</h1>
+              <p className="text-base-content/60 mb-8">
+                لینک بازیابی رمز عبور نامعتبر است یا منقضی شده است. لطفاً مجدداً درخواست بازیابی رمز
+                عبور دهید.
+              </p>
+              <Link href="/auth/forgot-password" className="btn btn-primary w-full gap-2">
+                درخواست لینک جدید
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+
+          {/* Error State */}
+          {status === 'error' && (
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-error/10 flex items-center justify-center">
+                <XCircle className="w-8 h-8 text-error" />
+              </div>
+              <h1 className="text-2xl font-bold text-base-content mb-2">خطا در تغییر رمز عبور</h1>
+              <p className="text-base-content/60 mb-8">{errorMessage}</p>
+              <div className="space-y-3">
+                <button onClick={() => setStatus('form')} className="btn btn-primary w-full">
+                  تلاش مجدد
+                </button>
+                <Link href="/auth/forgot-password" className="btn btn-outline w-full">
                   درخواست لینک جدید
                 </Link>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* Form State */}
+          {status === 'form' && token && (
             <>
-              {/* Error Alert */}
-              {error && (
+              {/* Header */}
+              <div className="mb-8 text-center">
+                <h1 className="text-3xl font-bold text-base-content mb-2">تنظیم رمز عبور جدید</h1>
+                <p className="text-base-content/70">رمز عبور جدید خود را وارد کنید.</p>
+              </div>
+
+              {/* Inline Error */}
+              {errorMessage && (
                 <div className="alert alert-error mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="stroke-current shrink-0 h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span>{error}</span>
+                  <XCircle className="w-5 h-5" />
+                  <span>{errorMessage}</span>
                 </div>
               )}
 
@@ -231,6 +274,7 @@ export default function ResetPasswordPage() {
                       </>
                     )}
                   </CapsLockDetector>
+                  <p className="text-xs text-base-content/50 mt-1">حداقل ۸ کاراکتر</p>
                 </div>
 
                 {/* Confirm Password */}
@@ -266,52 +310,20 @@ export default function ResetPasswordPage() {
                 </div>
 
                 {/* Submit Button */}
-                <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <span className="loading loading-spinner" />
-                      در حال تغییر رمز عبور...
-                    </>
-                  ) : (
-                    'تغییر رمز عبور'
-                  )}
+                <button type="submit" className="btn btn-primary btn-block">
+                  تغییر رمز عبور
                 </button>
               </form>
 
               {/* Back to Login */}
-              <div className="mt-6 text-center">
-                <Link
-                  href="/auth/login"
-                  className="link link-primary inline-flex items-center gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  بازگشت به صفحه ورود
+              <p className="text-center mt-8 text-base-content/80">
+                رمز عبور خود را به یاد آوردید؟{' '}
+                <Link href="/auth/login" className="text-primary font-semibold hover:underline">
+                  ورود
                 </Link>
-              </div>
+              </p>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Right Side - Image/Branding */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary to-primary/80 items-center justify-center p-12 text-white">
-        <div className="max-w-lg text-center">
-          <div className="mb-8">
-            <ShieldCheck className="w-24 h-24 mx-auto mb-6 opacity-90" />
-          </div>
-          <h2 className="text-5xl font-bold mb-6">امنیت حساب شما</h2>
-          <p className="text-xl opacity-90 mb-8">
-            یک رمز عبور قوی انتخاب کنید که شامل حروف بزرگ، کوچک، اعداد و نمادها باشد.
-          </p>
-          <div className="bg-white/10 rounded-xl p-6 text-right">
-            <h3 className="text-lg font-semibold mb-4">نکات امنیتی:</h3>
-            <ul className="space-y-2 text-sm opacity-90">
-              <li>• از رمز عبور منحصر به فرد استفاده کنید</li>
-              <li>• حداقل ۸ کاراکتر انتخاب کنید</li>
-              <li>• از ترکیب حروف و اعداد استفاده کنید</li>
-              <li>• از اطلاعات شخصی استفاده نکنید</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

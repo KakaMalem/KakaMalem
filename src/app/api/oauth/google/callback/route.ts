@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import type { User } from '@/payload-types'
 import mongoose from 'mongoose'
 
 /**
  * Google OAuth callback handler
  * Handles both new user creation and existing user login
  *
- * For users with hasPassword=true (email/password users):
- * - Temporarily sets a known password to generate a valid session
- * - Restores the original password hash after login
- * - This preserves their ability to login with email/password
- *
- * For users with hasPassword=false (OAuth-only users):
- * - Sets a random password and uses login endpoint directly
+ * Auth flow:
+ * 1. Exchange authorization code for access token
+ * 2. Get user info from Google
+ * 3. Create or update user with Google auth method
+ * 4. Generate session using Payload's internal login
+ * 5. Redirect to success page with auth cookie
  */
 export async function GET(request: NextRequest) {
   try {
@@ -65,6 +63,12 @@ export async function GET(request: NextRequest) {
     const googleUser = await userInfoResponse.json()
     const payload = await getPayload({ config })
 
+    // @ts-expect-error - accessing internal MongoDB connection
+    const db = payload.db?.connection?.db || payload.db?.client?.db()
+    if (!db) {
+      throw new Error('OAuth: Could not access database')
+    }
+
     // Check if user already exists
     const existingUsers = await payload.find({
       collection: 'users',
@@ -72,175 +76,126 @@ export async function GET(request: NextRequest) {
       limit: 1,
     })
 
-    let oauthPassword: string
-    let existingUser: User | null = null
-    let canUseLoginEndpoint = false
+    let userId: string
     let isNewUser = false
     let userName = ''
+    let originalHash: string | null = null
+    let originalSalt: string | null = null
+
+    // Generate a random password for OAuth login
+    const oauthPassword = crypto.randomUUID() + crypto.randomUUID()
 
     if (existingUsers.docs.length > 0) {
-      // Existing user - update OAuth info
+      // Existing user - add Google to auth methods if not already present
       const user = existingUsers.docs[0]
-      const isOAuthUser = !user.hasPassword
+      userId = user.id
+      userName = user.firstName || googleUser.given_name || ''
 
-      oauthPassword = crypto.randomUUID() + crypto.randomUUID()
+      const currentAuthMethods = (user.authMethods as string[]) || []
+      const hasGoogleAuth = currentAuthMethods.includes('google')
+      const hasPasswordAuth = currentAuthMethods.includes('password')
 
-      const updateData: Record<string, string | undefined> = {
-        sub: googleUser.sub,
+      const updateFields: Record<string, unknown> = {
+        googleSub: googleUser.sub,
         picture: googleUser.picture,
+        _verified: true, // Auto-verify via OAuth
       }
 
-      // Only update password for OAuth-only users (safe - they don't use password login)
-      // Email/password users keep their password intact
-      if (isOAuthUser) {
-        updateData.password = oauthPassword
-        canUseLoginEndpoint = true
+      // Add Google to auth methods if not present
+      if (!hasGoogleAuth) {
+        updateFields.authMethods = [...currentAuthMethods, 'google']
       }
 
-      existingUser = await payload.update({
+      // Update the non-password fields
+      await db
+        .collection('users')
+        .updateOne({ _id: new mongoose.Types.ObjectId(userId) }, { $set: updateFields })
+
+      // For users with password auth, we need to save and restore their password hash
+      if (hasPasswordAuth) {
+        // Get the current password hash from MongoDB
+        const userDoc = await db
+          .collection('users')
+          .findOne({ _id: new mongoose.Types.ObjectId(userId) })
+
+        originalHash = userDoc?.hash || null
+        originalSalt = userDoc?.salt || null
+      }
+
+      // Update password (this hashes it properly via Payload)
+      await payload.update({
         collection: 'users',
-        id: user.id,
-        data: updateData,
+        id: userId,
+        data: { password: oauthPassword },
       })
-      userName = existingUser.firstName || googleUser.given_name || ''
     } else {
-      // New user - create with random password
-      oauthPassword = crypto.randomUUID() + crypto.randomUUID()
-      canUseLoginEndpoint = true
+      // New user - create with Google auth method
       isNewUser = true
       userName = googleUser.given_name || googleUser.name?.split(' ')[0] || ''
 
-      await payload.create({
+      // Create user with Payload (this handles password hashing)
+      const newUser = await payload.create({
         collection: 'users',
         data: {
           email: googleUser.email,
           firstName: googleUser.given_name || googleUser.name?.split(' ')[0] || 'User',
           lastName: googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '',
-          sub: googleUser.sub,
-          picture: googleUser.picture,
           roles: ['customer'],
           password: oauthPassword,
         },
       })
+
+      userId = newUser.id
+
+      // Update the system-managed fields directly in MongoDB
+      await db.collection('users').updateOne(
+        { _id: new mongoose.Types.ObjectId(userId) },
+        {
+          $set: {
+            googleSub: googleUser.sub,
+            picture: googleUser.picture,
+            authMethods: ['google'],
+            _verified: true,
+          },
+        },
+      )
     }
 
-    let setCookieHeader: string | null = null
+    // Login the user using Payload's internal mechanism
+    const loginResult = await payload.login({
+      collection: 'users',
+      data: {
+        email: googleUser.email,
+        password: oauthPassword,
+      },
+    })
 
-    if (canUseLoginEndpoint) {
-      // OAuth-only users or new users: Use login endpoint directly
-      const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: googleUser.email,
-          password: oauthPassword,
-          stayLoggedIn: true,
-        }),
-      })
-
-      if (!loginResponse.ok) {
-        console.error('OAuth: Login endpoint failed:', await loginResponse.text())
-        return NextResponse.redirect(
-          new URL('/auth/login?error=login_failed', process.env.NEXT_PUBLIC_SERVER_URL),
-        )
-      }
-
-      setCookieHeader = loginResponse.headers.get('set-cookie')
-    } else {
-      // Email/password users: Temporarily set password, login, then restore original hash
-      if (!existingUser) {
-        throw new Error('OAuth: User not found')
-      }
-
-      // Get the current password hash directly from MongoDB
-      // @ts-expect-error - accessing internal MongoDB connection
-      const db = payload.db?.connection?.db || payload.db?.client?.db()
-      if (!db) {
-        throw new Error('OAuth: Could not access database')
-      }
-
-      const userDoc = await db
+    // Restore original password hash if user had password auth
+    if (originalHash && originalSalt) {
+      await db
         .collection('users')
-        .findOne({ _id: new mongoose.Types.ObjectId(existingUser.id) })
-
-      // Store original auth data
-      const originalHash = userDoc?.hash
-      const originalSalt = userDoc?.salt
-
-      if (!originalHash || !originalSalt) {
-        throw new Error('OAuth: User has no password hash')
-      }
-
-      // Set a temporary known password
-      const tempPassword = crypto.randomUUID() + crypto.randomUUID()
-
-      // Update password temporarily (this will hash it properly)
-      await payload.update({
-        collection: 'users',
-        id: existingUser.id,
-        data: { password: tempPassword },
-      })
-
-      // Login with the temp password
-      const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: existingUser.email,
-          password: tempPassword,
-          stayLoggedIn: true,
-        }),
-      })
-
-      if (!loginResponse.ok) {
-        console.error('OAuth: Login with temp password failed:', await loginResponse.text())
-        // Try to restore original password before returning error
-        try {
-          await db
-            .collection('users')
-            .updateOne(
-              { _id: new mongoose.Types.ObjectId(existingUser.id) },
-              { $set: { hash: originalHash, salt: originalSalt } },
-            )
-        } catch (_) {
-          // Ignore restoration error
-        }
-        return NextResponse.redirect(
-          new URL('/auth/login?error=login_failed', process.env.NEXT_PUBLIC_SERVER_URL),
+        .updateOne(
+          { _id: new mongoose.Types.ObjectId(userId) },
+          { $set: { hash: originalHash, salt: originalSalt } },
         )
-      }
-
-      setCookieHeader = loginResponse.headers.get('set-cookie')
-
-      // Restore the original password hash directly in MongoDB
-      try {
-        await db
-          .collection('users')
-          .updateOne(
-            { _id: new mongoose.Types.ObjectId(existingUser.id) },
-            { $set: { hash: originalHash, salt: originalSalt } },
-          )
-      } catch (restoreErr) {
-        console.error('OAuth: Failed to restore original password:', restoreErr)
-        // Continue anyway - user is logged in, they can reset password if needed
-      }
     }
 
-    // Build success page URL with parameters
+    // Build success page URL
     const authType = isNewUser ? 'register' : 'login'
     const successUrl = new URL('/auth/success', process.env.NEXT_PUBLIC_SERVER_URL)
     successUrl.searchParams.set('type', authType)
     successUrl.searchParams.set('name', userName)
     successUrl.searchParams.set('redirect', state)
 
-    // Create redirect response to success page
+    // Create redirect response
     const response = NextResponse.redirect(successUrl)
 
-    if (setCookieHeader) {
-      response.headers.set('Set-Cookie', setCookieHeader)
-    }
+    // Set the auth cookie
+    const cookieName = `${payload.config.cookiePrefix || 'payload'}-token`
+    const cookieValue = `${cookieName}=${loginResult.token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24 * 7}`
+    response.headers.set('Set-Cookie', cookieValue)
 
-    // Set flag for cart merge after login
+    // Set flag for cart merge
     response.headers.append('Set-Cookie', 'justLoggedIn=true; Path=/; Max-Age=60')
 
     return response
