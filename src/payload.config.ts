@@ -151,14 +151,18 @@ export default buildConfig({
   }),
   plugins: [
     payloadCloudPlugin(),
-    // uploadthingStorage({
-    //   collections: {
-    //     media: true,
-    //   },
-    //   options: {
-    //     token: process.env.UPLOADTHING_TOKEN,
-    //     acl: 'public-read',
-    //   },
-    // }),
+    ...(process.env.NODE_ENV === 'development'
+      ? [
+          uploadthingStorage({
+            collections: {
+              media: true,
+            },
+            options: {
+              token: process.env.UPLOADTHING_TOKEN,
+              acl: 'public-read',
+            },
+          }),
+        ]
+      : []),
   ],
 })
