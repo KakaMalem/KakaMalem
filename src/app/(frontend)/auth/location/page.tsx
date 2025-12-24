@@ -34,21 +34,35 @@ function LocationPageContent() {
   } = useLocationPermission()
 
   const [isRequesting, setIsRequesting] = useState(false)
-  const [locationResult, setLocationResult] = useState<'success' | 'denied' | null>(null)
+  const [locationResult, setLocationResult] = useState<
+    'success' | 'denied' | 'unavailable' | 'timeout' | null
+  >(null)
   const [countdown, setCountdown] = useState<number | null>(null)
 
   // Handle location request
   const handleAllowLocation = useCallback(async () => {
     setIsRequesting(true)
     try {
-      const position = await requestLocation()
-      if (position) {
-        await updateServerLocation(position)
+      const result = await requestLocation()
+      if (result.position) {
+        await updateServerLocation(result.position)
         setLocationResult('success')
         setCountdown(3)
       } else {
-        setLocationResult('denied')
-        setCountdown(3)
+        // Map error types to result states
+        switch (result.error) {
+          case 'position_unavailable':
+            setLocationResult('unavailable')
+            break
+          case 'timeout':
+            setLocationResult('timeout')
+            break
+          case 'permission_denied':
+          default:
+            setLocationResult('denied')
+            break
+        }
+        setCountdown(5) // Give more time to read the message
       }
     } catch (error) {
       console.error('Location error:', error)
@@ -172,12 +186,24 @@ function LocationPageContent() {
               {/* Message */}
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-base-content mb-2">
-                  {locationResult === 'success' ? 'موقعیت ثبت شد!' : 'موقعیت دریافت نشد'}
+                  {locationResult === 'success' && 'موقعیت ثبت شد!'}
+                  {locationResult === 'unavailable' && 'سرویس موقعیت‌یابی غیرفعال است'}
+                  {locationResult === 'timeout' && 'زمان دریافت موقعیت به پایان رسید'}
+                  {locationResult === 'denied' && 'دسترسی به موقعیت رد شد'}
                 </h1>
                 <p className="text-base-content/70">
-                  {locationResult === 'success'
-                    ? 'ممنون که به ما اعتماد کردید. تجربه خرید بهتری خواهید داشت.'
-                    : 'مشکلی نیست! همچنان می‌توانید از سایت استفاده کنید.'}
+                  {locationResult === 'success' &&
+                    'ممنون که به ما اعتماد کردید. تجربه خرید بهتری خواهید داشت.'}
+                  {locationResult === 'unavailable' && (
+                    <>
+                      لطفاً <span className="font-semibold text-warning">GPS یا Location</span> را
+                      از تنظیمات گوشی خود روشن کنید و دوباره امتحان کنید.
+                    </>
+                  )}
+                  {locationResult === 'timeout' &&
+                    'دریافت موقعیت بیش از حد طول کشید. لطفاً در محیط باز امتحان کنید.'}
+                  {locationResult === 'denied' &&
+                    'مشکلی نیست! همچنان می‌توانید از سایت استفاده کنید.'}
                 </p>
               </div>
 
@@ -186,11 +212,35 @@ function LocationPageContent() {
                 <p className="text-sm text-base-content/70">در حال انتقال... ({countdown})</p>
               </div>
 
-              {/* Continue Button */}
-              <Link href={safeUrl} className="btn btn-primary w-full gap-2">
-                ادامه
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                {/* Try Again button for recoverable errors */}
+                {(locationResult === 'unavailable' || locationResult === 'timeout') && (
+                  <button
+                    onClick={() => {
+                      setLocationResult(null)
+                      setCountdown(null)
+                    }}
+                    className="btn btn-primary w-full gap-2"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    تلاش مجدد
+                  </button>
+                )}
+
+                {/* Continue Button */}
+                <Link
+                  href={safeUrl}
+                  className={`btn w-full gap-2 ${
+                    locationResult === 'unavailable' || locationResult === 'timeout'
+                      ? 'btn-ghost'
+                      : 'btn-primary'
+                  }`}
+                >
+                  ادامه
+                  <ArrowLeft className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           )}
 

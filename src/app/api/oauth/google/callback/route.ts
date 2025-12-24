@@ -182,9 +182,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Capture user location from IP (non-blocking)
-    getGeoLocationFromRequest(request, 'oauth')
-      .then((location) => updateUserLocation(payload, userId, location))
-      .catch((err) => console.error('Failed to capture location on OAuth:', err))
+    // Only update if user hasn't granted browser permission (browser GPS is more accurate)
+    const existingUser = existingUsers.docs[0]
+    const existingLocation = existingUser?.location as { permissionGranted?: boolean } | undefined
+    if (!existingLocation?.permissionGranted) {
+      getGeoLocationFromRequest(request, 'oauth')
+        .then((location) => updateUserLocation(payload, userId, location))
+        .catch((err) => console.error('Failed to capture location on OAuth:', err))
+    }
 
     // Build success page URL
     const authType = isNewUser ? 'register' : 'login'

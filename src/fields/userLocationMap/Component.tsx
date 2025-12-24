@@ -574,7 +574,7 @@ export const UserLocationMap: React.FC<UserLocationMapProps> = ({
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#374151',
+              color: 'var(--theme-elevation-700)',
               marginBottom: '10px',
             }}
           >
@@ -584,22 +584,30 @@ export const UserLocationMap: React.FC<UserLocationMapProps> = ({
             style={{
               maxHeight: '200px',
               overflowY: 'auto',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--theme-elevation-150)',
               borderRadius: '8px',
+              backgroundColor: 'var(--theme-elevation-0)',
             }}
           >
             {locationHistory.map((entry, index) => {
               const entryEventInfo = entry.event ? eventConfig[entry.event] : null
               const entrySourceInfo = entry.source ? sourceConfig[entry.source] : null
               const entryLocation = [entry.city, entry.country].filter(Boolean).join(', ')
+              const entryLongitude = entry.coordinates?.[0]
+              const entryLatitude = entry.coordinates?.[1]
+              const hasCoordinates = entryLatitude && entryLongitude
 
               return (
                 <div
                   key={index}
                   style={{
                     padding: '10px 14px',
-                    borderBottom: index < locationHistory.length - 1 ? '1px solid #e5e7eb' : 'none',
-                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb',
+                    borderBottom:
+                      index < locationHistory.length - 1
+                        ? '1px solid var(--theme-elevation-150)'
+                        : 'none',
+                    backgroundColor:
+                      index % 2 === 0 ? 'var(--theme-elevation-0)' : 'var(--theme-elevation-50)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
@@ -607,11 +615,11 @@ export const UserLocationMap: React.FC<UserLocationMapProps> = ({
                   }}
                 >
                   <div style={{ flex: 1, minWidth: '120px' }}>
-                    <div style={{ fontSize: '13px', color: '#111827' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--theme-elevation-800)' }}>
                       {entryLocation || 'Unknown Location'}
                     </div>
                     {entry.timestamp && (
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--theme-elevation-500)' }}>
                         {new Date(entry.timestamp).toLocaleString()}
                       </div>
                     )}
@@ -651,6 +659,52 @@ export const UserLocationMap: React.FC<UserLocationMapProps> = ({
                     >
                       {entrySourceInfo.icon} {entrySourceInfo.label}
                     </span>
+                  )}
+
+                  {hasCoordinates && (
+                    <a
+                      href={`https://www.google.com/maps?q=${entryLatitude},${entryLongitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        backgroundColor: 'var(--theme-elevation-150)',
+                        color: 'var(--theme-elevation-800)',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        flexShrink: 0,
+                        border: '1px solid var(--theme-elevation-200)',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Open in Google Maps"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--theme-elevation-200)'
+                        e.currentTarget.style.borderColor = 'var(--theme-elevation-300)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--theme-elevation-150)'
+                        e.currentTarget.style.borderColor = 'var(--theme-elevation-200)'
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                    </a>
                   )}
                 </div>
               )

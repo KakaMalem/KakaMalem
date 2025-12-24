@@ -32,9 +32,9 @@ function AuthSuccessContent() {
     // Silently get location and update server (non-blocking)
     const updateLocation = async () => {
       try {
-        const position = await requestLocation()
-        if (position) {
-          await updateServerLocation(position)
+        const result = await requestLocation()
+        if (result.position) {
+          await updateServerLocation(result.position)
         }
       } catch {
         // Silent failure - location update is non-critical

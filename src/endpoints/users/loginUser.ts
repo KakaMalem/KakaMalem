@@ -86,9 +86,14 @@ export const loginUser: Endpoint = {
       })
 
       // Capture user location from IP (non-blocking)
-      getGeoLocationFromRequest(req, 'login')
-        .then((location) => updateUserLocation(payload, result.user.id, location))
-        .catch((err) => console.error('Failed to capture location on login:', err))
+      // Only update location if user hasn't granted browser permission before
+      // (browser GPS is more accurate than IP geolocation)
+      const existingLocation = existingUser.location as { permissionGranted?: boolean } | undefined
+      if (!existingLocation?.permissionGranted) {
+        getGeoLocationFromRequest(req, 'login')
+          .then((location) => updateUserLocation(payload, result.user.id, location))
+          .catch((err) => console.error('Failed to capture location on login:', err))
+      }
 
       // Migrate any guest orders with matching email to this user account
       try {

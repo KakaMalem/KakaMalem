@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useFormFields } from '@payloadcms/ui'
+import { useFormFields, useDocumentInfo } from '@payloadcms/ui'
 import { UserLocationMap } from './Component'
 
 type UserLocationMapFieldProps = {
@@ -10,6 +10,9 @@ type UserLocationMapFieldProps = {
 }
 
 export const UserLocationMapField: React.FC<UserLocationMapFieldProps> = ({ path, label }) => {
+  // Get document ID to force remount on navigation between users
+  const { id: docId } = useDocumentInfo()
+
   // Get user name fields
   const firstNameField = useFormFields(([fields]) => fields['firstName'])
   const lastNameField = useFormFields(([fields]) => fields['lastName'])
@@ -80,6 +83,7 @@ export const UserLocationMapField: React.FC<UserLocationMapFieldProps> = ({ path
 
   return (
     <UserLocationMap
+      key={docId ?? 'new'}
       path={path}
       label={label}
       locationData={locationData}

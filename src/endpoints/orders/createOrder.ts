@@ -74,6 +74,21 @@ export const createOrder: Endpoint = {
       )
     }
 
+    // Validate coordinates are required
+    if (
+      !shippingAddress.coordinates ||
+      !shippingAddress.coordinates.latitude ||
+      !shippingAddress.coordinates.longitude
+    ) {
+      return Response.json(
+        {
+          error: 'Coordinates are required for delivery',
+          hint: 'Please enable location access or select your location on the map',
+        },
+        { status: 400 },
+      )
+    }
+
     // If user is not populated but we have an email, try to find the user
     // This handles cases where req.user isn't populated (e.g., mobile access)
     if (!user && guestEmail) {
@@ -455,10 +470,14 @@ export const createOrder: Endpoint = {
       }
 
       // Capture user location on order placement (non-blocking, authenticated users only)
+      // Only update if user hasn't granted browser permission (browser GPS is more accurate)
       if (user) {
-        getGeoLocationFromRequest(req, 'order')
-          .then((location) => updateUserLocation(payload, user.id, location))
-          .catch((err) => console.error('Failed to capture location on order:', err))
+        const userLocation = (user as User).location
+        if (!userLocation?.permissionGranted) {
+          getGeoLocationFromRequest(req, 'order')
+            .then((location) => updateUserLocation(payload, user.id, location))
+            .catch((err) => console.error('Failed to capture location on order:', err))
+        }
       }
 
       // Revalidate product pages to show updated stock quantities

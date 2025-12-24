@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { MapPin, Navigation, Check, X } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { MapPin, Navigation, Check, X, Globe, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 // Dynamically import InteractiveMap with SSR disabled (Leaflet requires window)
@@ -25,11 +25,23 @@ export interface LocationData {
   ip?: string
 }
 
+interface IpLocationData {
+  latitude: number
+  longitude: number
+  city?: string
+  country?: string
+  ip: string
+}
+
 interface LocationPickerProps {
   latitude?: number
   longitude?: number
   onLocationSelect: (locationData: LocationData) => void
   className?: string
+  /** If true, will automatically try to get location on mount */
+  autoDetect?: boolean
+  /** If true, coordinates are required and IP fallback will be used */
+  required?: boolean
 }
 
 export const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -37,49 +49,198 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   longitude,
   onLocationSelect,
   className = '',
+  autoDetect = false,
+  required = false,
 }) => {
   const [selectedLat, setSelectedLat] = useState<number | undefined>(latitude)
   const [selectedLng, setSelectedLng] = useState<number | undefined>(longitude)
   const [accuracy, setAccuracy] = useState<number | undefined>(undefined)
+  const [locationSource, setLocationSource] = useState<'gps' | 'ip' | 'map' | undefined>(undefined)
   const [gettingLocation, setGettingLocation] = useState(false)
+  const [gettingIpLocation, setGettingIpLocation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [clientIP, setClientIP] = useState<string | undefined>(undefined)
+  const [ipLocationData, setIpLocationData] = useState<IpLocationData | null>(null)
+  const [hasAttemptedAutoDetect, setHasAttemptedAutoDetect] = useState(false)
 
   useEffect(() => {
     setSelectedLat(latitude)
     setSelectedLng(longitude)
   }, [latitude, longitude])
 
-  // Fetch client IP on mount
-  useEffect(() => {
-    const fetchIP = async () => {
-      try {
-        const response = await fetch('https://api.ipify.org?format=json')
-        const data = await response.json()
-        setClientIP(data.ip)
-      } catch (error) {
-        console.warn('Could not fetch IP address:', error)
+  // Fetch IP geolocation data
+  const fetchIpLocation = useCallback(async (): Promise<IpLocationData | null> => {
+    try {
+      // Try ip-api.com first (free, no API key needed)
+      const response = await fetch('http://ip-api.com/json/?fields=status,lat,lon,city,country,query')
+      const data = await response.json()
+
+      if (data.status === 'success' && data.lat && data.lon) {
+        return {
+          latitude: data.lat,
+          longitude: data.lon,
+          city: data.city,
+          country: data.country,
+          ip: data.query,
+        }
       }
+
+      // Fallback to ipapi.co
+      const fallbackResponse = await fetch('https://ipapi.co/json/')
+      const fallbackData = await fallbackResponse.json()
+
+      if (fallbackData.latitude && fallbackData.longitude) {
+        return {
+          latitude: fallbackData.latitude,
+          longitude: fallbackData.longitude,
+          city: fallbackData.city,
+          country: fallbackData.country_name,
+          ip: fallbackData.ip,
+        }
+      }
+
+      return null
+    } catch (err) {
+      console.error('Failed to fetch IP location:', err)
+      return null
     }
-    fetchIP()
   }, [])
 
-  const getCurrentLocation = () => {
+  // Apply IP-based location
+  const applyIpLocation = useCallback(
+    (ipData: IpLocationData) => {
+      setSelectedLat(ipData.latitude)
+      setSelectedLng(ipData.longitude)
+      setAccuracy(undefined) // IP location doesn't have accuracy
+      setLocationSource('ip')
+
+      onLocationSelect({
+        latitude: ipData.latitude,
+        longitude: ipData.longitude,
+        accuracy: undefined,
+        source: 'ip',
+        ip: ipData.ip,
+      })
+    },
+    [onLocationSelect],
+  )
+
+  // Try GPS, fall back to IP if GPS fails
+  const tryGpsWithIpFallback = useCallback(
+    (ipData: IpLocationData | null) => {
+      if (!navigator.geolocation) {
+        // No geolocation support, use IP fallback directly
+        if (ipData) {
+          applyIpLocation(ipData)
+        }
+        return
+      }
+
+      setGettingLocation(true)
+      setError(null)
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+          const locationAccuracy = position.coords.accuracy
+
+          setSelectedLat(lat)
+          setSelectedLng(lng)
+          setAccuracy(locationAccuracy)
+          setLocationSource('gps')
+
+          onLocationSelect({
+            latitude: lat,
+            longitude: lng,
+            accuracy: locationAccuracy,
+            source: 'gps',
+            ip: ipData?.ip || clientIP,
+          })
+          setGettingLocation(false)
+        },
+        () => {
+          // GPS failed, use IP fallback
+          setGettingLocation(false)
+          if (ipData) {
+            applyIpLocation(ipData)
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000, // Shorter timeout for auto-detect
+          maximumAge: 60000,
+        },
+      )
+    },
+    [clientIP, onLocationSelect, applyIpLocation],
+  )
+
+  // Fetch client IP on mount and optionally auto-detect location
+  useEffect(() => {
+    const init = async () => {
+      // Fetch IP location data (for fallback and display)
+      const ipData = await fetchIpLocation()
+      if (ipData) {
+        setClientIP(ipData.ip)
+        setIpLocationData(ipData)
+
+        // Auto-detect: if required and no location set, use IP as initial fallback
+        if (autoDetect && required && !latitude && !longitude && !hasAttemptedAutoDetect) {
+          setHasAttemptedAutoDetect(true)
+          // Try GPS first, fall back to IP
+          tryGpsWithIpFallback(ipData)
+        }
+      }
+    }
+    init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Get location from IP (manual trigger)
+  const getLocationFromIP = async () => {
+    setGettingIpLocation(true)
+    setError(null)
+
+    const ipData = ipLocationData || (await fetchIpLocation())
+    if (ipData) {
+      applyIpLocation(ipData)
+      setIpLocationData(ipData)
+    } else {
+      setError('دریافت موقعیت از IP ممکن نشد. لطفاً موقعیت را روی نقشه انتخاب کنید.')
+    }
+
+    setGettingIpLocation(false)
+  }
+
+  const getCurrentLocation = async () => {
     setGettingLocation(true)
     setError(null)
 
     // Check if the site is served over HTTPS (required for mobile devices)
     const isSecureContext = window.isSecureContext
     if (!isSecureContext && window.location.hostname !== 'localhost') {
-      setError(
-        'دسترسی به موقعیت به اتصال HTTPS نیاز دارد. لطفاً از HTTPS استفاده کنید یا ورود دستی را امتحان کنید.',
-      )
+      // Fall back to IP location on non-HTTPS
+      if (ipLocationData) {
+        applyIpLocation(ipLocationData)
+        setError('اتصال HTTPS نیست. موقعیت تقریبی از IP استفاده شد.')
+      } else {
+        setError(
+          'دسترسی به موقعیت به اتصال HTTPS نیاز دارد. لطفاً از HTTPS استفاده کنید یا ورود دستی را امتحان کنید.',
+        )
+      }
       setGettingLocation(false)
       return
     }
 
     if (!navigator.geolocation) {
-      setError('موقعیت‌یابی جغرافیایی توسط مرورگر شما پشتیبانی نمی‌شود')
+      // Fall back to IP location if geolocation not supported
+      if (ipLocationData) {
+        applyIpLocation(ipLocationData)
+        setError('GPS پشتیبانی نمی‌شود. موقعیت تقریبی از IP استفاده شد.')
+      } else {
+        setError('موقعیت‌یابی جغرافیایی توسط مرورگر شما پشتیبانی نمی‌شود')
+      }
       setGettingLocation(false)
       return
     }
@@ -94,6 +255,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         setSelectedLat(lat)
         setSelectedLng(lng)
         setAccuracy(locationAccuracy)
+        setLocationSource('gps')
 
         // Pass complete location data with metadata
         onLocationSelect({
@@ -112,35 +274,58 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           console.log('GPS location obtained with accuracy:', locationAccuracy, 'meters')
         }
       },
-      (error) => {
-        let errorMessage = 'دریافت موقعیت شما ممکن نیست. '
+      async (geoError) => {
+        console.error('Geolocation error:', geoError)
 
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage +=
-              'لطفاً دسترسی به موقعیت را در تنظیمات مرورگر/دستگاه خود مجاز کنید. در موبایل، هم دسترسی مرورگر و هم دسترسی دستگاه را بررسی کنید.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            errorMessage +=
-              'سیگنال GPS در دسترس نیست. مطمئن شوید که موقعیت در دستگاه شما فعال است، به منطقه باز بروید یا از ورود دستی استفاده کنید.'
-            break
-          case error.TIMEOUT:
-            errorMessage +=
-              'درخواست GPS زمان‌بندی شد. بررسی کنید که موقعیت در دستگاه شما فعال است، سپس دوباره امتحان کنید یا از ورود دستی استفاده کنید.'
-            break
-          default:
-            errorMessage +=
-              'لطفاً مجوزهای موقعیت مرورگر و دستگاه خود را بررسی کنید، مطمئن شوید که GPS/موقعیت فعال است.'
+        // Try IP fallback when GPS fails
+        const ipData = ipLocationData || (await fetchIpLocation())
+        if (ipData) {
+          applyIpLocation(ipData)
+          setIpLocationData(ipData)
+
+          // Show warning that IP location was used
+          let warningMessage = 'موقعیت GPS در دسترس نیست. '
+          switch (geoError.code) {
+            case geoError.PERMISSION_DENIED:
+              warningMessage += 'دسترسی رد شد - '
+              break
+            case geoError.POSITION_UNAVAILABLE:
+              warningMessage += 'GPS غیرفعال است - '
+              break
+            case geoError.TIMEOUT:
+              warningMessage += 'زمان GPS تمام شد - '
+              break
+          }
+          warningMessage += 'موقعیت تقریبی از IP استفاده شد. برای دقت بیشتر، موقعیت را روی نقشه تنظیم کنید.'
+          setError(warningMessage)
+        } else {
+          // No IP fallback available
+          let errorMessage = 'دریافت موقعیت شما ممکن نیست. '
+
+          switch (geoError.code) {
+            case geoError.PERMISSION_DENIED:
+              errorMessage +=
+                'لطفاً دسترسی به موقعیت را در تنظیمات مرورگر/دستگاه خود مجاز کنید.'
+              break
+            case geoError.POSITION_UNAVAILABLE:
+              errorMessage +=
+                'سیگنال GPS در دسترس نیست. مطمئن شوید که موقعیت در دستگاه شما فعال است.'
+              break
+            case geoError.TIMEOUT:
+              errorMessage += 'درخواست GPS زمان‌بندی شد. دوباره امتحان کنید.'
+              break
+            default:
+              errorMessage += 'لطفاً موقعیت را روی نقشه انتخاب کنید.'
+          }
+
+          setError(errorMessage)
         }
-
-        setError(errorMessage)
-        console.error('Geolocation error:', error)
         setGettingLocation(false)
       },
       {
         enableHighAccuracy: true, // Forces GPS usage over IP-based location
-        timeout: 30000, // Increased timeout for GPS to acquire signal
-        maximumAge: 0, // Always get fresh position, don't use cached
+        timeout: 15000, // 15 seconds timeout
+        maximumAge: 60000, // Accept cached position up to 1 minute old
       },
     )
   }
@@ -149,6 +334,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     setSelectedLat(undefined)
     setSelectedLng(undefined)
     setAccuracy(undefined)
+    setLocationSource(undefined)
     setError(null)
   }
 
@@ -164,6 +350,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     setSelectedLat(lat)
     setSelectedLng(lng)
     setAccuracy(undefined) // Clear accuracy when manually selecting on map
+    setLocationSource('map')
+    setError(null) // Clear any previous errors
 
     // Pass complete location data with map source
     onLocationSelect({
@@ -173,6 +361,20 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       source: 'map',
       ip: clientIP,
     })
+  }
+
+  // Get source label for display
+  const getSourceLabel = () => {
+    switch (locationSource) {
+      case 'gps':
+        return { text: 'GPS دقیق', color: 'text-success', icon: '📍' }
+      case 'ip':
+        return { text: 'تقریبی (IP)', color: 'text-warning', icon: '🌐' }
+      case 'map':
+        return { text: 'انتخاب روی نقشه', color: 'text-info', icon: '🗺️' }
+      default:
+        return null
+    }
   }
 
   return (
@@ -204,54 +406,101 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       </div>
 
       {selectedLat && selectedLng ? (
-        <div className="alert alert-success">
-          <Check className="w-5 h-5" />
+        <div className={`alert ${locationSource === 'ip' ? 'alert-warning' : 'alert-success'}`}>
+          {locationSource === 'ip' ? (
+            <AlertTriangle className="w-5 h-5" />
+          ) : (
+            <Check className="w-5 h-5" />
+          )}
           <div className="flex-1">
-            <div className="text-sm font-medium">موقعیت انتخاب شد</div>
+            <div className="text-sm font-medium flex items-center gap-2">
+              موقعیت انتخاب شد
+              {getSourceLabel() && (
+                <span className={`badge badge-sm ${getSourceLabel()?.color}`}>
+                  {getSourceLabel()?.icon} {getSourceLabel()?.text}
+                </span>
+              )}
+            </div>
             <div className="text-xs opacity-80">
               {selectedLat.toFixed(6)}, {selectedLng.toFixed(6)}
+              {accuracy && <span className="ml-2">• دقت: ±{Math.round(accuracy)}m</span>}
             </div>
+            {locationSource === 'ip' && (
+              <div className="text-xs mt-1 opacity-70">
+                برای دقت بیشتر، دکمه GPS را بزنید یا روی نقشه کلیک کنید
+              </div>
+            )}
           </div>
         </div>
       ) : (
-        <div className="alert alert-warning">
+        <div className={`alert ${required ? 'alert-error' : 'alert-warning'}`}>
           <MapPin className="w-5 h-5" />
           <div className="text-sm">
-            موقعیت دقیق خود را پین کنید تا تیم ارسال راحت‌تر شما را پیدا کند
+            {required
+              ? 'انتخاب موقعیت الزامی است. لطفاً موقعیت خود را مشخص کنید'
+              : 'موقعیت دقیق خود را پین کنید تا تیم ارسال راحت‌تر شما را پیدا کند'}
           </div>
         </div>
       )}
 
       {error && (
-        <div className="alert alert-error">
-          <X className="w-4 h-4" />
+        <div className={`alert ${selectedLat && selectedLng ? 'alert-warning' : 'alert-error'}`}>
+          {selectedLat && selectedLng ? (
+            <AlertTriangle className="w-4 h-4" />
+          ) : (
+            <X className="w-4 h-4" />
+          )}
           <span className="text-sm">{error}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <button
           type="button"
           onClick={getCurrentLocation}
-          disabled={gettingLocation}
+          disabled={gettingLocation || gettingIpLocation}
           className="btn btn-primary gap-2"
         >
           {gettingLocation ? (
             <>
               <span className="loading loading-spinner loading-xs"></span>
-              در حال دریافت موقعیت...
+              در حال دریافت...
             </>
           ) : (
             <>
               <Navigation className="w-4 h-4" />
-              استفاده از موقعیت فعلی من
+              موقعیت GPS
             </>
           )}
         </button>
 
-        <button type="button" onClick={openGoogleMapsForSelection} className="btn btn-soft gap-2">
+        <button
+          type="button"
+          onClick={getLocationFromIP}
+          disabled={gettingLocation || gettingIpLocation}
+          className="btn btn-soft gap-2"
+        >
+          {gettingIpLocation ? (
+            <>
+              <span className="loading loading-spinner loading-xs"></span>
+              در حال دریافت...
+            </>
+          ) : (
+            <>
+              <Globe className="w-4 h-4" />
+              موقعیت تقریبی
+            </>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={openGoogleMapsForSelection}
+          disabled={gettingLocation || gettingIpLocation}
+          className="btn btn-ghost gap-2"
+        >
           <MapPin className="w-4 h-4" />
-          باز کردن گوگل مپ
+          گوگل مپ
         </button>
       </div>
     </div>

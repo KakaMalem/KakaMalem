@@ -4,6 +4,20 @@ import { useState, useEffect, useCallback } from 'react'
 
 export type PermissionState = 'unknown' | 'granted' | 'denied' | 'prompt'
 
+/**
+ * Error types for location requests
+ * - permission_denied: User denied browser permission
+ * - position_unavailable: Location services disabled at OS level (phone settings)
+ * - timeout: Location request timed out
+ * - unknown: Other error
+ */
+export type LocationErrorType = 'permission_denied' | 'position_unavailable' | 'timeout' | 'unknown'
+
+export interface LocationResult {
+  position: GeolocationPosition | null
+  error: LocationErrorType | null
+}
+
 interface UseLocationPermissionReturn {
   /** Whether to show a location permission prompt to the user */
   shouldShowLocationPrompt: boolean
@@ -11,8 +25,10 @@ interface UseLocationPermissionReturn {
   isCheckingPermission: boolean
   /** Current permission state */
   permissionState: PermissionState
+  /** Last error from location request */
+  lastError: LocationErrorType | null
   /** Request location permission and get coordinates */
-  requestLocation: () => Promise<GeolocationPosition | null>
+  requestLocation: () => Promise<LocationResult>
   /** Update location on server after getting permission */
   updateServerLocation: (position: GeolocationPosition) => Promise<boolean>
   /** Dismiss the location prompt */
@@ -31,6 +47,7 @@ export function useLocationPermission(): UseLocationPermissionReturn {
   const [shouldShowLocationPrompt, setShouldShowLocationPrompt] = useState(false)
   const [isCheckingPermission, setIsCheckingPermission] = useState(true)
   const [permissionState, setPermissionState] = useState<PermissionState>('unknown')
+  const [lastError, setLastError] = useState<LocationErrorType | null>(null)
 
   useEffect(() => {
     const checkLocationPermission = async () => {
@@ -138,11 +155,13 @@ export function useLocationPermission(): UseLocationPermissionReturn {
 
   /**
    * Request location permission and get current position
+   * Returns both position and error type for better error handling
    */
-  const requestLocation = useCallback(async (): Promise<GeolocationPosition | null> => {
+  const requestLocation = useCallback(async (): Promise<LocationResult> => {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
-        resolve(null)
+        setLastError('unknown')
+        resolve({ position: null, error: 'unknown' })
         return
       }
 
@@ -150,15 +169,33 @@ export function useLocationPermission(): UseLocationPermissionReturn {
         (position) => {
           setPermissionState('granted')
           setShouldShowLocationPrompt(false)
-          resolve(position)
+          setLastError(null)
+          resolve({ position, error: null })
         },
         (error) => {
-          console.error('Geolocation error:', error)
-          if (error.code === error.PERMISSION_DENIED) {
-            setPermissionState('denied')
+          console.error('Geolocation error:', error.code, error.message)
+          let errorType: LocationErrorType = 'unknown'
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              // User denied browser permission
+              errorType = 'permission_denied'
+              setPermissionState('denied')
+              break
+            case error.POSITION_UNAVAILABLE:
+              // Location services disabled at OS level (phone settings off)
+              errorType = 'position_unavailable'
+              // Note: permission might still be 'granted' in browser, just OS-level disabled
+              break
+            case error.TIMEOUT:
+              // Request timed out
+              errorType = 'timeout'
+              break
           }
+
+          setLastError(errorType)
           setShouldShowLocationPrompt(false)
-          resolve(null)
+          resolve({ position: null, error: errorType })
         },
         {
           enableHighAccuracy: true,
@@ -213,6 +250,7 @@ export function useLocationPermission(): UseLocationPermissionReturn {
     shouldShowLocationPrompt,
     isCheckingPermission,
     permissionState,
+    lastError,
     requestLocation,
     updateServerLocation,
     dismissPrompt,

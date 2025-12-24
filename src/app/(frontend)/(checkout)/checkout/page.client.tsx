@@ -136,13 +136,12 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
           }
         } else {
           // Validate all required guest form fields
+          // Note: nearbyLandmark and detailedDirections are now optional
           const requiredFields: { field: keyof GuestFormData; label: string }[] = [
             { field: 'firstName', label: 'نام' },
             { field: 'lastName', label: 'تخلص' },
             { field: 'email', label: 'ایمیل' },
             { field: 'phone', label: 'شماره تماس' },
-            { field: 'nearbyLandmark', label: 'نشانی نزدیک' },
-            { field: 'detailedDirections', label: 'توضیحات مسیر' },
           ]
 
           for (const { field, label } of requiredFields) {
@@ -162,6 +161,12 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
           // Validate phone format
           if (!/^[+\d\s()-]+$/.test(guestForm.phone)) {
             toast.error('فرمت شماره تماس نامعتبر است')
+            return false
+          }
+
+          // Validate coordinates are required
+          if (!guestForm.coordinates.latitude || !guestForm.coordinates.longitude) {
+            toast.error('لطفاً موقعیت تحویل را مشخص کنید')
             return false
           }
         }

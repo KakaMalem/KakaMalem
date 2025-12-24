@@ -151,7 +151,8 @@ export default buildConfig({
   }),
   plugins: [
     payloadCloudPlugin(),
-    ...(process.env.NODE_ENV === 'development'
+    // use UploadThing only on production
+    ...(process.env.NODE_ENV === 'production' && process.env.UPLOADTHING_TOKEN
       ? [
           uploadthingStorage({
             collections: {

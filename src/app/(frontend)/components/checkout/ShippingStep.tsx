@@ -84,12 +84,7 @@ export function ShippingStep({
         if (!value.trim()) return 'شماره تماس الزامی است'
         if (!/^[+\d\s()-]+$/.test(value)) return 'فرمت شماره تماس نامعتبر است'
         return ''
-      case 'nearbyLandmark':
-        if (!value.trim()) return 'نشانی نزدیک الزامی است'
-        return ''
-      case 'detailedDirections':
-        if (!value.trim()) return 'توضیحات مسیر الزامی است'
-        return ''
+      // nearbyLandmark and detailedDirections are now optional
       default:
         return ''
     }
@@ -466,7 +461,7 @@ export function ShippingStep({
                   <div className="fieldset">
                     <label className="label" htmlFor="guest-nearbyLandmark">
                       <span className="label-text font-medium">
-                        نشانی نزدیک <span className="text-error">*</span>
+                        نشانی نزدیک <span className="text-base-content/50 text-xs">(اختیاری)</span>
                       </span>
                     </label>
                     <input
@@ -484,7 +479,7 @@ export function ShippingStep({
                   <div className="fieldset">
                     <label className="label" htmlFor="guest-detailedDirections">
                       <span className="label-text font-medium">
-                        توضیحات مسیر <span className="text-error">*</span>
+                        توضیحات مسیر <span className="text-base-content/50 text-xs">(اختیاری)</span>
                       </span>
                     </label>
                     <textarea
@@ -500,19 +495,21 @@ export function ShippingStep({
                 </div>
               </div>
 
-              {/* GPS Location */}
+              {/* GPS Location - Required */}
               <div className="bg-base-100 rounded-xl p-5 border border-base-300">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                       <Navigation className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    موقعیت GPS
+                    موقعیت تحویل <span className="text-error">*</span>
                   </h3>
                   {guestForm.coordinates.latitude && guestForm.coordinates.longitude && (
-                    <span className="badge badge-success badge-sm gap-1">
+                    <span
+                      className={`badge badge-sm gap-1 ${guestForm.coordinates.source === 'ip' ? 'badge-warning' : 'badge-success'}`}
+                    >
                       <Check className="w-3 h-3" />
-                      ثبت شده
+                      {guestForm.coordinates.source === 'ip' ? 'تقریبی' : 'ثبت شده'}
                     </span>
                   )}
                 </div>
@@ -531,6 +528,8 @@ export function ShippingStep({
                   }}
                   latitude={guestForm.coordinates.latitude ?? undefined}
                   longitude={guestForm.coordinates.longitude ?? undefined}
+                  required={true}
+                  autoDetect={true}
                 />
               </div>
             </div>

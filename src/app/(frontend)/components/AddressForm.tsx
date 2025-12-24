@@ -54,6 +54,11 @@ export const AddressForm: React.FC<AddressFormProps> = ({
       newErrors.phone = 'فرمت شماره تماس نامعتبر است'
     }
 
+    // Coordinates are required
+    if (!formData.coordinates?.latitude || !formData.coordinates?.longitude) {
+      newErrors.coordinates = 'موقعیت تحویل الزامی است'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -263,11 +268,11 @@ export const AddressForm: React.FC<AddressFormProps> = ({
             </div>
           </div>
 
-          {/* Nearby Landmark */}
+          {/* Nearby Landmark - Optional */}
           <div className="fieldset">
             <label className="label">
               <span className="label-text font-medium">
-                نشانی نزدیک <span className="text-error">*</span>
+                نشانی نزدیک <span className="text-base-content/50 text-xs">(اختیاری)</span>
               </span>
             </label>
             <input
@@ -276,15 +281,14 @@ export const AddressForm: React.FC<AddressFormProps> = ({
               placeholder="مثلاً چهارراهی شهید، نزدیک مسجد جامع"
               value={formData.nearbyLandmark || ''}
               onChange={(e) => setFormData({ ...formData, nearbyLandmark: e.target.value })}
-              required
             />
           </div>
 
-          {/* Detailed Directions */}
+          {/* Detailed Directions - Optional */}
           <div className="fieldset">
             <label className="label">
               <span className="label-text font-medium">
-                توضیحات مسیر <span className="text-error">*</span>
+                توضیحات مسیر <span className="text-base-content/50 text-xs">(اختیاری)</span>
               </span>
             </label>
             <textarea
@@ -292,22 +296,39 @@ export const AddressForm: React.FC<AddressFormProps> = ({
               placeholder="مسیر دقیق را بیان کنید، مثلاً از چهارراهی شهید به طرف لیسه زرغونه بروید، بعد از 50 متر کوچه سمت راست، خانه شماره 306"
               value={formData.detailedDirections || ''}
               onChange={(e) => setFormData({ ...formData, detailedDirections: e.target.value })}
-              required
             />
           </div>
         </div>
       </div>
 
-      {/* GPS Location Section */}
-      <div className="bg-base-100 rounded-xl p-5 border border-base-300">
-        <h4 className="font-semibold mb-4 flex items-center gap-2">
-          <Navigation className="w-4 h-4 text-primary" />
-          موقعیت GPS
-        </h4>
+      {/* GPS Location Section - Required */}
+      <div
+        className={`bg-base-100 rounded-xl p-5 border ${errors.coordinates ? 'border-error' : 'border-base-300'}`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Navigation className="w-4 h-4 text-primary" />
+            موقعیت تحویل <span className="text-error">*</span>
+          </h4>
+          {formData.coordinates?.latitude && formData.coordinates?.longitude && (
+            <span
+              className={`badge badge-sm gap-1 ${formData.coordinates.source === 'ip' ? 'badge-warning' : 'badge-success'}`}
+            >
+              <Check className="w-3 h-3" />
+              {formData.coordinates.source === 'ip' ? 'تقریبی' : 'ثبت شده'}
+            </span>
+          )}
+        </div>
+        {errors.coordinates && (
+          <div className="alert alert-error mb-4">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm">{errors.coordinates}</span>
+          </div>
+        )}
         <LocationPicker
           latitude={formData.coordinates?.latitude ?? undefined}
           longitude={formData.coordinates?.longitude ?? undefined}
-          onLocationSelect={(locationData: LocationData) =>
+          onLocationSelect={(locationData: LocationData) => {
             setFormData({
               ...formData,
               coordinates: {
@@ -318,7 +339,13 @@ export const AddressForm: React.FC<AddressFormProps> = ({
                 ip: locationData.ip,
               },
             })
-          }
+            // Clear error when location is set
+            if (errors.coordinates) {
+              setErrors({ ...errors, coordinates: '' })
+            }
+          }}
+          required={true}
+          autoDetect={true}
         />
       </div>
 
