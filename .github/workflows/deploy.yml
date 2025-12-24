@@ -61,6 +61,10 @@ jobs:
             OLD_COMMIT=$(git rev-parse HEAD)
             OLD_LOCK_HASH=$(md5sum pnpm-lock.yaml 2>/dev/null | cut -d' ' -f1 || echo "none")
 
+            # Reset any local changes (e.g., auto-generated payload-types.ts)
+            echo "🧹 Resetting local changes..."
+            git reset --hard HEAD
+
             echo "📥 Pulling latest changes..."
             git pull origin main
             NEW_COMMIT=$(git rev-parse HEAD)
@@ -75,15 +79,9 @@ jobs:
               echo "📦 No dependency changes, skipping install"
             fi
 
-            # Check if schema files changed (collections, globals, payload config)
-            SCHEMA_CHANGED=$(git diff --name-only $OLD_COMMIT $NEW_COMMIT -- 'src/collections/' 'src/globals/' 'src/payload.config.ts' | head -1)
-
-            if [ -n "$SCHEMA_CHANGED" ]; then
-              echo "🔧 Schema files changed, generating types..."
-              pnpm generate:types
-            else
-              echo "🔧 No schema changes, skipping type generation"
-            fi
+            echo "🔧 Generating types and importmap..."
+            pnpm generate:types
+            pnpm generate:importmap
 
             echo "🏗️ Building application..."
             pnpm build

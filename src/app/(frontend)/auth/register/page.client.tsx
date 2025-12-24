@@ -545,14 +545,16 @@ export default function RegisterPage() {
                     </label>
 
                     {/* Password match indicator */}
-                    {formData.confirmPassword && !fieldErrors.confirmPassword && (
-                      <label className="label">
-                        <span className="label-text-alt text-success flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          رمز عبور مطابقت دارد
-                        </span>
-                      </label>
-                    )}
+                    {formData.confirmPassword &&
+                      formData.password === formData.confirmPassword &&
+                      !fieldErrors.confirmPassword && (
+                        <label className="label">
+                          <span className="label-text-alt text-success flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            رمز عبور مطابقت دارد
+                          </span>
+                        </label>
+                      )}
 
                     {(fieldErrors.confirmPassword || active) && (
                       <label className="label">
