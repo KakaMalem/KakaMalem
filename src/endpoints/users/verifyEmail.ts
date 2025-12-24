@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { getGeoLocationFromRequest, updateUserLocation } from '@/utilities/geolocation'
 
 /**
  * Custom email verification endpoint with auto-login
@@ -106,6 +107,11 @@ export const verifyEmail: Endpoint = {
               { $set: { hash: originalHash, salt: originalSalt } },
             )
         }
+
+        // Capture user location from IP (non-blocking)
+        getGeoLocationFromRequest(req, 'verify_email')
+          .then((location) => updateUserLocation(payload, user.id, location))
+          .catch((err) => console.error('Failed to capture location on email verification:', err))
 
         // Build cookie
         const cookieName = `${payload.config.cookiePrefix || 'payload'}-token`

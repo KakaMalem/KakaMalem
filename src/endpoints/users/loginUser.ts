@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { getGeoLocationFromRequest, updateUserLocation } from '@/utilities/geolocation'
 
 interface LoginRequest {
   email: string
@@ -83,6 +84,11 @@ export const loginUser: Endpoint = {
         data: { email, password },
         req,
       })
+
+      // Capture user location from IP (non-blocking)
+      getGeoLocationFromRequest(req, 'login')
+        .then((location) => updateUserLocation(payload, result.user.id, location))
+        .catch((err) => console.error('Failed to capture location on login:', err))
 
       // Migrate any guest orders with matching email to this user account
       try {

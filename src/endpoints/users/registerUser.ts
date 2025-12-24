@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { getGeoLocationFromRequest, updateUserLocation } from '@/utilities/geolocation'
 
 interface RegisterRequest {
   email: string
@@ -96,6 +97,11 @@ export const registerUser: Endpoint = {
       }
 
       console.log('User created successfully:', user.id)
+
+      // Capture user location from IP (non-blocking)
+      getGeoLocationFromRequest(req, 'register')
+        .then((location) => updateUserLocation(payload, user.id, location))
+        .catch((err) => console.error('Failed to capture location on registration:', err))
 
       // Migrate guest orders to the new user account
       try {

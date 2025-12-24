@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, ArrowLeft, Mail, Loader2, Sparkles } from 'lucide-react'
 import { safeRedirect } from '@/utilities/redirect'
+import { useLocationPermission } from '@/hooks/useLocationPermission'
 import Logo from '../../components/Logo'
 
-export default function AuthSuccessPage() {
+function AuthSuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const type = searchParams.get('type') || 'login'
@@ -18,6 +19,30 @@ export default function AuthSuccessPage() {
   const [countdown, setCountdown] = useState(3)
   const [isVerified, setIsVerified] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
+
+  // Check location permission state
+  const { permissionState, isCheckingPermission, requestLocation, updateServerLocation } =
+    useLocationPermission()
+
+  // When permission is already granted, silently fetch and update location
+  useEffect(() => {
+    if (isCheckingPermission) return
+    if (permissionState !== 'granted') return
+
+    // Silently get location and update server (non-blocking)
+    const updateLocation = async () => {
+      try {
+        const position = await requestLocation()
+        if (position) {
+          await updateServerLocation(position)
+        }
+      } catch {
+        // Silent failure - location update is non-critical
+      }
+    }
+
+    updateLocation()
+  }, [permissionState, isCheckingPermission, requestLocation, updateServerLocation])
 
   // Check verification status
   const checkVerificationStatus = useCallback(async () => {
@@ -97,10 +122,27 @@ export default function AuthSuccessPage() {
   useEffect(() => {
     if (verificationPending && !isVerified) return
     if (countdown !== 0) return
+    if (isCheckingPermission) return // Wait for permission check
+
+    // If location permission is in 'prompt' state, redirect to location page first
+    if (permissionState === 'prompt') {
+      const locationUrl = `/auth/location?redirect=${encodeURIComponent(redirect)}&name=${encodeURIComponent(name)}`
+      router.push(locationUrl)
+      return
+    }
 
     const safeUrl = safeRedirect(redirect, '/')
     router.push(safeUrl)
-  }, [countdown, redirect, router, verificationPending, isVerified])
+  }, [
+    countdown,
+    redirect,
+    router,
+    verificationPending,
+    isVerified,
+    permissionState,
+    isCheckingPermission,
+    name,
+  ])
 
   const isRegister = type === 'register'
   const safeUrl = safeRedirect(redirect, '/')
@@ -258,5 +300,19 @@ export default function AuthSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AuthSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-base-200">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      }
+    >
+      <AuthSuccessContent />
+    </Suspense>
   )
 }

@@ -1,3 +1,4 @@
+import { UserLocationMapField as UserLocationMapField_04d0be345d15136234243ae2e39de7c0 } from '@/fields/userLocationMap'
 import { SlugComponent as SlugComponent_92cc057d0a2abb4f6cf0307edf59f986 } from '@/fields/slug/SlugComponent'
 import { RscEntryLexicalCell as RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
 import { RscEntryLexicalField as RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
@@ -27,9 +28,9 @@ import { OrderLocationMapField as OrderLocationMapField_b6e5e02be4b0cb93e2ae37fd
 import { ViewWebsiteAction as ViewWebsiteAction_dcfd03c3a19c39fdde6baf37ba057657 } from '../../../components/ViewWebsiteAction'
 import { AfterLogin as AfterLogin_28b73c3127132d3cd3c940991bec0e0c } from '../../../components/AfterLogin'
 import { BeforeLogin as BeforeLogin_01d809f8b80f9b2f728eaaa8a4fcc420 } from '../../../components/BeforeLogin'
-import { UploadthingClientUploadHandler as UploadthingClientUploadHandler_749dcaa11bb61b873d113cb6c609bc10 } from '@payloadcms/storage-uploadthing/client'
 
 export const importMap = {
+  "@/fields/userLocationMap#UserLocationMapField": UserLocationMapField_04d0be345d15136234243ae2e39de7c0,
   "@/fields/slug/SlugComponent#SlugComponent": SlugComponent_92cc057d0a2abb4f6cf0307edf59f986,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalField": RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -58,6 +59,5 @@ export const importMap = {
   "/fields/orderLocationMap#OrderLocationMapField": OrderLocationMapField_b6e5e02be4b0cb93e2ae37fd2c7a6787,
   "/components/ViewWebsiteAction#ViewWebsiteAction": ViewWebsiteAction_dcfd03c3a19c39fdde6baf37ba057657,
   "/components/AfterLogin#AfterLogin": AfterLogin_28b73c3127132d3cd3c940991bec0e0c,
-  "/components/BeforeLogin#BeforeLogin": BeforeLogin_01d809f8b80f9b2f728eaaa8a4fcc420,
-  "@payloadcms/storage-uploadthing/client#UploadthingClientUploadHandler": UploadthingClientUploadHandler_749dcaa11bb61b873d113cb6c609bc10
+  "/components/BeforeLogin#BeforeLogin": BeforeLogin_01d809f8b80f9b2f728eaaa8a4fcc420
 }

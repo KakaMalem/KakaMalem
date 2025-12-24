@@ -686,5 +686,260 @@ export const Users: CollectionConfig = {
         },
       },
     },
+    /**
+     * LAST LOGIN TRACKING
+     * Updated automatically via afterLogin hook
+     */
+    {
+      name: 'lastLoginAt',
+      type: 'date',
+      access: {
+        create: nobody,
+        update: nobody,
+      },
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+        description: 'Last successful login time',
+      },
+    },
+    /**
+     * LOCATION MAP (UI Component)
+     * Visual map display of user's current location
+     */
+    {
+      name: 'locationMap',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        condition: (data, siblingData, { user }) => {
+          // Only show if user has location data and viewer is admin+
+          const hasLocation = data?.location?.coordinates?.[0] && data?.location?.coordinates?.[1]
+          const isAuthorized = !!(
+            user?.roles?.includes('developer') ||
+            user?.roles?.includes('admin') ||
+            user?.roles?.includes('superadmin')
+          )
+          return hasLocation && isAuthorized
+        },
+        components: {
+          Field: '@/fields/userLocationMap#UserLocationMapField',
+        },
+      },
+    },
+    /**
+     * LOCATION TRACKING
+     * Automatically captured on login/registration via IP geolocation
+     * Can be enhanced with browser geolocation if user grants permission
+     * System-managed fields - no manual updates allowed
+     */
+    {
+      name: 'location',
+      type: 'group',
+      access: {
+        // System-managed field, no manual updates from frontend
+        create: nobody,
+        update: nobody,
+      },
+      admin: {
+        // Only show to developers and admins
+        condition: (data, siblingData, { user }) => {
+          return !!(
+            user?.roles?.includes('developer') ||
+            user?.roles?.includes('admin') ||
+            user?.roles?.includes('superadmin')
+          )
+        },
+      },
+      fields: [
+        {
+          name: 'coordinates',
+          type: 'point',
+          admin: {
+            description: 'Geographic coordinates [longitude, latitude]',
+          },
+        },
+        {
+          name: 'accuracy',
+          type: 'number',
+          admin: {
+            description: 'Location accuracy in meters (from browser GPS)',
+          },
+        },
+        {
+          name: 'country',
+          type: 'text',
+          admin: {
+            description: 'Country name (e.g., Afghanistan)',
+          },
+        },
+        {
+          name: 'countryCode',
+          type: 'text',
+          admin: {
+            description: 'ISO 3166-1 alpha-2 country code (e.g., AF)',
+          },
+        },
+        {
+          name: 'region',
+          type: 'text',
+          admin: {
+            description: 'Region/Province/State (e.g., Kabul)',
+          },
+        },
+        {
+          name: 'city',
+          type: 'text',
+          admin: {
+            description: 'City name',
+          },
+        },
+        {
+          name: 'timezone',
+          type: 'text',
+          admin: {
+            description: 'IANA timezone (e.g., Asia/Kabul)',
+          },
+        },
+        {
+          name: 'source',
+          type: 'select',
+          options: [
+            { label: 'Browser GPS', value: 'browser' },
+            { label: 'IP Geolocation', value: 'ip' },
+            { label: 'Manual Entry', value: 'manual' },
+          ],
+          admin: {
+            description: 'How location was obtained',
+          },
+        },
+        {
+          name: 'event',
+          type: 'select',
+          options: [
+            { label: 'Login', value: 'login' },
+            { label: 'Registration', value: 'register' },
+            { label: 'Order', value: 'order' },
+            { label: 'Browser Permission', value: 'browser_permission' },
+            { label: 'Email Verification', value: 'verify_email' },
+            { label: 'OAuth Login', value: 'oauth' },
+          ],
+          admin: {
+            description: 'What event triggered this location capture',
+          },
+        },
+        {
+          name: 'ip',
+          type: 'text',
+          admin: {
+            description: 'IP address used for geolocation',
+          },
+        },
+        {
+          name: 'permissionGranted',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Whether user granted browser location permission',
+          },
+        },
+        {
+          name: 'lastUpdated',
+          type: 'date',
+          admin: {
+            date: {
+              pickerAppearance: 'dayAndTime',
+            },
+            description: 'When location was last captured',
+          },
+        },
+      ],
+    },
+    /**
+     * LOCATION HISTORY
+     * Keeps track of last 10 location entries for analytics
+     * Hidden from admin panel, accessible via API for developers only
+     */
+    {
+      name: 'locationHistory',
+      type: 'array',
+      maxRows: 10,
+      access: {
+        create: nobody,
+        update: nobody,
+      },
+      admin: {
+        description: 'Historical location data (last 10 entries)',
+        condition: (data, siblingData, { user }) => {
+          return !!user?.roles?.includes('developer')
+        },
+      },
+      fields: [
+        {
+          name: 'coordinates',
+          type: 'point',
+        },
+        {
+          name: 'city',
+          type: 'text',
+        },
+        {
+          name: 'country',
+          type: 'text',
+        },
+        {
+          name: 'source',
+          type: 'select',
+          options: [
+            { label: 'Browser', value: 'browser' },
+            { label: 'IP', value: 'ip' },
+          ],
+        },
+        {
+          name: 'event',
+          type: 'select',
+          options: [
+            { label: 'Login', value: 'login' },
+            { label: 'Registration', value: 'register' },
+            { label: 'Order', value: 'order' },
+            { label: 'Browser Permission', value: 'browser_permission' },
+            { label: 'Email Verification', value: 'verify_email' },
+            { label: 'OAuth Login', value: 'oauth' },
+          ],
+        },
+        {
+          name: 'timestamp',
+          type: 'date',
+          admin: {
+            date: {
+              pickerAppearance: 'dayAndTime',
+            },
+          },
+        },
+      ],
+    },
   ],
+  hooks: {
+    afterLogin: [
+      async ({ user, req }) => {
+        // Update lastLoginAt timestamp
+        try {
+          await req.payload.update({
+            collection: 'users',
+            id: user.id,
+            data: {
+              lastLoginAt: new Date().toISOString(),
+            },
+            overrideAccess: true,
+          })
+        } catch (error) {
+          console.error('Failed to update lastLoginAt:', error)
+        }
+        return user
+      },
+    ],
+  },
 }

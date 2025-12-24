@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import mongoose from 'mongoose'
+import { getGeoLocationFromRequest, updateUserLocation } from '@/utilities/geolocation'
 
 /**
  * Google OAuth callback handler
@@ -179,6 +180,11 @@ export async function GET(request: NextRequest) {
           { $set: { hash: originalHash, salt: originalSalt } },
         )
     }
+
+    // Capture user location from IP (non-blocking)
+    getGeoLocationFromRequest(request, 'oauth')
+      .then((location) => updateUserLocation(payload, userId, location))
+      .catch((err) => console.error('Failed to capture location on OAuth:', err))
 
     // Build success page URL
     const authType = isNewUser ? 'register' : 'login'

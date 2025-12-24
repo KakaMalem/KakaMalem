@@ -267,6 +267,81 @@ export interface User {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  /**
+   * Last successful login time
+   */
+  lastLoginAt?: string | null;
+  location?: {
+    /**
+     * Geographic coordinates [longitude, latitude]
+     *
+     * @minItems 2
+     * @maxItems 2
+     */
+    coordinates?: [number, number] | null;
+    /**
+     * Location accuracy in meters (from browser GPS)
+     */
+    accuracy?: number | null;
+    /**
+     * Country name (e.g., Afghanistan)
+     */
+    country?: string | null;
+    /**
+     * ISO 3166-1 alpha-2 country code (e.g., AF)
+     */
+    countryCode?: string | null;
+    /**
+     * Region/Province/State (e.g., Kabul)
+     */
+    region?: string | null;
+    /**
+     * City name
+     */
+    city?: string | null;
+    /**
+     * IANA timezone (e.g., Asia/Kabul)
+     */
+    timezone?: string | null;
+    /**
+     * How location was obtained
+     */
+    source?: ('browser' | 'ip' | 'manual') | null;
+    /**
+     * What event triggered this location capture
+     */
+    event?: ('login' | 'register' | 'order' | 'browser_permission' | 'verify_email' | 'oauth') | null;
+    /**
+     * IP address used for geolocation
+     */
+    ip?: string | null;
+    /**
+     * Whether user granted browser location permission
+     */
+    permissionGranted?: boolean | null;
+    /**
+     * When location was last captured
+     */
+    lastUpdated?: string | null;
+  };
+  /**
+   * Historical location data (last 10 entries)
+   */
+  locationHistory?:
+    | {
+        /**
+         * @minItems 2
+         * @maxItems 2
+         */
+        coordinates?: [number, number] | null;
+        city?: string | null;
+        country?: string | null;
+        source?: ('browser' | 'ip') | null;
+        event?: ('login' | 'register' | 'order' | 'browser_permission' | 'verify_email' | 'oauth') | null;
+        timestamp?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -450,7 +525,6 @@ export interface Media {
    */
   alt?: string | null;
   uploadedBy?: (string | null) | User;
-  _key?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -947,6 +1021,34 @@ export interface UsersSelect<T extends boolean = true> {
         id?: T;
       };
   orders?: T;
+  lastLoginAt?: T;
+  location?:
+    | T
+    | {
+        coordinates?: T;
+        accuracy?: T;
+        country?: T;
+        countryCode?: T;
+        region?: T;
+        city?: T;
+        timezone?: T;
+        source?: T;
+        event?: T;
+        ip?: T;
+        permissionGranted?: T;
+        lastUpdated?: T;
+      };
+  locationHistory?:
+    | T
+    | {
+        coordinates?: T;
+        city?: T;
+        country?: T;
+        source?: T;
+        event?: T;
+        timestamp?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -973,7 +1075,6 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   uploadedBy?: T;
-  _key?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

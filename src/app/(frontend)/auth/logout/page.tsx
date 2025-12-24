@@ -22,14 +22,14 @@ export default function LogoutPage() {
 
       // Clear local storage auth-related data
       try {
-        localStorage.removeItem('payload-token')
+        localStorage.removeItem('kakamalem-token')
       } catch (_) {
         // Ignore localStorage errors
       }
 
       // Clear the HTTP-only cookie by setting it to expire immediately
       document.cookie =
-        'payload-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax'
+        'kakamalem-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax'
 
       try {
         // Still try to call the logout endpoint, but don't fail if it errors
@@ -68,6 +68,9 @@ export default function LogoutPage() {
   // Handle redirect when countdown reaches 0
   useEffect(() => {
     if (status === 'success' && countdown === 0) {
+      // Refresh the router cache to clear server component data (like navbar user state)
+      router.refresh()
+      // Then navigate to home page
       router.push('/')
     }
   }, [status, countdown, router])
@@ -129,10 +132,16 @@ export default function LogoutPage() {
                 </p>
               </div>
 
-              <Link href="/" className="btn btn-primary w-full gap-2">
+              <button
+                onClick={() => {
+                  router.refresh()
+                  router.push('/')
+                }}
+                className="btn btn-primary w-full gap-2"
+              >
                 بازگشت به صفحه اصلی
                 <ArrowLeft className="w-4 h-4" />
-              </Link>
+              </button>
             </div>
           )}
 

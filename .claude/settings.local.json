@@ -1,13 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run generate:types:*)",
-      "Bash(npm run build:*)",
       "Bash(xargs:*)",
       "Bash(pnpm generate:types:*)",
       "Bash(pnpm build:*)",
       "Bash(ls:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm generate:importmap:*)"
     ],
     "deny": [],
     "ask": []

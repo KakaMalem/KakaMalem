@@ -28,6 +28,7 @@ import { setPassword } from './endpoints/users/setPassword'
 import { resendVerification } from './endpoints/users/resendVerification'
 import { verifyEmail } from './endpoints/users/verifyEmail'
 import { checkVerification } from './endpoints/users/checkVerification'
+import { updateLocationEndpoint } from './endpoints/users/updateLocation'
 import { getProducts } from './endpoints/getProducts'
 import { trackProductView } from './endpoints/products/trackView'
 import { getRecentlyViewed } from './endpoints/products/getRecentlyViewed'
@@ -92,6 +93,7 @@ export default buildConfig({
   },
   collections: [Users, Media, Categories, Products, ProductVariants, Orders, Reviews],
   globals: [Terms, PrivacyPolicy, Help, Shipping, Contact, FAQs, SiteSettings],
+  cookiePrefix: 'kakamalem',
   cors: allowedOrigins,
   csrf: allowedOrigins,
   endpoints: [
@@ -101,6 +103,7 @@ export default buildConfig({
     resendVerification,
     verifyEmail,
     checkVerification,
+    updateLocationEndpoint,
     getProducts,
     trackProductView,
     getRecentlyViewed,
@@ -148,14 +151,14 @@ export default buildConfig({
   }),
   plugins: [
     payloadCloudPlugin(),
-    uploadthingStorage({
-      collections: {
-        media: true,
-      },
-      options: {
-        token: process.env.UPLOADTHING_TOKEN,
-        acl: 'public-read',
-      },
-    }),
+    // uploadthingStorage({
+    //   collections: {
+    //     media: true,
+    //   },
+    //   options: {
+    //     token: process.env.UPLOADTHING_TOKEN,
+    //     acl: 'public-read',
+    //   },
+    // }),
   ],
 })

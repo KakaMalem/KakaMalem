@@ -13,7 +13,7 @@ export const getMeUser = async (args?: {
 }> => {
   const { nullUserRedirect, validUserRedirect } = args || {}
   const cookieStore = await cookies()
-  const token = cookieStore.get('payload-token')?.value
+  const token = cookieStore.get('kakamalem-token')?.value
 
   const meUserReq = await fetch(`${getClientSideURL()}/api/users/me`, {
     headers: {

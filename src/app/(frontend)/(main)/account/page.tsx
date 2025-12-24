@@ -25,7 +25,7 @@ export default async function AccountOverviewPage() {
   try {
     const baseURL = getServerSideURL()
     const cookieStore = await cookies()
-    const token = cookieStore.get('payload-token')
+    const token = cookieStore.get('kakamalem-token')
 
     const response = await fetch(`${baseURL}/api/user-orders?limit=10&depth=1`, {
       headers: {

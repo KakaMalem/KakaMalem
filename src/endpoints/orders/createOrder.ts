@@ -1,6 +1,7 @@
 import type { Endpoint } from 'payload'
 import type { User, Product, SiteSetting } from '@/payload-types'
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { getGeoLocationFromRequest, updateUserLocation } from '@/utilities/geolocation'
 
 interface CartItem {
   product: string | Product
@@ -451,6 +452,13 @@ export const createOrder: Endpoint = {
             cart: [],
           },
         })
+      }
+
+      // Capture user location on order placement (non-blocking, authenticated users only)
+      if (user) {
+        getGeoLocationFromRequest(req, 'order')
+          .then((location) => updateUserLocation(payload, user.id, location))
+          .catch((err) => console.error('Failed to capture location on order:', err))
       }
 
       // Revalidate product pages to show updated stock quantities

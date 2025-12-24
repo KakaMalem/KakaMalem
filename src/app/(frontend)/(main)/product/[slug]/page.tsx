@@ -137,7 +137,7 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
 async function checkAuthentication(): Promise<boolean> {
   try {
     const cookieStore = await cookies()
-    const token = cookieStore.get('payload-token')?.value
+    const token = cookieStore.get('kakamalem-token')?.value
 
     if (!token) {
       return false
