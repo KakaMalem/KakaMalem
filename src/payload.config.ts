@@ -151,19 +151,17 @@ export default buildConfig({
   }),
   plugins: [
     payloadCloudPlugin(),
-    // use UploadThing only on production
-    ...(process.env.NODE_ENV === 'production' && process.env.UPLOADTHING_TOKEN
-      ? [
-          uploadthingStorage({
-            collections: {
-              media: true,
-            },
-            options: {
-              token: process.env.UPLOADTHING_TOKEN,
-              acl: 'public-read',
-            },
-          }),
-        ]
-      : []),
+    // Always register the plugin so import map includes UploadThing components,
+    // but only enable it when the token is present (production)
+    uploadthingStorage({
+      enabled: !!process.env.UPLOADTHING_TOKEN,
+      collections: {
+        media: true,
+      },
+      options: {
+        token: process.env.UPLOADTHING_TOKEN || '',
+        acl: 'public-read',
+      },
+    }),
   ],
 })

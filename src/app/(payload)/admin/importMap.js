@@ -28,6 +28,7 @@ import { OrderLocationMapField as OrderLocationMapField_b6e5e02be4b0cb93e2ae37fd
 import { ViewWebsiteAction as ViewWebsiteAction_dcfd03c3a19c39fdde6baf37ba057657 } from '../../../components/ViewWebsiteAction'
 import { AfterLogin as AfterLogin_28b73c3127132d3cd3c940991bec0e0c } from '../../../components/AfterLogin'
 import { BeforeLogin as BeforeLogin_01d809f8b80f9b2f728eaaa8a4fcc420 } from '../../../components/BeforeLogin'
+import { UploadthingClientUploadHandler as UploadthingClientUploadHandler_749dcaa11bb61b873d113cb6c609bc10 } from '@payloadcms/storage-uploadthing/client'
 
 export const importMap = {
   "@/fields/userLocationMap#UserLocationMapField": UserLocationMapField_04d0be345d15136234243ae2e39de7c0,
@@ -59,5 +60,6 @@ export const importMap = {
   "/fields/orderLocationMap#OrderLocationMapField": OrderLocationMapField_b6e5e02be4b0cb93e2ae37fd2c7a6787,
   "/components/ViewWebsiteAction#ViewWebsiteAction": ViewWebsiteAction_dcfd03c3a19c39fdde6baf37ba057657,
   "/components/AfterLogin#AfterLogin": AfterLogin_28b73c3127132d3cd3c940991bec0e0c,
-  "/components/BeforeLogin#BeforeLogin": BeforeLogin_01d809f8b80f9b2f728eaaa8a4fcc420
+  "/components/BeforeLogin#BeforeLogin": BeforeLogin_01d809f8b80f9b2f728eaaa8a4fcc420,
+  "@payloadcms/storage-uploadthing/client#UploadthingClientUploadHandler": UploadthingClientUploadHandler_749dcaa11bb61b873d113cb6c609bc10
 }
