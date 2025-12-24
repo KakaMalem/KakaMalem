@@ -87,7 +87,7 @@ async function getProductBySlugForMetadata(slug: string): Promise<Product | null
     url.searchParams.set('limit', '1')
 
     const res = await fetch(url.toString(), {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     })
 
     if (!res.ok) return null
@@ -113,10 +113,7 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
     url.searchParams.set('limit', '1')
 
     const res = await fetch(url.toString(), {
-      next: {
-        revalidate: 10, // Revalidate every 10 seconds for up-to-date stock info
-        tags: ['products', `product-${decodedSlug}`],
-      },
+      cache: 'no-store', // No caching to ensure fresh ratings and stock info
     })
 
     if (!res.ok) {

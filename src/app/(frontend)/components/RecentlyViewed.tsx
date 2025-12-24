@@ -179,17 +179,18 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
                 <div className="flex items-center gap-1 mb-1">
                   <Star
                     className={`w-3 h-3 ${
-                      product.averageRating && product.averageRating > 0
+                      typeof product.averageRating === 'number' && product.averageRating > 0
                         ? 'fill-rating text-rating'
                         : 'text-base-300'
                     }`}
                   />
                   <span className="text-xs opacity-70">
-                    {product.averageRating
+                    {typeof product.averageRating === 'number'
                       ? product.averageRating.toFixed(1)
-                      : product.reviewCount && product.reviewCount > 0
-                        ? '0.0'
-                        : 'بدون امتیاز'}
+                      : 'بدون امتیاز'}
+                    {typeof product.reviewCount === 'number' && product.reviewCount > 0
+                      ? ` (${product.reviewCount})`
+                      : ''}
                   </span>
                 </div>
 

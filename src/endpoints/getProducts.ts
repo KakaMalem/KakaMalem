@@ -305,7 +305,7 @@ export const getProducts: Endpoint = {
         }),
       )
 
-      // Return results
+      // Return results with no-cache headers to ensure fresh data
       return Response.json(
         {
           success: true,
@@ -329,7 +329,12 @@ export const getProducts: Endpoint = {
             sort: searchParams.sort,
           },
         },
-        { status: 200 },
+        {
+          status: 200,
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+          },
+        },
       )
     } catch (error: unknown) {
       console.error('Products fetch error:', error)

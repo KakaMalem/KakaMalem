@@ -724,12 +724,10 @@ export const Users: CollectionConfig = {
       admin: {
         position: 'sidebar',
         condition: (data, siblingData, { user }) => {
-          // Only show if user has location data and viewer is admin+
+          // Only show if user has location data and viewer is developer or superadmin
           const hasLocation = data?.location?.coordinates?.[0] && data?.location?.coordinates?.[1]
           const isAuthorized = !!(
-            user?.roles?.includes('developer') ||
-            user?.roles?.includes('admin') ||
-            user?.roles?.includes('superadmin')
+            user?.roles?.includes('developer') || user?.roles?.includes('superadmin')
           )
           return hasLocation && isAuthorized
         },
@@ -753,13 +751,9 @@ export const Users: CollectionConfig = {
         update: nobody,
       },
       admin: {
-        // Only show to developers and admins
+        // Only show to developers and superadmins
         condition: (data, siblingData, { user }) => {
-          return !!(
-            user?.roles?.includes('developer') ||
-            user?.roles?.includes('admin') ||
-            user?.roles?.includes('superadmin')
-          )
+          return !!(user?.roles?.includes('developer') || user?.roles?.includes('superadmin'))
         },
       },
       fields: [

@@ -24,9 +24,9 @@ async function fetchProducts(searchQuery?: string) {
       url.searchParams.set('q', searchQuery)
     }
 
-    // Standard fetch with revalidation
+    // Fetch without caching to ensure fresh ratings
     const res = await fetch(url.toString(), {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     })
     const data = await res.json()
     return data.docs || data.products || []

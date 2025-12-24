@@ -154,6 +154,7 @@ export default buildConfig({
     // Always register the plugin so import map includes UploadThing components,
     // but only enable it when the token is present (production)
     uploadthingStorage({
+      enabled: !!process.env.UPLOADTHING_TOKEN,
       collections: {
         media: true,
       },
