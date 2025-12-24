@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { getAccountMenuItems, type IconType } from './constants'
-import type { User } from '@/payload-types'
+import type { User, Media } from '@/payload-types'
 
 interface ProfileDropdownProps {
   user: User | null
@@ -123,7 +123,22 @@ const UserAvatar = ({
 
   const sizePx = { xs: 24, sm: 32, md: 40, lg: 48 }
 
-  const oauthPicture = user?.picture
+  // Get profile picture URL - prioritize user-uploaded, then OAuth
+  const getProfilePictureUrl = (): string | null => {
+    if (!user) return null
+    // Priority 1: User-uploaded profile picture
+    if (user.profilePicture) {
+      const pic = user.profilePicture
+      if (typeof pic === 'object' && pic !== null && 'url' in pic) {
+        return (pic as Media).url || null
+      }
+    }
+    // Priority 2: OAuth profile picture
+    if (user.picture) return user.picture
+    return null
+  }
+
+  const profilePictureUrl = getProfilePictureUrl()
   const initial = (user?.firstName?.[0] || user?.email?.[0] || 'U').toUpperCase()
 
   const ringClasses = showRing ? 'ring-2 ring-base-200 ring-offset-1 ring-offset-base-100' : ''
@@ -131,16 +146,16 @@ const UserAvatar = ({
   // Reset error state when user changes
   useEffect(() => {
     setImgError(false)
-  }, [user?.id, user?.picture])
+  }, [user?.id, user?.picture, user?.profilePicture])
 
-  // Try OAuth picture first, fallback to initials
-  if (oauthPicture && !imgError) {
+  // Try profile picture first, fallback to initials
+  if (profilePictureUrl && !imgError) {
     return (
       <div
         className={`${sizeClasses[size]} rounded-full overflow-hidden flex-shrink-0 ${ringClasses}`}
       >
         <Image
-          src={oauthPicture}
+          src={profilePictureUrl}
           alt={user?.firstName || 'User'}
           width={sizePx[size]}
           height={sizePx[size]}

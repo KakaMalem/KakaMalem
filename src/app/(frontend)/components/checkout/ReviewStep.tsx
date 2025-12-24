@@ -11,6 +11,7 @@ import {
   Phone,
   Mail,
   Navigation,
+  MessageSquare,
 } from 'lucide-react'
 import type { User, Media } from '@/payload-types'
 import type { CartItem } from '@/providers/cart/types'
@@ -41,6 +42,8 @@ interface ReviewStepProps {
   shippingCost: number
   total: number
   shippingSettings: ShippingSettings
+  customerNote: string
+  setCustomerNote: (note: string) => void
 }
 
 // Payment method display labels
@@ -61,6 +64,8 @@ export function ReviewStep({
   shippingCost,
   total,
   shippingSettings,
+  customerNote,
+  setCustomerNote,
 }: ReviewStepProps) {
   const userAddresses = user?.addresses || []
   const shippingAddress = user
@@ -304,6 +309,27 @@ export function ReviewStep({
               <span className="font-bold">جمع کل</span>
               <span className="font-bold text-xl text-primary">{formatPrice(total, currency)}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Customer Note Section */}
+        <div className="mt-6 bg-base-100 p-5 rounded-xl border border-base-300">
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-primary" />
+            </div>
+            یادداشت سفارش
+            <span className="badge badge-ghost badge-sm">اختیاری</span>
+          </h3>
+          <textarea
+            className="textarea textarea-bordered w-full h-24 resize-none"
+            placeholder='آیا چیزی هست که بخواهید به ما بگویید؟ مثلاً "ساعت ۹ تا ۱۱ صبح بیارید وگرنه خانه نیستم"'
+            value={customerNote}
+            onChange={(e) => setCustomerNote(e.target.value)}
+            maxLength={500}
+          />
+          <div className="text-xs text-base-content/50 text-left mt-1">
+            {customerNote.length}/500
           </div>
         </div>
 

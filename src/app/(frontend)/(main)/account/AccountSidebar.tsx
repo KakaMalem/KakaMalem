@@ -17,6 +17,7 @@ import {
   ChevronLeft,
 } from 'lucide-react'
 import type { User as PayloadUser } from '@/payload-types'
+import { getUserProfilePictureUrl, getUserInitials, getUserDisplayName } from '@/utilities/ui'
 
 interface AccountSidebarProps {
   user: PayloadUser
@@ -63,13 +64,10 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
     }
   }, [isOpen])
 
-  // Get user display info
-  const displayName =
-    user.firstName || user.lastName
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : 'کاربر'
-  const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase()
-  const profilePictureUrl = user.picture || null
+  // Get user display info using utility functions
+  const displayName = getUserDisplayName(user)
+  const initials = getUserInitials(user)
+  const profilePictureUrl = getUserProfilePictureUrl(user)
 
   // Main navigation items
   const menuItems: MenuItem[] = [

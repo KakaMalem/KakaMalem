@@ -176,6 +176,10 @@ export interface User {
    */
   picture?: string | null;
   /**
+   * User-uploaded profile picture
+   */
+  profilePicture?: (string | null) | Media;
+  /**
    * Original Fan - Early supporter badge
    */
   ogfan?: boolean | null;
@@ -363,6 +367,29 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: string;
+  /**
+   * Leave blank to auto-generate from filename
+   */
+  alt?: string | null;
+  uploadedBy?: (string | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "products".
  */
 export interface Product {
@@ -516,30 +543,6 @@ export interface Product {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: string;
-  /**
-   * Leave blank to auto-generate from filename
-   */
-  alt?: string | null;
-  uploadedBy?: (string | null) | User;
-  _key?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "categories".
  */
 export interface Category {
@@ -635,6 +638,10 @@ export interface Order {
     };
   };
   trackingNumber?: string | null;
+  /**
+   * Customer note for this order (e.g., delivery instructions)
+   */
+  customerNote?: string | null;
   /**
    * Internal notes - only visible to admins and developers
    */
@@ -980,6 +987,7 @@ export interface UsersSelect<T extends boolean = true> {
   authMethods?: T;
   googleSub?: T;
   picture?: T;
+  profilePicture?: T;
   ogfan?: T;
   phone?: T;
   roles?: T;
@@ -1076,7 +1084,6 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   uploadedBy?: T;
-  _key?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1244,6 +1251,7 @@ export interface OrdersSelect<T extends boolean = true> {
             };
       };
   trackingNumber?: T;
+  customerNote?: T;
   notes?: T;
   status?: T;
   paymentStatus?: T;

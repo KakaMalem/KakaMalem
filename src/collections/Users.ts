@@ -316,6 +316,14 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      name: 'profilePicture',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description: 'User-uploaded profile picture',
+      },
+    },
+    {
       name: 'ogfan',
       type: 'checkbox',
       defaultValue: false,

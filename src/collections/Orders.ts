@@ -8,7 +8,7 @@ export const Orders: CollectionConfig = {
   slug: 'orders',
   admin: {
     useAsTitle: 'orderNumber',
-    defaultColumns: ['orderNumber', 'customer', 'total', 'status', 'createdAt'],
+    defaultColumns: ['orderNumber', 'customer', 'total', 'status', 'paymentStatus', 'createdAt'],
     group: 'E-commerce',
   },
   access: {
@@ -684,6 +684,15 @@ export const Orders: CollectionConfig = {
         condition: (data, siblingData, { user }) => {
           return !!user?.roles?.includes('developer')
         },
+      },
+    },
+    {
+      name: 'customerNote',
+      type: 'textarea',
+      admin: {
+        description: 'Customer note for this order (e.g., delivery instructions)',
+        placeholder:
+          'آیا چیزی هست که بخواهید به ما بگویید؟ مثلاً "ساعت ۹ تا ۱۱ صبح بیارید وگرنه خونه نیستم"',
       },
     },
     {

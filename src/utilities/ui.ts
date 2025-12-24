@@ -6,7 +6,7 @@
 
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { Media, Product, ProductVariant } from '@/payload-types'
+import type { Media, Product, ProductVariant, User } from '@/payload-types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -170,4 +170,48 @@ export function isProductAvailable(
   }
 
   return { available: true }
+}
+
+/**
+ * Get user profile picture URL with proper prioritization:
+ * 1. User-uploaded profile picture (profilePicture field from media collection)
+ * 2. OAuth profile picture (picture field from Google)
+ * 3. null (fallback to initials)
+ */
+export function getUserProfilePictureUrl(user: User | null): string | null {
+  if (!user) return null
+
+  // Priority 1: User-uploaded profile picture
+  if (user.profilePicture) {
+    const pic = user.profilePicture
+    if (typeof pic === 'object' && pic !== null && 'url' in pic) {
+      return (pic as Media).url || null
+    }
+  }
+
+  // Priority 2: OAuth profile picture (from Google)
+  if (user.picture) {
+    return user.picture
+  }
+
+  return null
+}
+
+/**
+ * Get user initials for fallback avatar
+ */
+export function getUserInitials(user: User | null): string {
+  if (!user) return '?'
+  const firstInitial = user.firstName?.[0] || ''
+  const lastInitial = user.lastName?.[0] || ''
+  return (firstInitial + lastInitial).toUpperCase() || '?'
+}
+
+/**
+ * Get user display name
+ */
+export function getUserDisplayName(user: User | null): string {
+  if (!user) return 'کاربر'
+  const name = `${user.firstName || ''} ${user.lastName || ''}`.trim()
+  return name || 'کاربر'
 }

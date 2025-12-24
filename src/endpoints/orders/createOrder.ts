@@ -40,6 +40,7 @@ interface CreateOrderRequest {
   saveAddress?: boolean
   guestEmail?: string
   items?: RequestCartItem[]
+  customerNote?: string
 }
 
 export const createOrder: Endpoint = {
@@ -64,6 +65,7 @@ export const createOrder: Endpoint = {
       saveAddress,
       guestEmail,
       items: requestItems,
+      customerNote,
     } = body
 
     // Validate required fields
@@ -391,6 +393,7 @@ export const createOrder: Endpoint = {
         currency: 'USD' | 'AFN'
         customer?: string
         guestEmail?: string
+        customerNote?: string
       } = {
         orderNumber: `ORD-${Date.now()}`, // Auto-generated order number
         items: orderItems,
@@ -417,6 +420,7 @@ export const createOrder: Endpoint = {
         paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
         status: 'pending',
         currency,
+        customerNote: customerNote || undefined,
       }
 
       // Add customer or guestEmail based on authentication
@@ -477,6 +481,142 @@ export const createOrder: Endpoint = {
           getGeoLocationFromRequest(req, 'order')
             .then((location) => updateUserLocation(payload, user.id, location))
             .catch((err) => console.error('Failed to capture location on order:', err))
+        }
+      }
+
+      // Send order confirmation email
+      const recipientEmail = user ? user.email : guestEmail
+      const recipientName = shippingAddress.firstName || 'مشتری'
+
+      if (recipientEmail) {
+        try {
+          // Format items for email
+          const emailItems = orderItems
+            .map((item) => {
+              const productName =
+                typeof item.product === 'object' ? (item.product as Product).name : 'محصول'
+              return `<tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${productName}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left;" dir="ltr">${currency === 'AFN' ? '؋' : '$'}${item.price.toLocaleString()}</td>
+              </tr>`
+            })
+            .join('')
+
+          const currencySymbol = currency === 'AFN' ? '؋' : '$'
+          const paymentMethodLabel =
+            paymentMethod === 'cod'
+              ? 'پرداخت هنگام تحویل'
+              : paymentMethod === 'bank_transfer'
+                ? 'انتقال بانکی'
+                : 'کارت اعتباری'
+
+          await payload.sendEmail({
+            to: recipientEmail,
+            subject: `تأیید سفارش #${order.orderNumber} - کاکا معلم`,
+            html: `
+              <!DOCTYPE html>
+              <html dir="rtl" lang="fa">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              </head>
+              <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; direction: rtl;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f5f5f5;" dir="rtl">
+                  <tr>
+                    <td style="padding: 40px 20px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" dir="rtl">
+                        <!-- Header -->
+                        <tr>
+                          <td style="background-color: #16a34a; padding: 30px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">کاکا معلم</h1>
+                            <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">سفارش شما با موفقیت ثبت شد!</p>
+                          </td>
+                        </tr>
+
+                        <!-- Content -->
+                        <tr>
+                          <td style="padding: 40px 30px; text-align: right;" dir="rtl">
+                            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px; text-align: right;">سلام ${recipientName} عزیز،</h2>
+
+                            <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; text-align: right;">
+                              از خرید شما متشکریم! سفارش شما با موفقیت ثبت شد و در حال پردازش است.
+                            </p>
+
+                            <!-- Order Info -->
+                            <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                              <p style="margin: 0 0 10px 0; text-align: right;"><strong>شماره سفارش:</strong> ${order.orderNumber}</p>
+                              <p style="margin: 0 0 10px 0; text-align: right;"><strong>روش پرداخت:</strong> ${paymentMethodLabel}</p>
+                              <p style="margin: 0; text-align: right;"><strong>تاریخ سفارش:</strong> ${new Date().toLocaleDateString('fa-IR')}</p>
+                            </div>
+
+                            <!-- Order Items -->
+                            <h3 style="color: #1f2937; margin: 30px 0 15px 0; font-size: 18px; text-align: right;">اقلام سفارش</h3>
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;" dir="rtl">
+                              <thead>
+                                <tr style="background-color: #f3f4f6;">
+                                  <th style="padding: 12px; text-align: right; font-weight: 600;">محصول</th>
+                                  <th style="padding: 12px; text-align: center; font-weight: 600;">تعداد</th>
+                                  <th style="padding: 12px; text-align: left; font-weight: 600;">قیمت</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${emailItems}
+                              </tbody>
+                            </table>
+
+                            <!-- Totals -->
+                            <div style="border-top: 2px solid #e5e7eb; margin-top: 20px; padding-top: 20px;">
+                              <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;" dir="rtl">
+                                <tr>
+                                  <td style="text-align: right; padding: 5px 0;">جمع جزء:</td>
+                                  <td style="text-align: left; padding: 5px 0;" dir="ltr">${currencySymbol}${subtotal.toLocaleString()}</td>
+                                </tr>
+                                <tr>
+                                  <td style="text-align: right; padding: 5px 0;">هزینه ارسال:</td>
+                                  <td style="text-align: left; padding: 5px 0;" dir="ltr">${shipping === 0 ? 'رایگان' : `${currencySymbol}${shipping.toLocaleString()}`}</td>
+                                </tr>
+                                <tr style="font-size: 18px; font-weight: bold; color: #16a34a;">
+                                  <td style="text-align: right; padding: 10px 0;">جمع کل:</td>
+                                  <td style="text-align: left; padding: 10px 0;" dir="ltr">${currencySymbol}${total.toLocaleString()}</td>
+                                </tr>
+                              </table>
+                            </div>
+
+                            <!-- Shipping Address -->
+                            <h3 style="color: #1f2937; margin: 30px 0 15px 0; font-size: 18px; text-align: right;">آدرس تحویل</h3>
+                            <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px;">
+                              <p style="margin: 0 0 5px 0; text-align: right;"><strong>${shippingAddress.firstName} ${shippingAddress.lastName}</strong></p>
+                              ${shippingAddress.state ? `<p style="margin: 0 0 5px 0; text-align: right;">${shippingAddress.state}، ${shippingAddress.country}</p>` : `<p style="margin: 0 0 5px 0; text-align: right;">${shippingAddress.country}</p>`}
+                              ${shippingAddress.phone ? `<p style="margin: 0 0 5px 0; text-align: right;" dir="ltr">${shippingAddress.phone}</p>` : ''}
+                              ${shippingAddress.nearbyLandmark ? `<p style="margin: 0; text-align: right; color: #6b7280;">${shippingAddress.nearbyLandmark}</p>` : ''}
+                            </div>
+
+                            <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; text-align: right;">
+                              می‌توانید وضعیت سفارش خود را از طریق حساب کاربری پیگیری کنید.
+                            </p>
+                          </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                          <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                              با تشکر از خرید شما از کاکا معلم
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </body>
+              </html>
+            `,
+          })
+        } catch (emailError) {
+          // Log but don't fail the order if email fails
+          console.error('Order confirmation email error:', emailError)
         }
       }
 

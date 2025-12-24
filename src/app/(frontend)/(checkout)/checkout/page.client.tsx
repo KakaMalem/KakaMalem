@@ -49,6 +49,7 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
       longitude: null,
     },
   })
+  const [customerNote, setCustomerNote] = useState('')
 
   // FIX: Memoize these values to prevent referential instability on every render
   const userAddresses = useMemo(() => user?.addresses || [], [user])
@@ -242,6 +243,7 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
           currency,
           items,
           guestEmail, // Include guest email if not logged in
+          customerNote: customerNote.trim() || undefined,
         }),
       })
 
@@ -344,6 +346,8 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
             shippingCost={shippingCost}
             total={total}
             shippingSettings={shipping}
+            customerNote={customerNote}
+            setCustomerNote={setCustomerNote}
           />
         )}
 

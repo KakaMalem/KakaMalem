@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { LogOut, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react'
 import { useCart } from '@/providers'
 import Logo from '../../components/Logo'
@@ -11,7 +10,6 @@ type LogoutStatus = 'logging-out' | 'success' | 'error'
 
 export default function LogoutPage() {
   const { refreshCart } = useCart()
-  const router = useRouter()
   const [status, setStatus] = useState<LogoutStatus>('logging-out')
   const [countdown, setCountdown] = useState(3)
 
@@ -68,12 +66,11 @@ export default function LogoutPage() {
   // Handle redirect when countdown reaches 0
   useEffect(() => {
     if (status === 'success' && countdown === 0) {
-      // Refresh the router cache to clear server component data (like navbar user state)
-      router.refresh()
-      // Then navigate to home page
-      router.push('/')
+      // Use window.location for a full page reload to ensure server components refetch
+      // This guarantees the navbar gets fresh auth state without cache issues
+      window.location.href = '/'
     }
-  }, [status, countdown, router])
+  }, [status, countdown])
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-base-200">
@@ -134,8 +131,7 @@ export default function LogoutPage() {
 
               <button
                 onClick={() => {
-                  router.refresh()
-                  router.push('/')
+                  window.location.href = '/'
                 }}
                 className="btn btn-primary w-full gap-2"
               >

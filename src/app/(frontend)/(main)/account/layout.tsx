@@ -1,6 +1,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { getMeUser } from '@/utilities/getMeUser'
+import { getUserProfilePictureUrl, getUserInitials, getUserDisplayName } from '@/utilities/ui'
 import AccountSidebar from './AccountSidebar'
 import OgFanBadge from './OgFanBadge'
 
@@ -9,17 +10,14 @@ export default async function AccountLayout({ children }: { children: React.Reac
     nullUserRedirect: '/auth/login?redirect=/account',
   })
 
-  // Get profile picture URL if available (for OAuth users)
-  const profilePictureUrl = user.picture || null
+  // Get profile picture URL (prioritizes user-uploaded over OAuth)
+  const profilePictureUrl = getUserProfilePictureUrl(user)
 
   // Get user initials for fallback avatar
-  const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase()
+  const initials = getUserInitials(user)
 
   // Get display name
-  const displayName =
-    user.firstName || user.lastName
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : 'حساب کاربری'
+  const displayName = getUserDisplayName(user) || 'حساب کاربری'
 
   // Check if user is an OG Fan
   const isOgFan = user.ogfan === true

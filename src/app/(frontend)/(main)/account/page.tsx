@@ -29,7 +29,7 @@ export default async function AccountOverviewPage() {
 
     const response = await fetch(`${baseURL}/api/user-orders?limit=10&depth=1`, {
       headers: {
-        Cookie: token ? `payload-token=${token.value}` : '',
+        Cookie: token ? `kakamalem-token=${token.value}` : '',
       },
       cache: 'no-store',
     })

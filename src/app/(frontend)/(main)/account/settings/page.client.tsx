@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
+import Image from 'next/image'
 import {
   Bell,
   DollarSign,
@@ -13,6 +14,11 @@ import {
   CheckCircle,
   Settings,
   Shield,
+  Camera,
+  User as UserIcon,
+  Loader2,
+  Phone,
+  Mail,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User } from '@/payload-types'
@@ -48,9 +54,19 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
   const [user, setUser] = useState(initialUser)
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [uploadingPicture, setUploadingPicture] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Profile editing state
+  const [profileData, setProfileData] = useState({
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    phone: user.phone || '',
+  })
 
   // Auth methods from the new field
   const authMethods = (user.authMethods as string[]) || []
@@ -106,6 +122,37 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
       toast.error('ثبت ترجیحات ناموفق بود. لطفاً دوباره امتحان کنید.')
     } finally {
       setSavingPreferences(false)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true)
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          firstName: profileData.firstName.trim() || null,
+          lastName: profileData.lastName.trim() || null,
+          phone: profileData.phone.trim() || null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile')
+      }
+
+      const updatedData = await response.json()
+      setUser(updatedData.doc || updatedData)
+      toast.success('اطلاعات پروفایل با موفقیت ذخیره شد!')
+    } catch (err: unknown) {
+      console.error('Error updating profile:', err)
+      toast.error('ذخیره اطلاعات پروفایل ناموفق بود. لطفاً دوباره امتحان کنید.')
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -208,6 +255,130 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
     setPasswordError(null)
   }
 
+  // Get profile picture URL - prioritize user-uploaded, then OAuth picture
+  const getProfilePictureUrl = (): string | null => {
+    // User-uploaded profile picture (from media collection)
+    if (user.profilePicture) {
+      const pic = user.profilePicture
+      if (typeof pic === 'object' && pic !== null && 'url' in pic) {
+        return pic.url as string
+      }
+    }
+    // OAuth profile picture (from Google)
+    if (user.picture) {
+      return user.picture
+    }
+    return null
+  }
+
+  const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('لطفاً یک فایل تصویر انتخاب کنید')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('حجم تصویر نباید بیشتر از ۵ مگابایت باشد')
+      return
+    }
+
+    setUploadingPicture(true)
+
+    try {
+      // First upload the image to media collection
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('alt', `${user.firstName || 'User'} ${user.lastName || ''} Profile Picture`)
+
+      const uploadResponse = await fetch('/api/media', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('آپلود تصویر ناموفق بود')
+      }
+
+      const uploadData = await uploadResponse.json()
+      const mediaId = uploadData.doc?.id
+
+      if (!mediaId) {
+        throw new Error('آپلود تصویر ناموفق بود')
+      }
+
+      // Then update user with the new profile picture
+      const updateResponse = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          profilePicture: mediaId,
+        }),
+      })
+
+      if (!updateResponse.ok) {
+        throw new Error('ذخیره تصویر پروفایل ناموفق بود')
+      }
+
+      const updatedData = await updateResponse.json()
+      setUser(updatedData.doc || updatedData)
+      toast.success('تصویر پروفایل با موفقیت به‌روزرسانی شد!')
+    } catch (err: unknown) {
+      console.error('Error uploading profile picture:', err)
+      const errorMessage =
+        err instanceof Error ? err.message : 'آپلود تصویر ناموفق بود. لطفاً دوباره امتحان کنید.'
+      toast.error(errorMessage)
+    } finally {
+      setUploadingPicture(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemoveProfilePicture = async () => {
+    if (!user.profilePicture) return
+
+    setUploadingPicture(true)
+
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          profilePicture: null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('حذف تصویر پروفایل ناموفق بود')
+      }
+
+      const updatedData = await response.json()
+      setUser(updatedData.doc || updatedData)
+      toast.success('تصویر پروفایل حذف شد')
+    } catch (err: unknown) {
+      console.error('Error removing profile picture:', err)
+      toast.error('حذف تصویر پروفایل ناموفق بود')
+    } finally {
+      setUploadingPicture(false)
+    }
+  }
+
+  const profilePictureUrl = getProfilePictureUrl()
+
   return (
     <div className="space-y-6">
       <Breadcrumb
@@ -227,6 +398,183 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
           <p className="text-sm md:text-base text-base-content/70 mt-0.5">
             مدیریت ترجیحات و امنیت حساب کاربری
           </p>
+        </div>
+      </div>
+
+      {/* Profile Picture */}
+      <div className="card bg-base-100 border-2 border-base-300">
+        <div className="card-body p-4 md:p-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-4 md:mb-6">
+            <Camera className="w-5 h-5 text-primary" />
+            <h3 className="card-title text-lg">تصویر پروفایل</h3>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {/* Current Profile Picture */}
+            <div className="relative">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden bg-base-200 border-4 border-base-300 flex items-center justify-center">
+                {profilePictureUrl ? (
+                  <Image
+                    src={profilePictureUrl}
+                    alt="تصویر پروفایل"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserIcon className="w-12 h-12 md:w-16 md:h-16 text-base-content/30" />
+                )}
+              </div>
+              {uploadingPicture && (
+                <div className="absolute inset-0 bg-base-100/80 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+              )}
+            </div>
+
+            {/* Upload Controls */}
+            <div className="flex-1 text-center sm:text-right space-y-3">
+              <div>
+                <p className="font-medium mb-1">تصویر پروفایل خود را آپلود کنید</p>
+                <p className="text-sm text-base-content/60">
+                  فرمت‌های مجاز: JPG، PNG، GIF - حداکثر ۵ مگابایت
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                  className="hidden"
+                  id="profile-picture-input"
+                />
+                <label
+                  htmlFor="profile-picture-input"
+                  className={`btn btn-primary btn-sm gap-2 ${uploadingPicture ? 'btn-disabled' : ''}`}
+                >
+                  <Camera className="w-4 h-4" />
+                  {profilePictureUrl ? 'تغییر تصویر' : 'آپلود تصویر'}
+                </label>
+
+                {user.profilePicture && (
+                  <button
+                    onClick={handleRemoveProfilePicture}
+                    className="btn btn-ghost btn-sm gap-2 text-error hover:bg-error/10"
+                    disabled={uploadingPicture}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    حذف
+                  </button>
+                )}
+              </div>
+
+              {user.picture && !user.profilePicture && (
+                <p className="text-xs text-base-content/50">
+                  در حال استفاده از تصویر حساب گوگل شما
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile Information */}
+      <div className="card bg-base-100 border-2 border-base-300">
+        <div className="card-body p-4 md:p-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-base-300 mb-4 md:mb-6">
+            <UserIcon className="w-5 h-5 text-primary" />
+            <h3 className="card-title text-lg">اطلاعات پروفایل</h3>
+          </div>
+
+          <div className="space-y-4">
+            {/* First Name & Last Name */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="fieldset">
+                <label className="label pb-1">
+                  <span className="label-text font-medium">نام</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  placeholder="نام خود را وارد کنید"
+                  value={profileData.firstName}
+                  onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                />
+              </div>
+
+              <div className="fieldset">
+                <label className="label pb-1">
+                  <span className="label-text font-medium">نام خانوادگی</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  placeholder="نام خانوادگی خود را وارد کنید"
+                  value={profileData.lastName}
+                  onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Email (read-only) */}
+            <div className="fieldset">
+              <label className="label pb-1">
+                <span className="label-text font-medium flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  ایمیل
+                </span>
+              </label>
+              <input
+                type="email"
+                className="input input-bordered w-full bg-base-200 cursor-not-allowed"
+                value={user.email}
+                disabled
+                readOnly
+              />
+              <p className="text-xs text-base-content/50 mt-1">ایمیل قابل تغییر نیست</p>
+            </div>
+
+            {/* Phone */}
+            <div className="fieldset">
+              <label className="label pb-1">
+                <span className="label-text font-medium flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  شماره تلفن
+                </span>
+              </label>
+              <input
+                type="tel"
+                className="input input-bordered w-full"
+                placeholder="مثال: 0799123456"
+                value={profileData.phone}
+                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                dir="ltr"
+              />
+            </div>
+
+            {/* Save Button */}
+            <div className="card-actions pt-2">
+              <button
+                onClick={handleSaveProfile}
+                className="btn btn-primary gap-2"
+                disabled={savingProfile}
+              >
+                {savingProfile ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    در حال ذخیره...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    ذخیره اطلاعات
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -19,6 +19,7 @@ export const getMeUser = async (args?: {
     headers: {
       Authorization: `JWT ${token}`,
     },
+    cache: 'no-store',
   })
 
   const {

@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingBag, Check, AlertTriangle, Clock, PackageX } from 'lucide-react'
+import { ShoppingBag, Check, AlertTriangle, Clock, PackageX, ImageOff } from 'lucide-react'
 import { Product, Media } from '@/payload-types'
 import { useCart } from '@/providers'
 import { StarRating } from './StarRating'
@@ -119,6 +119,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addItem, cart } = useCart()
   const [isAdding, setIsAdding] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
+  const [imageLoading, setImageLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoading(false)
+  }, [])
+
+  const handleImageError = useCallback(() => {
+    setImageLoading(false)
+    setImageError(true)
+  }, [])
 
   // -- SAFELY NORMALIZE STRINGS TO AVOID TS ERRORS --
   const safeName: string = product.name ?? ''
@@ -275,13 +286,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <article className="card card-compact bg-base-100 border border-base-200 h-full hover:border-base-300 hover:shadow-xl transition-all duration-300 overflow-hidden">
         {/* IMAGE AREA */}
         <figure className="relative aspect-[4/5] bg-base-200 overflow-hidden">
-          <Image
-            src={imageUrl}
-            alt={imageAlt}
-            fill
-            sizes="(max-width: 768px) 50vw, 25vw"
-            className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
-          />
+          {/* Loading skeleton */}
+          {imageLoading && !imageError && (
+            <div className="absolute inset-0 bg-base-200 animate-pulse flex items-center justify-center z-[1]">
+              <div className="w-12 h-12 rounded-full bg-base-300 animate-pulse" />
+            </div>
+          )}
+
+          {/* Error fallback */}
+          {imageError ? (
+            <div className="absolute inset-0 bg-base-200 flex flex-col items-center justify-center text-base-content/30">
+              <ImageOff className="w-12 h-12 mb-2" />
+              <span className="text-xs">تصویر موجود نیست</span>
+            </div>
+          ) : (
+            <Image
+              src={imageUrl}
+              alt={imageAlt}
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className={`object-cover transition-all duration-700 ease-in-out group-hover:scale-110 ${
+                imageLoading ? 'opacity-0' : 'opacity-100'
+              }`}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+            />
+          )}
 
           {/* BADGES */}
           <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
@@ -300,13 +330,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {safeName}
           </h3>
 
-          {/* Rating */}
-          {safeAverageRating > 0 && (
-            <div className="flex items-center gap-1.5 opacity-60">
-              <StarRating rating={safeAverageRating} size="sm" />
-              <span className="text-[10px] font-bold tracking-tight">({safeReviewCount})</span>
-            </div>
-          )}
+          {/* Rating - Always show, with gray stars when no reviews */}
+          <div className="flex items-center gap-1.5 opacity-60">
+            <StarRating rating={safeAverageRating} size="sm" />
+            <span className="text-[10px] font-bold tracking-tight">
+              {safeReviewCount > 0 ? `(${safeReviewCount})` : '(بدون نظر)'}
+            </span>
+          </div>
 
           {/* Footer: Price & Action */}
           <div className="mt-auto pt-3 flex items-end justify-between border-t border-base-100 group-hover:border-base-200 transition-colors">
