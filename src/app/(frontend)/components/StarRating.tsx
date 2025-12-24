@@ -23,7 +23,7 @@ export const StarRating: React.FC<StarRatingProps> = ({ rating, size = 'sm' }) =
         return (
           <div
             key={value}
-            className={`mask mask-star-2 ${isHalf ? 'mask-half-1' : 'mask-half-2'} ${isFilled ? 'bg-rating' : 'bg-base-300'}`}
+            className={`mask mask-star-2 ${isHalf ? 'mask-half-1' : 'mask-half-2'} ${isFilled ? 'bg-rating' : 'bg-rating-empty'}`}
             aria-label={`${value} star`}
             aria-current={value === roundedRating ? 'true' : undefined}
           />

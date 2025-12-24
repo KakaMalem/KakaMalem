@@ -181,7 +181,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ showTitle = true
                     className={`w-3 h-3 ${
                       typeof product.averageRating === 'number' && product.averageRating > 0
                         ? 'fill-rating text-rating'
-                        : 'text-base-300'
+                        : 'text-rating-empty'
                     }`}
                   />
                   <span className="text-xs opacity-70">

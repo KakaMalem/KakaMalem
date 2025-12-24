@@ -78,7 +78,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
         if (!response.ok) {
           throw new Error(
-            data.error || `خطا در ${isUpdate ? 'بروزرسانی' : 'ارسال'} نظر. لطفا دوباره تلاش کنید.`,
+            data.error ||
+              `خطا در ${isUpdate ? 'بروزرسانی' : 'ارسال'} نظریه. لطفا دوباره تلاش کنید.`,
           )
         }
 
@@ -96,7 +97,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
         setUserReview(updatedReview)
         setIsEditing(false)
-        toast.success(isUpdate ? 'نظر شما با موفقیت بروزرسانی شد!' : 'نظر شما با موفقیت ثبت شد!')
+        toast.success(
+          isUpdate ? 'نظریه شما با موفقیت بروزرسانی شد!' : 'نظریه شما با موفقیت ثبت شد!',
+        )
 
         // Clear form
         setRating(0)
@@ -107,9 +110,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           onSuccess()
         }
       } catch (error: unknown) {
-        console.error('خطا در ثبت نظر:', error)
+        console.error('خطا در ثبت نظریه:', error)
         const errorMessage =
-          error instanceof Error ? error.message : 'خطا در ثبت نظر. لطفا دوباره تلاش کنید.'
+          error instanceof Error ? error.message : 'خطا در ثبت نظریه. لطفا دوباره تلاش کنید.'
         setError(errorMessage)
         toast.error(errorMessage)
       } finally {
@@ -174,7 +177,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           sessionStorage.removeItem(pendingReviewKey)
 
           // Show notification that we're auto-submitting
-          toast.loading('در حال ارسال نظر شما...', { duration: 2000 })
+          toast.loading('در حال ارسال نظریه شما...', { duration: 2000 })
 
           // Populate form with stored data first
           setRating(reviewData.rating)
@@ -187,8 +190,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
               await submitReview(reviewData.rating, reviewData.title, reviewData.comment)
               setIsAutoSubmitting(false)
             } catch (error) {
-              console.error('خطا در ارسال خودکار نظر:', error)
-              toast.error('خطا در ارسال خودکار نظر. لطفا دکمه ارسال را فشار دهید.')
+              console.error('خطا در ارسال خودکار نظریه:', error)
+              toast.error('خطا در ارسال خودکار نظریه. لطفا دکمه ارسال را فشار دهید.')
               setIsAutoSubmitting(false)
               // Keep data in form so user can manually submit
               setRating(reviewData.rating)
@@ -197,9 +200,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
             }
           }, 800)
         } catch (error) {
-          console.error('خطا در بازیابی اطلاعات نظر:', error)
+          console.error('خطا در بازیابی اطلاعات نظریه:', error)
           sessionStorage.removeItem(pendingReviewKey)
-          toast.error('خطا در بازیابی اطلاعات نظر. لطفا دوباره وارد کنید.')
+          toast.error('خطا در بازیابی اطلاعات نظریه. لطفا دوباره وارد کنید.')
         }
       } else {
         // If submitReview param exists but no data, clean up the URL
@@ -223,14 +226,14 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     }
 
     if (title.trim().length === 0) {
-      setError('لطفاً عنوان نظر را وارد کنید')
-      toast.error('لطفاً عنوان نظر را وارد کنید')
+      setError('لطفاً عنوان نظریه را وارد کنید')
+      toast.error('لطفاً عنوان نظریه را وارد کنید')
       return
     }
 
     if (comment.trim().length === 0) {
-      setError('لطفاً متن نظر را وارد کنید')
-      toast.error('لطفاً متن نظر را وارد کنید')
+      setError('لطفاً متن نظریه را وارد کنید')
+      toast.error('لطفاً متن نظریه را وارد کنید')
       return
     }
 
@@ -263,7 +266,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         const redirectUrl = encodeURIComponent(fullUrl)
 
         // Show toast notification
-        toast.success('نظر شما ذخیره شد! لطفاً وارد شوید تا نظر ارسال شود.', {
+        toast.success('نظریه شما ذخیره شد! لطفاً وارد شوید تا نظریه ارسال شود.', {
           duration: 3000,
           icon: '🔐',
         })
@@ -273,7 +276,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           router.push(`/auth/login?redirect=${redirectUrl}`)
         }, 800)
       } catch (error) {
-        console.error('خطا در ذخیره نظر:', error)
+        console.error('خطا در ذخیره نظریه:', error)
         toast.error('خطا در ذخیره اطلاعات. لطفا دوباره تلاش کنید.')
         setError('خطا در ذخیره اطلاعات. لطفا دوباره تلاش کنید.')
       }
@@ -318,10 +321,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'خطا در حذف نظر')
+        throw new Error(data.error || 'خطا در حذف نظریه')
       }
 
-      toast.success('نظر شما با موفقیت حذف شد!')
+      toast.success('نظریه شما با موفقیت حذف شد!')
       setUserReview(null)
       setShowDeleteConfirm(false)
 
@@ -329,9 +332,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         onSuccess()
       }
     } catch (error: unknown) {
-      console.error('خطا در حذف نظر:', error)
+      console.error('خطا در حذف نظریه:', error)
       const errorMessage =
-        error instanceof Error ? error.message : 'خطا در حذف نظر. لطفا دوباره تلاش کنید.'
+        error instanceof Error ? error.message : 'خطا در حذف نظریه. لطفا دوباره تلاش کنید.'
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -354,21 +357,21 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     return (
       <div className="card bg-base-100 border border-base-300 p-6" dir="rtl">
         <div className="flex items-start justify-between mb-4">
-          <h3 className="text-xl font-bold">نظر شما</h3>
+          <h3 className="text-xl font-bold">نظریه شما</h3>
           <div className="flex gap-2">
             <button
               onClick={handleEdit}
               className="btn btn-sm btn-ghost"
-              aria-label="ویرایش نظر"
-              title="ویرایش نظر"
+              aria-label="ویرایش نظریه"
+              title="ویرایش نظریه"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="btn btn-sm btn-ghost text-error"
-              aria-label="حذف نظر"
-              title="حذف نظر"
+              aria-label="حذف نظریه"
+              title="حذف نظریه"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -413,7 +416,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 ` • ویرایش شده در ${new Date(userReview.updatedAt).toLocaleDateString('en-US').replace(/\d{4}/, '2025')}`}
             </p>
             {userReview.status === 'pending' && (
-              <p className="text-warning mt-1">نظر شما در انتظار تایید است</p>
+              <p className="text-warning mt-1">نظریه شما در انتظار تایید است</p>
             )}
           </div>
         </div>
@@ -421,7 +424,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         {/* Delete Confirmation Dialog */}
         {showDeleteConfirm && (
           <div className="mt-4 p-4 bg-error/10 border border-error rounded-lg">
-            <p className="font-semibold mb-3">آیا مطمئن هستید که می‌خواهید نظر خود را حذف کنید؟</p>
+            <p className="font-semibold mb-3">
+              آیا مطمئن هستید که می‌خواهید نظریه خود را حذف کنید؟
+            </p>
             <p className="text-sm text-base-content/70 mb-4">این عملیات قابل بازگشت نیست.</p>
             <div className="flex gap-2">
               <button
@@ -457,7 +462,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   return (
     <div className="card bg-base-100 border border-base-300 p-6" dir="rtl">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold">{isEditing ? 'ویرایش نظر شما' : 'نوشتن نظر'}</h3>
+        <h3 className="text-xl font-bold">{isEditing ? 'ویرایش نظریه شما' : 'نوشتن نظریه'}</h3>
         {isEditing && (
           <button onClick={handleCancelEdit} className="btn btn-sm btn-ghost" aria-label="انصراف">
             <X className="w-4 h-4" />
@@ -504,13 +509,13 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         <div className="fieldset">
           <label className="label">
             <span className="label-text font-semibold">
-              عنوان نظر <span className="text-error">*</span>
+              عنوان نظریه <span className="text-error">*</span>
             </span>
             <span className="label-text-alt opacity-60">{title.length}/100</span>
           </label>
           <input
             type="text"
-            placeholder="نظر خود را در یک خط خلاصه کنید"
+            placeholder="نظریه خود را در یک خط خلاصه کنید"
             className="input w-full"
             value={title}
             onChange={(e) => setTitle(e.target.value.slice(0, 100))}
@@ -523,13 +528,13 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         <div className="fieldset">
           <label className="label">
             <span className="label-text font-semibold">
-              نظر شما <span className="text-error">*</span>
+              نظریه شما <span className="text-error">*</span>
             </span>
             <span className="label-text-alt opacity-60">{comment.length}/2000</span>
           </label>
           <textarea
             className="textarea textarea-bordered w-full h-32"
-            placeholder="نظر خود را درباره این محصول بنویسید..."
+            placeholder="نظریه خود را درباره این محصول بنویسید..."
             value={comment}
             onChange={(e) => setComment(e.target.value.slice(0, 2000))}
             maxLength={2000}
@@ -562,7 +567,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           <div className="alert alert-info">
             <div className="flex items-center gap-2">
               <span className="loading loading-spinner loading-sm"></span>
-              <span>در حال ارسال خودکار نظر شما...</span>
+              <span>در حال ارسال خودکار نظریه شما...</span>
             </div>
           </div>
         )}
@@ -582,9 +587,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 {isEditing ? 'در حال بروزرسانی...' : 'در حال ارسال...'}
               </>
             ) : isEditing ? (
-              'بروزرسانی نظر'
+              'بروزرسانی نظریه'
             ) : (
-              'ارسال نظر'
+              'ارسال نظریه'
             )}
           </button>
         </div>

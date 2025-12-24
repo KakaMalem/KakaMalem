@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   if (!product) {
     return {
       title: 'محصول یافت نشد',
-      description: 'محصول مورد نظر یافت نشد',
+      description: 'محصول مورد نظریه یافت نشد',
     }
   }
 

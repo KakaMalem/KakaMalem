@@ -490,18 +490,28 @@ export const createOrder: Endpoint = {
 
       if (recipientEmail) {
         try {
-          // Format items for email
-          const emailItems = orderItems
-            .map((item) => {
-              const productName =
-                typeof item.product === 'object' ? (item.product as Product).name : 'محصول'
-              return `<tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${productName}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left;" dir="ltr">${currency === 'AFN' ? '؋' : '$'}${item.price.toLocaleString()}</td>
-              </tr>`
-            })
-            .join('')
+          // Format items for email - fetch product names
+          const emailItemsPromises = orderItems.map(async (item) => {
+            let productName = 'محصول'
+            try {
+              const productData = await payload.findByID({
+                collection: 'products',
+                id: item.product,
+                depth: 0,
+              })
+              if (productData && productData.name) {
+                productName = productData.name
+              }
+            } catch {
+              // Use fallback name if product fetch fails
+            }
+            return `<tr>
+              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${productName}</td>
+              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+              <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left;" dir="ltr">${currency === 'AFN' ? '؋' : '$'}${item.price.toLocaleString()}</td>
+            </tr>`
+          })
+          const emailItems = (await Promise.all(emailItemsPromises)).join('')
 
           const currencySymbol = currency === 'AFN' ? '؋' : '$'
           const paymentMethodLabel =
@@ -540,7 +550,7 @@ export const createOrder: Endpoint = {
                             <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px; text-align: right;">سلام ${recipientName} عزیز،</h2>
 
                             <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; text-align: right;">
-                              از خرید شما متشکریم! سفارش شما با موفقیت ثبت شد و در حال پردازش است.
+                              از خرید شما متشکریم! سفارش شما با موفقیت ثبت شد و در حال پروسس است.
                             </p>
 
                             <!-- Order Info -->

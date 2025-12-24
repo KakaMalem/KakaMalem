@@ -27,7 +27,7 @@ export async function generateMetadata({
   if (!categoryResult.docs.length) {
     return {
       title: 'دسته‌بندی یافت نشد',
-      description: 'دسته‌بندی مورد نظر یافت نشد',
+      description: 'دسته‌بندی مورد نظریه یافت نشد',
     }
   }
 

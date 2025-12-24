@@ -1,15 +1,17 @@
 import type { CollectionConfig } from 'payload'
-import { isAdminOrSeller } from '../access/isAdminOrSeller'
 import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
 import { createIsAdminOrSellerOwner } from '../access/isAdminOrSellerOwner'
+
+// Allow any authenticated user to upload media (needed for profile pictures)
+const isAuthenticated = ({ req: { user } }: { req: { user: unknown } }) => !!user
 
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
     // Anyone can read media files (needed for product images on frontend)
     read: () => true,
-    // Admins and sellers can upload media
-    create: isAdminOrSeller,
+    // Any authenticated user can upload media (for profile pictures, etc.)
+    create: isAuthenticated,
     // Admins and developers can update any media, sellers can only update their own
     update: createIsAdminOrSellerOwner('uploadedBy'),
     // Admins and developers can delete any media, sellers can only delete their own

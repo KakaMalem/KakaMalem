@@ -60,7 +60,7 @@ const ORDER_STATUS_CONFIG: Record<
   },
   processing: {
     badge: 'badge-warning',
-    label: 'در حال پردازش',
+    label: 'در حال پروسس',
     icon: <Clock className="w-4 h-4" />,
     color: 'text-warning',
     bgAccent: 'bg-warning/10',

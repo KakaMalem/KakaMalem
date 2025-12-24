@@ -3,6 +3,9 @@ import type { Metadata } from 'next'
 import { Product } from '@/payload-types'
 import HomeClient from './page.client'
 
+// Force dynamic rendering to ensure fresh ratings data
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Kaka Malem',
   description:

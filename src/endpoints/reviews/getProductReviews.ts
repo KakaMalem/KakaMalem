@@ -219,17 +219,30 @@ export const getProductReviews: Endpoint = {
 
         // Format user info
         const reviewUser = review.user
-        const userData =
-          typeof reviewUser === 'object' && reviewUser
-            ? {
-                id: reviewUser.id,
-                name:
-                  reviewUser.firstName && reviewUser.lastName
-                    ? `${reviewUser.firstName} ${reviewUser.lastName}`
-                    : reviewUser.firstName || reviewUser.lastName || 'Anonymous',
-                email: reviewUser.email,
-              }
-            : null
+        let userData = null
+        if (typeof reviewUser === 'object' && reviewUser) {
+          // Get profile picture URL - priority: profilePicture (upload) > picture (OAuth)
+          let profilePictureUrl: string | null = null
+          if (reviewUser.profilePicture) {
+            // Handle upload field - can be string ID or Media object
+            if (typeof reviewUser.profilePicture === 'object' && reviewUser.profilePicture.url) {
+              profilePictureUrl = reviewUser.profilePicture.url
+            }
+          } else if (reviewUser.picture) {
+            // OAuth picture URL (Google profile picture)
+            profilePictureUrl = reviewUser.picture
+          }
+
+          userData = {
+            id: reviewUser.id,
+            name:
+              reviewUser.firstName && reviewUser.lastName
+                ? `${reviewUser.firstName} ${reviewUser.lastName}`
+                : reviewUser.firstName || reviewUser.lastName || 'Anonymous',
+            email: reviewUser.email,
+            profilePicture: profilePictureUrl,
+          }
+        }
 
         return {
           id: review.id,

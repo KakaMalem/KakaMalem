@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { CheckCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { StarRating } from './StarRating'
 import type { Review as PayloadReview } from '@/payload-types'
 
 interface Review extends Omit<PayloadReview, 'user'> {
-  user: { id: string; name?: string; email?: string } | string
+  user: { id: string; name?: string; email?: string; profilePicture?: string | null } | string
   userVote?: 'helpful' | 'not-helpful' | null
 }
 
@@ -76,6 +77,7 @@ const RatingDistribution = ({
 const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticated?: boolean }) => {
   const user = typeof review.user === 'object' ? review.user : null
   const userName = user?.name || user?.email?.split('@')[0] || 'Anonymous'
+  const profilePicture = user?.profilePicture
   const reviewDate = new Date(review.createdAt)
     .toLocaleDateString('en-US', {
       year: 'numeric',
@@ -128,9 +130,15 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <div className="avatar avatar-placeholder">
-              <div className="bg-neutral text-neutral-content rounded-full w-10">
-                <span className="text-sm">{userName.charAt(0).toUpperCase()}</span>
+            <div className="avatar">
+              <div className="w-10 rounded-full">
+                {profilePicture ? (
+                  <Image src={profilePicture} alt={userName} width={40} height={40} className="object-cover" />
+                ) : (
+                  <div className="bg-neutral text-neutral-content w-full h-full flex items-center justify-center">
+                    <span className="text-sm">{userName.charAt(0).toUpperCase()}</span>
+                  </div>
+                )}
               </div>
             </div>
             <div>
@@ -140,7 +148,7 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
             {review.verifiedPurchase && (
               <div className="badge badge-success badge-sm gap-1">
                 <CheckCircle className="w-3 h-3" />
-                خرید تایید شده
+                تایید شده
               </div>
             )}
           </div>
@@ -175,7 +183,7 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
       )}
 
       <div className="mt-4 flex items-center gap-4">
-        <p className="text-sm opacity-60">آیا این نظر مفید بود؟</p>
+        <p className="text-sm opacity-60">آیا این نظریه مفید بود؟</p>
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleVote(true)}
@@ -197,7 +205,7 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
         </div>
         {helpfulCount > 0 && userVote !== 'helpful' && (
           <span className="text-sm opacity-60">
-            {helpfulCount} {helpfulCount === 1 ? 'نفر' : 'نفر'} این نظر را مفید دانستند
+            {helpfulCount} {helpfulCount === 1 ? 'نفر' : 'نفر'} این نظریه را مفید دانستند
           </span>
         )}
       </div>
@@ -219,7 +227,9 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
     return (
       <div className="text-center py-12" dir="rtl">
         <p className="text-lg opacity-60">هنوز نظری ثبت نشده</p>
-        <p className="text-sm opacity-40 mt-2">اولین نفری باشید که در مورد این محصول نظر میدهد!</p>
+        <p className="text-sm opacity-40 mt-2">
+          اولین نفری باشید که در مورد این محصول نظریه میدهد!
+        </p>
       </div>
     )
   }
@@ -239,7 +249,7 @@ export const ReviewDisplay: React.FC<ReviewDisplayProps> = ({
           </div>
           <StarRating rating={stats.averageRating} />
           <p className="text-sm opacity-60 mt-2">
-            بر اساس {stats.totalReviews} {stats.totalReviews === 1 ? 'نظر' : 'نظر'}
+            بر اساس {stats.totalReviews} {stats.totalReviews === 1 ? 'نظریه' : 'نظریه'}
           </p>
         </div>
 

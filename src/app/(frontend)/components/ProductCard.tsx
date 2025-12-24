@@ -334,7 +334,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div className="flex items-center gap-1.5 opacity-60">
             <StarRating rating={safeAverageRating} size="sm" />
             <span className="text-[10px] font-bold tracking-tight">
-              {safeReviewCount > 0 ? `(${safeReviewCount})` : '(بدون نظر)'}
+              {safeReviewCount > 0 ? `(${safeReviewCount})` : '(بدون نظریه)'}
             </span>
           </div>
 

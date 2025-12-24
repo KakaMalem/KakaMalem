@@ -1,11 +1,6 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
 
-interface RecentlyViewedItem {
-  product: Product
-  viewedAt: string
-}
-
 export const getRecentlyViewed: Endpoint = {
   path: '/recently-viewed',
   method: 'get',
@@ -36,26 +31,62 @@ export const getRecentlyViewed: Endpoint = {
         )
       }
 
-      // Get user with recently viewed products populated
+      // Get user with recently viewed products (minimal depth, we'll fetch products separately)
       const currentUser = await payload.findByID({
         collection: 'users',
         id: user.id,
-        depth: 2, // Populate product relationships
+        depth: 1,
       })
 
-      const recentlyViewed = (currentUser.recentlyViewed as RecentlyViewedItem[]) || []
+      const recentlyViewed = (currentUser.recentlyViewed || []) as Array<{
+        product: string | Product
+        viewedAt: string
+      }>
 
-      // Filter out any products that no longer exist and limit results
-      const filteredProducts = recentlyViewed
-        .filter((item: RecentlyViewedItem) => {
-          return item.product && typeof item.product === 'object' && item.product.id
-        })
+      // Extract product IDs and viewedAt timestamps
+      const productIdsWithTimestamps = recentlyViewed
+        .map((item) => ({
+          productId: typeof item.product === 'string' ? item.product : item.product?.id,
+          viewedAt: item.viewedAt,
+        }))
+        .filter((item) => item.productId)
         .slice(0, limit)
 
-      // For products with variants, fetch default variant data
+      if (productIdsWithTimestamps.length === 0) {
+        return Response.json(
+          {
+            success: true,
+            data: [],
+            isGuest: false,
+          },
+          {
+            headers: {
+              'Cache-Control': 'no-store, max-age=0',
+            },
+          },
+        )
+      }
+
+      // Fetch fresh product data with current ratings
+      const productIds = productIdsWithTimestamps.map((p) => p.productId) as string[]
+      const productsResult = await payload.find({
+        collection: 'products',
+        where: {
+          id: { in: productIds },
+        },
+        depth: 1,
+        limit: productIds.length,
+      })
+
+      // Create a map for quick lookup
+      const productsMap = new Map(productsResult.docs.map((p) => [p.id, p]))
+
+      // Build response maintaining original order with fresh product data
       const validProducts = await Promise.all(
-        filteredProducts.map(async (item: RecentlyViewedItem) => {
-          const product = item.product
+        productIdsWithTimestamps.map(async (item) => {
+          const product = productsMap.get(item.productId as string)
+          if (!product) return null
+
           const productData: Record<string, unknown> = {
             id: product.id,
             name: product.name,
@@ -123,11 +154,21 @@ export const getRecentlyViewed: Endpoint = {
         }),
       )
 
-      return Response.json({
-        success: true,
-        data: validProducts,
-        isGuest: false,
-      })
+      // Filter out null entries (products that no longer exist)
+      const filteredValidProducts = validProducts.filter((p) => p !== null)
+
+      return Response.json(
+        {
+          success: true,
+          data: filteredValidProducts,
+          isGuest: false,
+        },
+        {
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+          },
+        },
+      )
     } catch (error: unknown) {
       console.error('Error fetching recently viewed:', error)
       return Response.json(

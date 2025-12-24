@@ -378,7 +378,7 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
               {processing ? (
                 <>
                   <span className="loading loading-spinner"></span>
-                  در حال پردازش سفارش...
+                  در حال پروسس سفارش...
                 </>
               ) : (
                 <>

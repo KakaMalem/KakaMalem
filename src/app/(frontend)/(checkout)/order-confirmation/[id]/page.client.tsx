@@ -100,7 +100,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
   const getOrderStatusBadge = (status: string | null | undefined) => {
     const statusConfig: Record<string, { label: string; class: string }> = {
       pending: { label: 'در انتظار بررسی', class: 'badge-warning' },
-      processing: { label: 'در حال پردازش', class: 'badge-info' },
+      processing: { label: 'در حال پروسس', class: 'badge-info' },
       shipped: { label: 'ارسال شده', class: 'badge-primary' },
       delivered: { label: 'تحویل داده شده', class: 'badge-success' },
       cancelled: { label: 'لغو شده', class: 'badge-error' },
@@ -143,7 +143,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
           </div>
           <h1 className="text-4xl font-bold mb-3">سفارش شما ثبت شد!</h1>
           <p className="text-lg opacity-80 mb-2">
-            از خرید شما متشکریم. سفارش شما دریافت شده و به زودی پردازش خواهد شد.
+            از خرید شما متشکریم. سفارش شما دریافت شده و به زودی پروسس خواهد شد.
           </p>
 
           {/* Order Info Cards */}
@@ -411,7 +411,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>سفارش شما ظرف ۱-۲ روز کاری پردازش خواهد شد</span>
+                    <span>سفارش شما ظرف ۱-۲ روز کاری پروسس خواهد شد</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />

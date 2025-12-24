@@ -391,7 +391,7 @@ export default function ProductDetailsClient({
               href="#reviews"
               className="text-xs text-base-content/70 hover:text-primary transition-colors"
             >
-              {product.reviewCount} {product.reviewCount === 1 ? 'نظر' : 'نظر'}
+              {product.reviewCount} {product.reviewCount === 1 ? 'نظریه' : 'نظریه'}
             </a>
           </>
         )}
@@ -440,7 +440,7 @@ export default function ProductDetailsClient({
                       href="#reviews"
                       className="text-sm text-base-content/70 hover:text-primary transition-colors"
                     >
-                      {product.reviewCount} {product.reviewCount === 1 ? 'نظر' : 'نظر'}
+                      {product.reviewCount} {product.reviewCount === 1 ? 'نظریه' : 'نظریه'}
                     </a>
                   </>
                 )}
@@ -526,7 +526,7 @@ export default function ProductDetailsClient({
                         <span className="mr-2 text-primary">{selectedOptions[option.name]}</span>
                       )}
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mt-1">
                       {option.values?.map((val) => {
                         const isSelected = selectedOptions[option.name] === val.value
 

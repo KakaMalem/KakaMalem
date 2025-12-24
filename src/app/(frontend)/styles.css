@@ -115,6 +115,15 @@
   background-color: var(--color-rating);
 }
 
+/* Empty star color - darker than base-300 for better visibility */
+.bg-rating-empty {
+  background-color: oklch(80% 0.04 75);
+}
+
+.text-rating-empty {
+  color: oklch(80% 0.04 75);
+}
+
 .bg-overlay {
   background-color: var(--color-overlay);
 }

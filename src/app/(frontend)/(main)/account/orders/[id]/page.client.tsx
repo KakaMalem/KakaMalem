@@ -70,7 +70,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
       processing: {
         color: 'badge-info',
         icon: <Package className="w-4 h-4" />,
-        label: 'در حال پردازش',
+        label: 'در حال پروسس',
       },
       shipped: { color: 'badge-primary', icon: <Truck className="w-4 h-4" />, label: 'ارسال شده' },
       delivered: {
@@ -402,7 +402,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                         {order.status === 'cancelled'
                           ? 'سفارش لغو شد'
                           : order.status === 'processing'
-                            ? 'در حال پردازش'
+                            ? 'در حال پروسس'
                             : order.status === 'shipped'
                               ? 'ارسال شده'
                               : 'تحویل داده شده'}

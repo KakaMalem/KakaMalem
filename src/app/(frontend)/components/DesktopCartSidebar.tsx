@@ -169,7 +169,7 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
               </div>
               <h3 className="text-xl font-semibold mb-2">سبد خرید شما خالی است</h3>
               <p className="text-base-content/60 text-center mb-8">
-                به نظر می‌رسد هنوز چیزی به سبد خرید خود اضافه نکرده‌اید
+                به نظریه می‌رسد هنوز چیزی به سبد خرید خود اضافه نکرده‌اید
               </p>
               <Link href="/" className="btn btn-primary" onClick={onClose}>
                 <ShoppingBag className="w-5 h-5" />

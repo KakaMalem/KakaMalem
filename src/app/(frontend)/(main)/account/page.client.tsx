@@ -30,7 +30,7 @@ interface AccountClientProps {
 const ORDER_STATUS_CONFIG: Record<string, { badge: string; label: string }> = {
   delivered: { badge: 'badge-success', label: 'تحویل شده' },
   shipped: { badge: 'badge-info', label: 'ارسال شده' },
-  processing: { badge: 'badge-warning', label: 'در حال پردازش' },
+  processing: { badge: 'badge-warning', label: 'در حال پروسس' },
   cancelled: { badge: 'badge-error', label: 'لغو شده' },
   pending: { badge: 'badge-ghost', label: 'در انتظار' },
 }
