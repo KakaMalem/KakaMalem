@@ -159,33 +159,31 @@ export default function CategoryPageClient({
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 pb-8">
-        <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-
-          {/* Loading Skeletons */}
-          {loading &&
-            Array.from({ length: getSkeletonCount(products.length) }, (_, i) => (
-              <ProductCardSkeleton key={`skeleton-${i}`} />
+        <div className="space-y-8">
+          <div className="grid gap-6 auto-rows-fr items-stretch grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
+
+            {/* Loading Skeletons */}
+            {loading &&
+              Array.from({ length: getSkeletonCount(products.length) }, (_, i) => (
+                <ProductCardSkeleton key={`skeleton-${i}`} />
+              ))}
+          </div>
+
+          {/* Infinite Scroll Sentinel */}
+          <div ref={ref} className="h-4" />
+
+          {/* End of Results Message */}
+          {!hasMore && products.length > 0 && (
+            <div className="text-center py-8">
+              <p className="text-sm text-base-content/60">
+                به پایان رسیدید. نمایش همه {totalProducts} محصول.
+              </p>
+            </div>
+          )}
         </div>
-
-        {/* Infinite Scroll Sentinel */}
-        {hasMore && (
-          <div ref={ref} className="flex justify-center py-8">
-            {!loading && <span className="loading loading-spinner loading-lg text-primary"></span>}
-          </div>
-        )}
-
-        {/* End of Results Message */}
-        {!hasMore && products.length > 0 && (
-          <div className="text-center py-8">
-            <p className="text-sm text-base-content/60">
-              به پایان رسیدید. نمایش همه {totalProducts} محصول.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )

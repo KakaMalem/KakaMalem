@@ -6,7 +6,7 @@ interface SearchQuery {
   minPrice?: number
   maxPrice?: number
   rating?: number // Minimum rating
-  sort?: 'price-asc' | 'price-desc' | 'rating' | 'newest' | 'featured'
+  sort?: 'price-asc' | 'price-desc' | 'rating' | 'newest'
   page?: number
   limit?: number
   ids?: string[] // Specific product IDs to fetch
@@ -52,7 +52,7 @@ export const getProducts: Endpoint = {
         rating: url.searchParams.get('rating')
           ? parseFloat(url.searchParams.get('rating')!)
           : undefined,
-        sort: (url.searchParams.get('sort') as SearchQuery['sort']) || 'featured',
+        sort: (url.searchParams.get('sort') as SearchQuery['sort']) || 'newest',
         page: url.searchParams.get('page') ? parseInt(url.searchParams.get('page')!) : 1,
         limit: url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 12,
         ids: url.searchParams.get('ids')
@@ -69,6 +69,15 @@ export const getProducts: Endpoint = {
           },
         ],
       }
+
+      // MAIN SITE PRODUCT VISIBILITY:
+      // Only show products that are visible on the main KakaMalem site
+      // Products are visible on main site if:
+      // 1. showOnMainStore is true, OR
+      // 2. No stores are assigned (legacy/platform products)
+      where.and?.push({
+        or: [{ showOnMainStore: { equals: true } }, { stores: { exists: false } }],
+      })
 
       // Filter by specific IDs (takes precedence over other filters)
       if (searchParams.ids && searchParams.ids.length > 0) {
@@ -179,9 +188,6 @@ export const getProducts: Endpoint = {
           break
         case 'newest':
           sort = '-createdAt'
-          break
-        case 'featured':
-          sort = '-featured,-createdAt' // Featured first, then newest
           break
       }
 

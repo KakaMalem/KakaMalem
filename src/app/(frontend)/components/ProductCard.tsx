@@ -12,6 +12,8 @@ import { getStockStatusLabel, getStockStatusTextClass } from '@/utilities/ui'
 
 interface ProductCardProps {
   product: Product
+  /** Optional store slug for store pages - links to /store/[storeSlug]/product/[slug] instead of /product/[slug] */
+  storeSlug?: string
 }
 
 /**
@@ -115,7 +117,7 @@ const getProductMedia = (product: Product): string => {
   return placeholder
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, storeSlug }) => {
   const { addItem, cart } = useCart()
   const [isAdding, setIsAdding] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
@@ -216,9 +218,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const imageAlt: string = safeName || 'Product image'
 
   // Build product URL with variant parameter if available
-  const productUrl = enriched.defaultVariantId
-    ? `/product/${encodeURIComponent(slug)}?variant=${enriched.defaultVariantId}`
+  // If storeSlug is provided, link to store-specific product page to avoid redirect
+  const baseProductPath = storeSlug
+    ? `/store/${encodeURIComponent(storeSlug)}/product/${encodeURIComponent(slug)}`
     : `/product/${encodeURIComponent(slug)}`
+
+  const productUrl = enriched.defaultVariantId
+    ? `${baseProductPath}?variant=${enriched.defaultVariantId}`
+    : baseProductPath
 
   // Play success sound - a pleasant two-tone beep
   const playSuccessSound = () => {

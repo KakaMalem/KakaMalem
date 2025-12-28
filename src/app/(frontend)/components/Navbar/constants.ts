@@ -15,6 +15,9 @@ export type IconType =
   | 'login'
   | 'register'
   | 'admin'
+  | 'dashboard'
+  | 'store'
+  | 'becomeSeller'
 
 export interface AccountMenuItem {
   href?: string
@@ -42,8 +45,13 @@ export const getAccountMenuItems = (
 ): AccountMenuItem[] => {
   if (isLoggedIn) {
     // --- LOGGED IN MENU ---
-    // Check if user has admin panel access (same logic as Users collection access.admin)
-    const hasAdminAccess = !!(
+    const isSeller = userRoles?.includes('seller')
+    const isStorefrontOwner = userRoles?.includes('storefront_owner')
+
+    // Check if user has admin panel access
+    // Note: storefront_owner has technical access to admin panel but we don't show the link in navbar
+    // They should use the dashboard instead. The admin panel link is only shown for sellers and admins.
+    const showAdminPanelLink = !!(
       userRoles?.includes('superadmin') ||
       userRoles?.includes('admin') ||
       userRoles?.includes('developer') ||
@@ -60,11 +68,23 @@ export const getAccountMenuItems = (
       { isDivider: true },
     ]
 
-    // Add admin panel link for users with admin panel access
-    if (hasAdminAccess) {
-      menuItems.push({ href: '/admin', label: 'پنل مدیریت', icon: 'admin' })
-      menuItems.push({ isDivider: true })
+    // Add seller dashboard for sellers and storefront owners
+    if (isSeller || isStorefrontOwner) {
+      menuItems.push({ href: '/dashboard', label: 'داشبورد فروشنده', icon: 'dashboard' })
     }
+
+    // Add admin panel link - NOT shown for storefront_owner (they use dashboard instead)
+    if (showAdminPanelLink) {
+      menuItems.push({ href: '/admin', label: 'پنل مدیریت', icon: 'admin' })
+    }
+
+    // Add "Become a Seller" for users who are not sellers or storefront owners
+    if (!isSeller && !isStorefrontOwner) {
+      menuItems.push({ href: '/become-a-seller', label: 'فروشنده شوید', icon: 'becomeSeller' })
+    }
+
+    // Always add divider after role-specific items (seller dashboard, admin panel, become seller)
+    menuItems.push({ isDivider: true })
 
     menuItems.push(
       { href: '/account', label: 'حساب کاربری', icon: 'user' },

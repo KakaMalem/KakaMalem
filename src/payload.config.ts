@@ -15,6 +15,7 @@ import { Products } from './collections/Products'
 import { ProductVariants } from './collections/ProductVariants'
 import { Orders } from './collections/Orders'
 import { Reviews } from './collections/Reviews'
+import { StoreFronts } from './collections/StoreFronts'
 import { Terms } from './globals/Terms'
 import { PrivacyPolicy } from './globals/PrivacyPolicy'
 import { Help } from './globals/Help'
@@ -52,6 +53,11 @@ import { createOrder } from './endpoints/orders/createOrder'
 import { getUserOrders } from './endpoints/orders/getUserOrders'
 import { getOrderConfirmation } from './endpoints/orders/getOrderConfirmation'
 import { getProductVariants } from './endpoints/variants'
+import { getStorefront } from './endpoints/storefronts/getStorefront'
+import { getStorefrontProducts } from './endpoints/storefronts/getStorefrontProducts'
+import { createStorefrontEndpoint } from './endpoints/storefronts/createStorefront'
+import { reorderCategories } from './endpoints/categories/reorderCategories'
+import { reorderProducts } from './endpoints/products/reorderProducts'
 
 const getAllowedOrigins = (): string[] => {
   const baseUrls = [
@@ -91,7 +97,7 @@ export default buildConfig({
       afterLogin: ['/components/AfterLogin#AfterLogin'],
     },
   },
-  collections: [Users, Media, Categories, Products, ProductVariants, Orders, Reviews],
+  collections: [Users, Media, Categories, Products, ProductVariants, Orders, Reviews, StoreFronts],
   globals: [Terms, PrivacyPolicy, Help, Shipping, Contact, FAQs, SiteSettings],
   cookiePrefix: 'kakamalem',
   cors: allowedOrigins,
@@ -127,6 +133,14 @@ export default buildConfig({
     createOrder,
     getUserOrders,
     getOrderConfirmation,
+    // Storefront endpoints
+    getStorefront,
+    getStorefrontProducts,
+    createStorefrontEndpoint,
+    // Categories endpoints
+    reorderCategories,
+    // Products endpoints
+    reorderProducts,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

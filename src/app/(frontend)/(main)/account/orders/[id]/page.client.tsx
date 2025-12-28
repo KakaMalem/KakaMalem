@@ -76,7 +76,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
       delivered: {
         color: 'badge-success',
         icon: <CheckCircle className="w-4 h-4" />,
-        label: 'تحویل داده شده',
+        label: 'تحویل شده',
       },
       cancelled: { color: 'badge-error', icon: <XCircle className="w-4 h-4" />, label: 'لغو شده' },
     }
@@ -405,7 +405,7 @@ export default function OrderDetailsClient({ order, user }: OrderDetailsClientPr
                             ? 'در حال پروسس'
                             : order.status === 'shipped'
                               ? 'ارسال شده'
-                              : 'تحویل داده شده'}
+                              : 'تحویل شده'}
                       </div>
                       <hr
                         className={

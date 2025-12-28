@@ -3,19 +3,36 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function SearchBar() {
+interface SearchBarProps {
+  /** Optional store slug - when provided, search is scoped to this store */
+  storeSlug?: string
+  /** Optional placeholder text */
+  placeholder?: string
+}
+
+export default function SearchBar({ storeSlug, placeholder }: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const router = useRouter()
+
+  const defaultPlaceholder = storeSlug ? 'جستجو در این فروشگاه...' : 'جستجوی محصولات...'
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (searchQuery.trim()) {
-      // Navigate to home page with search query
-      router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`)
+    if (storeSlug) {
+      // Store-specific search - navigate to store page with search query
+      if (searchQuery.trim()) {
+        router.push(`/store/${storeSlug}?q=${encodeURIComponent(searchQuery.trim())}`)
+      } else {
+        router.push(`/store/${storeSlug}`)
+      }
     } else {
-      // Navigate to home page without query
-      router.push('/')
+      // Global search - navigate to home page with search query
+      if (searchQuery.trim()) {
+        router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`)
+      } else {
+        router.push('/')
+      }
     }
   }
 
@@ -30,7 +47,7 @@ export default function SearchBar() {
       <div className="relative group">
         <input
           type="text"
-          placeholder="جستجوی محصولات..."
+          placeholder={placeholder || defaultPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={handleKeyDown}

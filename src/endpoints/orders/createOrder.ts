@@ -1,7 +1,12 @@
 import type { Endpoint } from 'payload'
-import type { User, Product, SiteSetting } from '@/payload-types'
+import type { User, Product, SiteSetting, Storefront } from '@/payload-types'
+import { customAlphabet } from 'nanoid'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getGeoLocationFromRequest, updateUserLocation } from '@/utilities/geolocation'
+
+// Generate short, readable order numbers (8 chars, uppercase alphanumeric)
+// Example: KM-A7B3C9D2
+const generateOrderNumber = customAlphabet('0123456789ABCDEFGHJKLMNPQRSTUVWXYZ', 8)
 
 interface CartItem {
   product: string | Product
@@ -167,6 +172,10 @@ export const createOrder: Endpoint = {
         variantId?: string
       }> = []
 
+      // Track storefront revenue for analytics updates
+      // Map of storefront ID -> { orderCount: 1, revenue: total }
+      const storefrontRevenue: Map<string, { revenue: number }> = new Map()
+
       for (const cartItem of cart) {
         const productId =
           typeof cartItem.product === 'string' ? cartItem.product : cartItem.product.id
@@ -267,6 +276,21 @@ export const createOrder: Endpoint = {
 
         subtotal += itemTotal
 
+        // Track revenue for each storefront this product belongs to
+        if (product.stores && Array.isArray(product.stores)) {
+          for (const store of product.stores) {
+            const storeId = typeof store === 'string' ? store : (store as Storefront)?.id
+            if (storeId) {
+              const existing = storefrontRevenue.get(storeId)
+              if (existing) {
+                existing.revenue += itemTotal
+              } else {
+                storefrontRevenue.set(storeId, { revenue: itemTotal })
+              }
+            }
+          }
+        }
+
         const orderItem: {
           product: string
           quantity: number
@@ -329,6 +353,7 @@ export const createOrder: Endpoint = {
           collection: 'products',
           id: product.id,
           data: productUpdateData,
+          overrideAccess: true, // Required to update analytics and totalSold (access: nobody)
         })
 
         // Update variant inventory if variant was used
@@ -395,7 +420,7 @@ export const createOrder: Endpoint = {
         guestEmail?: string
         customerNote?: string
       } = {
-        orderNumber: `ORD-${Date.now()}`, // Auto-generated order number
+        orderNumber: `KM-${generateOrderNumber()}`, // Short, readable order number
         items: orderItems,
         subtotal,
         shipping,
@@ -471,6 +496,35 @@ export const createOrder: Endpoint = {
             cart: [],
           },
         })
+      }
+
+      // Update storefront analytics (totalOrders and totalRevenue)
+      for (const [storefrontId, data] of storefrontRevenue) {
+        try {
+          const storefront = await payload.findByID({
+            collection: 'storefronts',
+            id: storefrontId,
+          })
+
+          if (storefront) {
+            const currentAnalytics = storefront.analytics || {}
+            await payload.update({
+              collection: 'storefronts',
+              id: storefrontId,
+              data: {
+                analytics: {
+                  ...currentAnalytics,
+                  totalOrders: (currentAnalytics.totalOrders || 0) + 1,
+                  totalRevenue: (currentAnalytics.totalRevenue || 0) + data.revenue,
+                },
+              },
+              overrideAccess: true,
+            })
+          }
+        } catch (error) {
+          // Log but don't fail the order if storefront analytics update fails
+          console.error(`Failed to update storefront ${storefrontId} analytics:`, error)
+        }
       }
 
       // Capture user location on order placement (non-blocking, authenticated users only)

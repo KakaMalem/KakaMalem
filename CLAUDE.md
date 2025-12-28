@@ -370,7 +370,7 @@ The application uses a comprehensive role-based access control system defined in
 - Product cards always show star ratings, even with 0 reviews
 - Plus button on product cards accounts for existing cart quantity
 - Checkout pages are in separate route group without navbar/footer
-- The form-control classes aren't doing anything, make sure to use fieldset classes from daisyui
+- The fieldset classes aren't doing anything, make sure to use fieldset classes from daisyui
 
 ### Custom Endpoint Path Pattern (CRITICAL)
 

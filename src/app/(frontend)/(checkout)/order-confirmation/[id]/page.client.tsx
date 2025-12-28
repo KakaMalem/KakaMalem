@@ -18,6 +18,7 @@ import confetti from 'canvas-confetti'
 import Image from 'next/image'
 import { Breadcrumb } from '@/app/(frontend)/components/Breadcrumb'
 import { PLACEHOLDER_IMAGE } from '@/utilities/ui'
+import { useStoreContext } from '@/providers'
 
 interface OrderItem {
   product: string | Product
@@ -57,6 +58,7 @@ const extractMediaUrl = (mediaItem: unknown): string | null => {
 }
 
 export default function OrderConfirmationClient({ order }: OrderConfirmationClientProps) {
+  const { storeContext, getHomeUrl } = useStoreContext()
   const [confettiShown, setConfettiShown] = React.useState(false)
   const currency = order.currency || 'AFN'
   const isGuest = !order.customer
@@ -102,7 +104,7 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
       pending: { label: 'در انتظار بررسی', class: 'badge-warning' },
       processing: { label: 'در حال پروسس', class: 'badge-info' },
       shipped: { label: 'ارسال شده', class: 'badge-primary' },
-      delivered: { label: 'تحویل داده شده', class: 'badge-success' },
+      delivered: { label: 'تحویل شده', class: 'badge-success' },
       cancelled: { label: 'لغو شده', class: 'badge-error' },
     }
     const config = statusConfig[status || 'pending'] || statusConfig.pending
@@ -136,6 +138,8 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                 { label: 'تصفیه حساب', href: '/checkout' },
                 { label: 'تأیید سفارش', active: true },
               ]}
+              storeSlug={storeContext.storeSlug || undefined}
+              storeName={storeContext.storeName || undefined}
             />
           </div>
           <div className="inline-flex items-center justify-center w-20 h-20 bg-success text-success-content rounded-full mb-6 animate-bounce">
@@ -190,14 +194,14 @@ export default function OrderConfirmationClient({ order }: OrderConfirmationClie
                 مشاهده جزئیات سفارش
                 <ArrowRight className="w-4 h-4 rotate-180" />
               </Link>
-              <Link href="/" className="btn btn-outline btn-lg gap-2">
+              <Link href={getHomeUrl()} className="btn btn-outline btn-lg gap-2">
                 <ShoppingBag className="w-5 h-5" />
                 ادامه خرید
               </Link>
             </>
           ) : (
             <>
-              <Link href="/" className="btn btn-primary btn-lg gap-2">
+              <Link href={getHomeUrl()} className="btn btn-primary btn-lg gap-2">
                 <ShoppingBag className="w-5 h-5" />
                 ادامه خرید
               </Link>

@@ -1,8 +1,13 @@
 import type { CollectionConfig, Where } from 'payload'
+import { customAlphabet } from 'nanoid'
 import { isAdminField } from '../access/isAdmin'
 import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
 import { nobody } from '../access/nobody'
 import { anyone } from '../access/anyone'
+
+// Generate short, readable order numbers (8 chars, uppercase alphanumeric)
+// Example: KM-A7B3C9D2
+const generateOrderNumber = customAlphabet('0123456789ABCDEFGHJKLMNPQRSTUVWXYZ', 8)
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
@@ -29,12 +34,18 @@ export const Orders: CollectionConfig = {
         return true
       }
 
-      // Sellers can only read orders containing their products
-      if (user?.roles?.includes('seller')) {
+      // Sellers and storefront owners can only read orders containing their products
+      // Check multiple paths: items.productSeller, items.product.seller, items.product.stores.seller
+      if (user?.roles?.includes('seller') || user?.roles?.includes('storefront_owner')) {
         return {
-          'items.productSeller': {
-            equals: user.id,
-          },
+          or: [
+            // Direct productSeller field (auto-populated during order creation)
+            { 'items.productSeller': { equals: user.id } },
+            // Direct product.seller relationship
+            { 'items.product.seller': { equals: user.id } },
+            // Storefront seller - products in user's stores
+            { 'items.product.stores.seller': { equals: user.id } },
+          ],
         } as Where
       }
 
@@ -60,8 +71,12 @@ export const Orders: CollectionConfig = {
     /**
      * UPDATE ACCESS
      * - Admins/Developers: Can update any order
-     * - Sellers: Can only update orders containing their products (limited by validation hook)
+     * - Sellers/Storefront owners: Can update orders containing their products
      * - Customers: No update access (read-only for customers)
+     *
+     * NOTE: Due to Payload CMS limitations with deep nested relationship queries,
+     * we use a simpler approach for sellers - allow all seller/storefront_owner users
+     * to attempt updates, and validate ownership in the beforeValidate hook.
      */
     update: ({ req: { user } }) => {
       if (!user) return false
@@ -75,13 +90,10 @@ export const Orders: CollectionConfig = {
         return true
       }
 
-      // Sellers can only update orders containing their products
-      if (user.roles?.includes('seller')) {
-        return {
-          'items.productSeller': {
-            equals: user.id,
-          },
-        } as Where
+      // Sellers and storefront owners - allow access, ownership validated in hooks
+      // This is necessary because nested relationship queries don't work reliably
+      if (user.roles?.includes('seller') || user.roles?.includes('storefront_owner')) {
+        return true
       }
 
       return false
@@ -101,23 +113,41 @@ export const Orders: CollectionConfig = {
 
         // Generate order number if not exists
         if (!data.orderNumber) {
-          data.orderNumber = `ORD-${Date.now()}`
+          data.orderNumber = `KM-${generateOrderNumber()}`
         }
 
         // Populate productSeller for each order item from the product
+        // Priority: product.seller > storefront.seller (from product.stores)
         if (data.items && Array.isArray(data.items)) {
           for (const item of data.items) {
             if (item.product && !item.productSeller) {
               try {
-                // Fetch the product to get its seller
+                // Fetch the product to get its seller and stores
                 const product = await req.payload.findByID({
                   collection: 'products',
                   id: typeof item.product === 'string' ? item.product : item.product.id,
+                  depth: 2, // Include nested storefront data
                 })
 
+                let sellerId: string | null = null
+
+                // First, check direct product.seller
                 if (product?.seller) {
-                  item.productSeller =
-                    typeof product.seller === 'string' ? product.seller : product.seller.id
+                  sellerId = typeof product.seller === 'string' ? product.seller : product.seller.id
+                }
+
+                // If no direct seller, check storefront seller
+                if (!sellerId && product?.stores && Array.isArray(product.stores)) {
+                  for (const store of product.stores) {
+                    if (typeof store === 'object' && store !== null && store.seller) {
+                      sellerId = typeof store.seller === 'string' ? store.seller : store.seller.id
+                      break // Use the first storefront's seller
+                    }
+                  }
+                }
+
+                if (sellerId) {
+                  item.productSeller = sellerId
                 }
               } catch (error) {
                 req.payload.logger.error(`Failed to fetch product seller: ${error}`)
@@ -248,7 +278,7 @@ export const Orders: CollectionConfig = {
       },
     ],
     beforeValidate: [
-      ({ data, req, operation }) => {
+      async ({ data, req, operation, originalDoc }) => {
         if (!data) return data
 
         const user = req.user
@@ -259,28 +289,110 @@ export const Orders: CollectionConfig = {
           user?.roles?.includes('superadmin') ||
           user?.roles?.includes('developer')
 
-        // Validate seller status updates (only if seller WITHOUT elevated privileges)
-        const isSellerOnly = user?.roles?.includes('seller') && !hasElevatedPrivileges
+        // Validate seller/storefront owner status updates (only if WITHOUT elevated privileges)
+        const isSellerOrStorefrontOwner =
+          (user?.roles?.includes('seller') || user?.roles?.includes('storefront_owner')) &&
+          !hasElevatedPrivileges
 
-        if (operation === 'update' && isSellerOnly) {
-          const allowedStatuses = ['processing', 'shipped', 'delivered']
+        if (operation === 'update' && isSellerOrStorefrontOwner && originalDoc && user) {
+          // Verify seller owns at least one product in this order
+          let isOwner = false
+          const userId = user.id
 
-          if (data.status && !allowedStatuses.includes(data.status)) {
-            throw new Error('Sellers can only update status to: processing, shipped, or delivered')
+          if (originalDoc.items && Array.isArray(originalDoc.items)) {
+            for (const item of originalDoc.items) {
+              // Check productSeller field first (most reliable)
+              const productSellerId =
+                typeof item.productSeller === 'object' ? item.productSeller?.id : item.productSeller
+
+              if (productSellerId === userId) {
+                isOwner = true
+                break
+              }
+
+              // If productSeller not set, check via product lookup
+              if (!productSellerId && item.product) {
+                try {
+                  const productId =
+                    typeof item.product === 'string' ? item.product : item.product.id
+                  const product = await req.payload.findByID({
+                    collection: 'products',
+                    id: productId,
+                    depth: 2,
+                  })
+
+                  // Check direct seller
+                  const sellerId =
+                    typeof product?.seller === 'object' ? product.seller?.id : product?.seller
+                  if (sellerId === userId) {
+                    isOwner = true
+                    break
+                  }
+
+                  // Check storefront seller
+                  if (product?.stores && Array.isArray(product.stores)) {
+                    for (const store of product.stores) {
+                      if (typeof store === 'object' && store !== null) {
+                        const storeSellerId =
+                          typeof store.seller === 'object' ? store.seller?.id : store.seller
+                        if (storeSellerId === userId) {
+                          isOwner = true
+                          break
+                        }
+                      }
+                    }
+                  }
+                } catch (error) {
+                  req.payload.logger.error(`Failed to verify product ownership: ${error}`)
+                }
+              }
+
+              if (isOwner) break
+            }
           }
 
-          // Prevent sellers from modifying totals or prices
-          if (
-            data.subtotal !== undefined ||
-            data.total !== undefined ||
-            data.shipping !== undefined
-          ) {
-            throw new Error('Sellers cannot modify order totals')
+          if (!isOwner) {
+            throw new Error('You do not have permission to update this order')
+          }
+
+          // Storefront owners have full access to update their own orders
+          // Only restrict sellers (not storefront owners)
+          const isOnlySeller =
+            user.roles?.includes('seller') && !user.roles?.includes('storefront_owner')
+
+          if (isOnlySeller) {
+            // Validate allowed status transitions for sellers only
+            const allowedStatuses = ['processing', 'shipped', 'delivered']
+            const allowedPaymentStatuses = ['pending', 'paid']
+
+            if (data.status && !allowedStatuses.includes(data.status)) {
+              throw new Error(
+                'Sellers can only update status to: processing, shipped, or delivered',
+              )
+            }
+
+            if (data.paymentStatus && !allowedPaymentStatuses.includes(data.paymentStatus)) {
+              throw new Error('Sellers can only update payment status to: pending or paid')
+            }
+
+            // Prevent sellers from modifying totals or prices
+            if (
+              data.subtotal !== undefined ||
+              data.total !== undefined ||
+              data.shipping !== undefined
+            ) {
+              throw new Error('Sellers cannot modify order totals')
+            }
           }
         }
 
         // Customers cannot update their own orders
-        if (operation === 'update' && user && !hasElevatedPrivileges && !isSellerOnly) {
+        if (
+          operation === 'update' &&
+          user &&
+          !hasElevatedPrivileges &&
+          !isSellerOrStorefrontOwner
+        ) {
           throw new Error('Customers cannot modify orders')
         }
 
@@ -655,7 +767,7 @@ export const Orders: CollectionConfig = {
         /**
          * TRACKING NUMBER UPDATE ACCESS
          * - Admins/Developers: Can update any tracking number
-         * - Sellers: Can update tracking for orders containing their products
+         * - Sellers/Storefront owners: Can update tracking for orders containing their products
          */
         update: ({ req: { user }, doc }) => {
           if (!user) return false
@@ -667,12 +779,47 @@ export const Orders: CollectionConfig = {
           ) {
             return true
           }
-          // Sellers can update tracking for their orders
-          if (user.roles?.includes('seller')) {
+          // Sellers and storefront owners can update tracking for their orders
+          if (user.roles?.includes('seller') || user.roles?.includes('storefront_owner')) {
             // Check if any item in the order belongs to this seller
             return (
               doc?.items?.some(
-                (item: { productSeller?: string }) => item.productSeller === user.id,
+                (item: {
+                  productSeller?: string | { id: string }
+                  product?: {
+                    seller?: string | { id: string }
+                    stores?: Array<{ seller?: string | { id: string } } | string>
+                  }
+                }) => {
+                  // Check productSeller field
+                  const productSellerId =
+                    typeof item.productSeller === 'object'
+                      ? item.productSeller?.id
+                      : item.productSeller
+                  if (productSellerId === user.id) return true
+
+                  // Check product.seller field
+                  if (item.product) {
+                    const sellerId =
+                      typeof item.product.seller === 'object'
+                        ? item.product.seller?.id
+                        : item.product.seller
+                    if (sellerId === user.id) return true
+
+                    // Check if any store in product.stores is owned by user
+                    if (item.product.stores && Array.isArray(item.product.stores)) {
+                      return item.product.stores.some((store) => {
+                        if (typeof store === 'object' && store !== null) {
+                          const storeSellerId =
+                            typeof store.seller === 'object' ? store.seller?.id : store.seller
+                          return storeSellerId === user.id
+                        }
+                        return false
+                      })
+                    }
+                  }
+                  return false
+                },
               ) ?? false
             )
           }
@@ -738,7 +885,7 @@ export const Orders: CollectionConfig = {
         /**
          * STATUS FIELD UPDATE ACCESS
          * - Admins/Developers: Can update to any status
-         * - Sellers: Can update status for their orders (limited to: processing, shipped, delivered)
+         * - Sellers/Storefront owners: Can update status for their orders (limited to: processing, shipped, delivered)
          * - Customers: Cannot update status
          */
         update: ({ req: { user }, doc }) => {
@@ -751,12 +898,48 @@ export const Orders: CollectionConfig = {
           ) {
             return true
           }
-          // Sellers can update status for their orders (limited by validation hook)
-          if (user.roles?.includes('seller')) {
-            // Sellers can only update orders containing their products
+          // Sellers and storefront owners can update status for their orders (limited by validation hook)
+          if (user.roles?.includes('seller') || user.roles?.includes('storefront_owner')) {
+            // Check if any item in the order belongs to this seller
+            // Check productSeller, product.seller, or product.stores.seller
             return (
               doc?.items?.some(
-                (item: { productSeller?: string }) => item.productSeller === user.id,
+                (item: {
+                  productSeller?: string | { id: string }
+                  product?: {
+                    seller?: string | { id: string }
+                    stores?: Array<{ seller?: string | { id: string } } | string>
+                  }
+                }) => {
+                  // Check productSeller field
+                  const productSellerId =
+                    typeof item.productSeller === 'object'
+                      ? item.productSeller?.id
+                      : item.productSeller
+                  if (productSellerId === user.id) return true
+
+                  // Check product.seller field
+                  if (item.product) {
+                    const sellerId =
+                      typeof item.product.seller === 'object'
+                        ? item.product.seller?.id
+                        : item.product.seller
+                    if (sellerId === user.id) return true
+
+                    // Check if any store in product.stores is owned by user
+                    if (item.product.stores && Array.isArray(item.product.stores)) {
+                      return item.product.stores.some((store) => {
+                        if (typeof store === 'object' && store !== null) {
+                          const storeSellerId =
+                            typeof store.seller === 'object' ? store.seller?.id : store.seller
+                          return storeSellerId === user.id
+                        }
+                        return false
+                      })
+                    }
+                  }
+                  return false
+                },
               ) ?? false
             )
           }
@@ -792,8 +975,69 @@ export const Orders: CollectionConfig = {
         },
       ],
       access: {
-        // Only admins and developers can update payment status
-        update: isAdminField,
+        /**
+         * PAYMENT STATUS FIELD UPDATE ACCESS
+         * - Admins/Developers: Can update to any payment status
+         * - Sellers/Storefront owners: Can update payment status for their orders (limited to: pending, paid)
+         * - Customers: Cannot update payment status
+         */
+        update: ({ req: { user }, doc }) => {
+          if (!user) return false
+          // Technical staff can update to any status
+          if (
+            user.roles?.includes('admin') ||
+            user.roles?.includes('superadmin') ||
+            user.roles?.includes('developer')
+          ) {
+            return true
+          }
+          // Sellers and storefront owners can update payment status for their orders
+          if (user.roles?.includes('seller') || user.roles?.includes('storefront_owner')) {
+            // Check if any item in the order belongs to this seller
+            return (
+              doc?.items?.some(
+                (item: {
+                  productSeller?: string | { id: string }
+                  product?: {
+                    seller?: string | { id: string }
+                    stores?: Array<{ seller?: string | { id: string } } | string>
+                  }
+                }) => {
+                  // Check productSeller field
+                  const productSellerId =
+                    typeof item.productSeller === 'object'
+                      ? item.productSeller?.id
+                      : item.productSeller
+                  if (productSellerId === user.id) return true
+
+                  // Check product.seller field
+                  if (item.product) {
+                    const sellerId =
+                      typeof item.product.seller === 'object'
+                        ? item.product.seller?.id
+                        : item.product.seller
+                    if (sellerId === user.id) return true
+
+                    // Check if any store in product.stores is owned by user
+                    if (item.product.stores && Array.isArray(item.product.stores)) {
+                      return item.product.stores.some((store) => {
+                        if (typeof store === 'object' && store !== null) {
+                          const storeSellerId =
+                            typeof store.seller === 'object' ? store.seller?.id : store.seller
+                          return storeSellerId === user.id
+                        }
+                        return false
+                      })
+                    }
+                  }
+                  return false
+                },
+              ) ?? false
+            )
+          }
+          // Customers cannot update payment status
+          return false
+        },
       },
       admin: {
         position: 'sidebar',

@@ -317,7 +317,7 @@ export default function AccountClient({ user: initialUser, orders }: AccountClie
                   >
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-base md:text-lg truncate group-hover:text-primary transition-colors">
-                        سفارش #{order.orderNumber || order.id.slice(-8)}
+                        سفارش #{order.orderNumber}
                       </div>
                       <div className="text-sm text-base-content/70">{orderDate}</div>
                       <div className="text-xs text-base-content/50 mt-1">

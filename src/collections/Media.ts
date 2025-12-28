@@ -10,7 +10,7 @@ export const Media: CollectionConfig = {
   access: {
     // Anyone can read media files (needed for product images on frontend)
     read: () => true,
-    // Any authenticated user can upload media (for profile pictures, etc.)
+    // Any authenticated user can upload media (for profile pictures, product images, etc.)
     create: isAuthenticated,
     // Admins and developers can update any media, sellers can only update their own
     update: createIsAdminOrSellerOwner('uploadedBy'),

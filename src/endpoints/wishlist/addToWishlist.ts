@@ -69,6 +69,7 @@ export const addToWishlist: Endpoint = {
               wishlistCount,
             },
           },
+          overrideAccess: true, // Required to update analytics (access: nobody)
         }),
       ])
 

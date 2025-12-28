@@ -144,6 +144,7 @@ export const trackProductView: Endpoint = {
               viewedByUsers: updatedViewedByUsers,
             },
           },
+          overrideAccess: true, // Required to update analytics (access: nobody)
         }),
       ])
 

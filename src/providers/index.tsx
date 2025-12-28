@@ -5,21 +5,24 @@ import { WishlistProvider } from './wishlist'
 import { RecentlyViewedProvider } from './recentlyViewed'
 import { RecentlyViewedMergeHandler } from './recentlyViewed/RecentlyViewedMergeHandler'
 import { SiteSettingsProvider } from './siteSettings'
+import { StoreContextProvider } from './storeContext'
 
 export const Providers: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   return (
     <SiteSettingsProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <RecentlyViewedProvider>
-            <CartMergeHandler />
-            <RecentlyViewedMergeHandler />
-            {children}
-          </RecentlyViewedProvider>
-        </WishlistProvider>
-      </CartProvider>
+      <StoreContextProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <RecentlyViewedProvider>
+              <CartMergeHandler />
+              <RecentlyViewedMergeHandler />
+              {children}
+            </RecentlyViewedProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </StoreContextProvider>
     </SiteSettingsProvider>
   )
 }
@@ -35,4 +38,5 @@ export {
   getRemainingForFreeShipping,
   FREE_DELIVERY_BADGE_TEXT,
 } from './siteSettings'
+export { StoreContextProvider, useStoreContext } from './storeContext'
 export * from './cart/shared'

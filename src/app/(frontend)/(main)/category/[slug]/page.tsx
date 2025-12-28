@@ -33,16 +33,12 @@ export async function generateMetadata({
 
   const category = categoryResult.docs[0] as Category
 
-  // Extract image URL if available (prefer heroImage, fallback to smallCategoryImage)
-  const imageUrl = category.heroImage
-    ? typeof category.heroImage === 'object'
-      ? (category.heroImage as Media).url
+  // Extract image URL if available
+  const imageUrl = category.smallCategoryImage
+    ? typeof category.smallCategoryImage === 'object'
+      ? (category.smallCategoryImage as Media).url
       : null
-    : category.smallCategoryImage
-      ? typeof category.smallCategoryImage === 'object'
-        ? (category.smallCategoryImage as Media).url
-        : null
-      : null
+    : null
 
   return {
     title: category.name,
@@ -186,9 +182,6 @@ export async function generateStaticParams() {
 
   const categories = await payload.find({
     collection: 'categories',
-    where: {
-      status: { equals: 'active' },
-    },
     limit: 100,
   })
 

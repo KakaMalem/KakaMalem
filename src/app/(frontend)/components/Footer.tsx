@@ -20,7 +20,12 @@ async function getFooterData(): Promise<FooterData> {
       payload.find({
         collection: 'categories',
         where: {
-          status: { equals: 'active' },
+          or: [
+            // Categories explicitly marked for main store
+            { showOnMainStore: { equals: true } },
+            // Categories with no stores assigned (main site only)
+            { stores: { exists: false } },
+          ],
         },
         sort: 'displayOrder',
         limit: 3,
@@ -58,7 +63,7 @@ export const Footer: React.FC = async () => {
           <div>
             <Logo />
             <p className="mt-4 text-sm opacity-80">
-              سودای خانه و دفاتر با نازل ترین قیمت‌ها و ارسال سریع درب منزل تان.
+              پلتفرم ساخت فروشگاه آنلاین - فروشگاه خود را رایگان بسازید و محصولات‌تان را بفروشید.
             </p>
 
             <div className="flex items-center gap-3 mt-6">

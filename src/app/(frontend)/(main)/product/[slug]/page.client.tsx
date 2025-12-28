@@ -30,6 +30,9 @@ type Props = {
   descriptionHtml: string
   isAuthenticated: boolean
   initialVariants: ProductVariant[]
+  variantDescriptions?: Record<string, string> // Pre-serialized variant descriptions
+  storeSlug?: string // Optional: if provided, use store-specific URLs
+  storeName?: string // Optional: store name for breadcrumbs
 }
 
 interface ErrorWithMessage {
@@ -41,6 +44,9 @@ export default function ProductDetailsClient({
   descriptionHtml,
   isAuthenticated,
   initialVariants,
+  variantDescriptions = {},
+  storeSlug,
+  storeName,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -206,6 +212,10 @@ export default function ProductDetailsClient({
   const isOutOfStock = stockStatus === 'out_of_stock' || stockStatus === 'discontinued'
   const isLowStock = stockStatus === 'low_stock'
   const isBackorder = stockStatus === 'on_backorder'
+
+  // Check if stock status should be shown to customers
+  // Note: Even when hidden, stock validation still happens on add-to-cart
+  const showStockToCustomer = product.showStockInFrontend !== false
   const maxQuantity =
     stockSource.trackQuantity && stockSource.quantity && !stockSource.allowBackorders
       ? Math.min(99, Math.max(0, stockSource.quantity - quantityInCart))
@@ -338,9 +348,13 @@ export default function ProductDetailsClient({
   if (product.categories && Array.isArray(product.categories) && product.categories.length > 0) {
     const category = product.categories[0]
     if (typeof category === 'object' && 'name' in category && 'slug' in category) {
+      // Use store-specific category URL if in store context
+      const categoryHref = storeSlug
+        ? `/store/${storeSlug}/category/${(category as Category).slug}`
+        : `/category/${(category as Category).slug}`
       breadcrumbItems.push({
         label: (category as Category).name,
-        href: `/category/${(category as Category).slug}`,
+        href: categoryHref,
       })
     }
   }
@@ -355,20 +369,20 @@ export default function ProductDetailsClient({
     <>
       {/* Breadcrumb */}
       <div className="mb-4">
-        <Breadcrumb items={breadcrumbItems} />
+        <Breadcrumb items={breadcrumbItems} storeSlug={storeSlug} storeName={storeName} />
       </div>
 
       {/* Product Name - Above everything (mobile only) */}
       <div className="mb-3 lg:hidden">
         <h1 className="text-xl font-normal">{product.name}</h1>
         {/* Discontinued/Out of Stock Badge - Mobile */}
-        {stockStatus === 'discontinued' && (
+        {showStockToCustomer && stockStatus === 'discontinued' && (
           <div className="mt-2 inline-flex items-center gap-2 bg-error text-error-content px-3 py-1.5 rounded-lg text-xs font-bold">
             <X className="w-4 h-4" />
             <span>توقف تولید</span>
           </div>
         )}
-        {stockStatus === 'out_of_stock' && (
+        {showStockToCustomer && stockStatus === 'out_of_stock' && (
           <div className="mt-2 inline-flex items-center gap-2 bg-warning text-warning-content px-3 py-1.5 rounded-lg text-xs font-bold">
             <PackageX className="w-4 h-4" />
             <span>ناموجود</span>
@@ -413,13 +427,13 @@ export default function ProductDetailsClient({
               {/* Product Name (desktop only) */}
               <h1 className="hidden lg:block text-2xl font-normal mb-2">{product.name}</h1>
               {/* Discontinued/Out of Stock Badge - Desktop */}
-              {stockStatus === 'discontinued' && (
+              {showStockToCustomer && stockStatus === 'discontinued' && (
                 <div className="hidden lg:inline-flex items-center gap-2 bg-error text-error-content px-3 py-1.5 rounded-lg text-xs font-bold mb-3">
                   <X className="w-4 h-4" />
                   <span>توقف تولید</span>
                 </div>
               )}
-              {stockStatus === 'out_of_stock' && (
+              {showStockToCustomer && stockStatus === 'out_of_stock' && (
                 <div className="hidden lg:inline-flex items-center gap-2 bg-warning text-warning-content px-3 py-1.5 rounded-lg text-xs font-bold mb-3">
                   <PackageX className="w-4 h-4" />
                   <span>ناموجود</span>
@@ -518,89 +532,108 @@ export default function ProductDetailsClient({
               return shouldShow
             })() && (
               <div className="space-y-3 sm:space-y-4 border-t border-b border-base-300 py-3 sm:py-4">
-                {product.variantOptions?.map((option) => (
-                  <div key={option.name} className="space-y-2">
-                    <label className="text-sm font-medium text-base-content">
-                      {option.name}:
-                      {selectedOptions[option.name] && (
-                        <span className="mr-2 text-primary">{selectedOptions[option.name]}</span>
-                      )}
-                    </label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {option.values?.map((val) => {
-                        const isSelected = selectedOptions[option.name] === val.value
+                {product.variantOptions?.map((option) => {
+                  // Filter option values to only show those that exist in actual variants
+                  const existingValues = option.values?.filter((val) => {
+                    return variants.some((v) => {
+                      return v.options?.some(
+                        (opt) => opt.name === option.name && opt.value === val.value,
+                      )
+                    })
+                  })
 
-                        // Check if this option value is available
-                        const isAvailable =
-                          variants.length === 0 ||
-                          variants.some((v) => {
-                            // Check if this option value exists in this variant
-                            const hasOption = v.options?.some(
-                              (opt) => opt.name === option.name && opt.value === val.value,
-                            )
-                            if (!hasOption) return false
+                  // Don't render this option section if no values exist in variants
+                  if (!existingValues || existingValues.length === 0) {
+                    return null
+                  }
 
-                            // Check if variant is discontinued or out of stock
-                            if (
-                              v.stockStatus === 'discontinued' ||
-                              v.stockStatus === 'out_of_stock'
-                            ) {
-                              return false
-                            }
+                  return (
+                    <div key={option.name} className="space-y-2">
+                      <label className="text-sm font-medium text-base-content">
+                        {option.name}:
+                        {selectedOptions[option.name] && (
+                          <span className="mr-2 text-primary">{selectedOptions[option.name]}</span>
+                        )}
+                      </label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {existingValues.map((val) => {
+                          const isSelected = selectedOptions[option.name] === val.value
 
-                            // Get other selected options (excluding current option)
-                            const otherSelectedOptions = Object.entries(selectedOptions).filter(
-                              ([key]) => key !== option.name,
-                            )
-
-                            // If no other options are selected yet, this option is available
-                            if (otherSelectedOptions.length === 0) return true
-
-                            // Check if all other selected options match this variant
-                            return otherSelectedOptions.every(([key, value]) => {
-                              return v.options?.some(
-                                (opt) => opt.name === key && opt.value === value,
+                          // Check if this option value is available
+                          const isAvailable =
+                            variants.length === 0 ||
+                            variants.some((v) => {
+                              // Check if this option value exists in this variant
+                              const hasOption = v.options?.some(
+                                (opt) => opt.name === option.name && opt.value === val.value,
                               )
-                            })
-                          })
+                              if (!hasOption) return false
 
-                        // Get image URL if exists
-                        const imageUrl =
-                          val.image && typeof val.image === 'object' && 'url' in val.image
-                            ? val.image.url
-                            : null
-
-                        return (
-                          <button
-                            key={val.value}
-                            onClick={() => {
-                              const newOptions = {
-                                ...selectedOptions,
-                                [option.name]: val.value,
+                              // Check if variant is discontinued or out of stock
+                              if (
+                                v.stockStatus === 'discontinued' ||
+                                v.stockStatus === 'out_of_stock'
+                              ) {
+                                return false
                               }
-                              setSelectedOptions(newOptions)
 
-                              // Find matching variant
-                              const matchingVariant = variants.find((v) => {
-                                return Object.entries(newOptions).every(([key, value]) => {
-                                  return v.options?.some(
-                                    (opt) => opt.name === key && opt.value === value,
-                                  )
-                                })
+                              // Get other selected options (excluding current option)
+                              const otherSelectedOptions = Object.entries(selectedOptions).filter(
+                                ([key]) => key !== option.name,
+                              )
+
+                              // If no other options are selected yet, this option is available
+                              if (otherSelectedOptions.length === 0) return true
+
+                              // Check if all other selected options match this variant
+                              return otherSelectedOptions.every(([key, value]) => {
+                                return v.options?.some(
+                                  (opt) => opt.name === key && opt.value === value,
+                                )
                               })
+                            })
 
-                              setSelectedVariant(matchingVariant || null)
-                              // Reset to first image when variant changes (images will update via getImages)
-                              setSelected(0)
+                          // Get image URL if exists
+                          const imageUrl =
+                            val.image && typeof val.image === 'object' && 'url' in val.image
+                              ? val.image.url
+                              : null
 
-                              // Update URL with variant ID to persist selection
-                              if (matchingVariant) {
-                                const url = new URL(window.location.href)
-                                url.searchParams.set('variant', matchingVariant.id)
-                                router.replace(url.pathname + url.search, { scroll: false })
-                              }
-                            }}
-                            className={`
+                          return (
+                            <button
+                              key={val.value}
+                              onClick={() => {
+                                // Don't allow clicking unavailable options
+                                if (!isAvailable) return
+
+                                const newOptions = {
+                                  ...selectedOptions,
+                                  [option.name]: val.value,
+                                }
+                                setSelectedOptions(newOptions)
+
+                                // Find matching variant
+                                const matchingVariant = variants.find((v) => {
+                                  return Object.entries(newOptions).every(([key, value]) => {
+                                    return v.options?.some(
+                                      (opt) => opt.name === key && opt.value === value,
+                                    )
+                                  })
+                                })
+
+                                setSelectedVariant(matchingVariant || null)
+                                // Reset to first image when variant changes (images will update via getImages)
+                                setSelected(0)
+
+                                // Update URL with variant ID to persist selection
+                                if (matchingVariant) {
+                                  const url = new URL(window.location.href)
+                                  url.searchParams.set('variant', matchingVariant.id)
+                                  router.replace(url.pathname + url.search, { scroll: false })
+                                }
+                              }}
+                              disabled={!isAvailable}
+                              className={`
                                 ${imageUrl ? 'p-0 overflow-hidden' : 'btn btn-sm'}
                                 transition-all relative
                                 ${
@@ -613,82 +646,96 @@ export default function ProductDetailsClient({
                                         ? 'ring-1 ring-base-300 hover:ring-2 hover:ring-primary/50'
                                         : 'btn-outline'
                                       : imageUrl
-                                        ? 'ring-1 ring-base-300 opacity-50 hover:ring-2 hover:ring-primary/50'
-                                        : 'btn-outline opacity-50'
+                                        ? 'ring-1 ring-base-300 opacity-40 cursor-not-allowed'
+                                        : 'btn-outline btn-disabled opacity-40'
                                 }
                                 ${imageUrl ? 'w-16 h-16 sm:w-20 sm:h-20 rounded-lg' : ''}
                               `}
-                            title={isAvailable ? val.value : `${val.value} (ناموجود)`}
-                          >
-                            {imageUrl ? (
-                              <Image
-                                src={imageUrl}
-                                alt={val.value}
-                                fill
-                                className="object-cover"
-                                sizes="80px"
-                              />
-                            ) : (
-                              <span>{val.value}</span>
-                            )}
-                          </button>
-                        )
-                      })}
+                              title={isAvailable ? val.value : `${val.value} (ناموجود)`}
+                            >
+                              {imageUrl ? (
+                                <>
+                                  <Image
+                                    src={imageUrl}
+                                    alt={val.value}
+                                    fill
+                                    className={`object-cover ${!isAvailable ? 'grayscale' : ''}`}
+                                    sizes="80px"
+                                  />
+                                  {!isAvailable && (
+                                    <div className="absolute inset-0 bg-base-100/60 flex items-center justify-center">
+                                      <X className="w-6 h-6 text-error" />
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <span className={!isAvailable ? 'line-through' : ''}>
+                                  {val.value}
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
-            {/* Stock status display */}
-            <div className="text-sm font-bold tracking-wider" dir="rtl">
-              {stockStatus === 'discontinued' ? (
-                <div className="space-y-2">
-                  <span
-                    className={`${getStockStatusTextClass('discontinued')} flex items-center gap-2`}
-                  >
-                    <X className="w-5 h-5" />
-                    {getStockStatusLabel('discontinued')}
-                  </span>
-                  <div className="bg-error/10 border border-error/20 rounded-lg p-3 text-xs font-normal text-error">
-                    <p>این محصول دیگر تولید نمی‌شود و قابل خرید نیست</p>
+            {/* Stock status display - only shown when showStockInFrontend is enabled */}
+            {showStockToCustomer && (
+              <div className="text-sm font-bold tracking-wider" dir="rtl">
+                {stockStatus === 'discontinued' ? (
+                  <div className="space-y-2">
+                    <span
+                      className={`${getStockStatusTextClass('discontinued')} flex items-center gap-2`}
+                    >
+                      <X className="w-5 h-5" />
+                      {getStockStatusLabel('discontinued')}
+                    </span>
+                    <div className="bg-error/10 border border-error/20 rounded-lg p-3 text-xs font-normal text-error">
+                      <p>این محصول دیگر تولید نمی‌شود و قابل خرید نیست</p>
+                    </div>
                   </div>
-                </div>
-              ) : isOutOfStock ? (
-                <div className="space-y-2">
-                  <span
-                    className={`${getStockStatusTextClass('out_of_stock')} flex items-center gap-2`}
-                  >
-                    <PackageX className="w-5 h-5" />
-                    {getStockStatusLabel('out_of_stock')}
-                  </span>
-                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 text-xs font-normal text-warning">
-                    <p>این محصول در حال حاضر موجود نیست</p>
+                ) : isOutOfStock ? (
+                  <div className="space-y-2">
+                    <span
+                      className={`${getStockStatusTextClass('out_of_stock')} flex items-center gap-2`}
+                    >
+                      <PackageX className="w-5 h-5" />
+                      {getStockStatusLabel('out_of_stock')}
+                    </span>
+                    <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 text-xs font-normal text-warning">
+                      <p>این محصول در حال حاضر موجود نیست</p>
+                    </div>
                   </div>
-                </div>
-              ) : isLowStock ? (
-                <span className={`${getStockStatusTextClass('low_stock')} flex items-center gap-2`}>
-                  <AlertTriangle className="w-5 h-5" />
-                  {stockSource.trackQuantity && stockSource.quantity
-                    ? `تنها ${stockSource.quantity} عدد`
-                    : getStockStatusLabel('low_stock')}
-                </span>
-              ) : isBackorder ? (
-                <span
-                  className={`${getStockStatusTextClass('on_backorder')} flex items-center gap-2`}
-                >
-                  <Clock className="w-5 h-5" />
-                  {getStockStatusLabel('on_backorder')}
-                </span>
-              ) : stockStatus === 'in_stock' ? (
-                <span
-                  className={`${getStockStatusTextClass('in_stock')} flex items-center gap-2 opacity-60`}
-                >
-                  <Check className="w-5 h-5" />
-                  {getStockStatusLabel('in_stock')}
-                </span>
-              ) : null}
-            </div>
+                ) : isLowStock ? (
+                  <span
+                    className={`${getStockStatusTextClass('low_stock')} flex items-center gap-2`}
+                  >
+                    <AlertTriangle className="w-5 h-5" />
+                    {stockSource.trackQuantity && stockSource.quantity
+                      ? `تنها ${stockSource.quantity} عدد`
+                      : getStockStatusLabel('low_stock')}
+                  </span>
+                ) : isBackorder ? (
+                  <span
+                    className={`${getStockStatusTextClass('on_backorder')} flex items-center gap-2`}
+                  >
+                    <Clock className="w-5 h-5" />
+                    {getStockStatusLabel('on_backorder')}
+                  </span>
+                ) : stockStatus === 'in_stock' ? (
+                  <span
+                    className={`${getStockStatusTextClass('in_stock')} flex items-center gap-2 opacity-60`}
+                  >
+                    <Check className="w-5 h-5" />
+                    {getStockStatusLabel('in_stock')}
+                  </span>
+                ) : null}
+              </div>
+            )}
 
             {/* Price - Mobile only (shown right above quantity controls) */}
             <div className="flex lg:hidden items-baseline gap-3">
@@ -881,20 +928,30 @@ export default function ProductDetailsClient({
         </aside>
       </div>
 
-      {/* Product Description & Specifications - Full Width */}
+      {/* Product Description - Shows variant description if available, otherwise product description */}
       <div className="mt-8 sm:mt-12 space-y-6 sm:space-y-8">
-        {/* Product Description */}
-        {descriptionHtml && (
-          <div>
-            <div className="prose prose-sm sm:prose-lg max-w-none">
-              <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">توضیحات</h3>
-              <div
-                className="text-sm sm:text-base text-base-content/80 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-              />
+        {(() => {
+          // Determine which description to show
+          // Priority: variant description > product description
+          const variantHasDescription = selectedVariant && variantDescriptions[selectedVariant.id]
+          const descriptionToShow = variantHasDescription
+            ? variantDescriptions[selectedVariant.id]
+            : descriptionHtml
+
+          if (!descriptionToShow) return null
+
+          return (
+            <div dir="rtl">
+              <div className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-right prose-p:text-right prose-li:text-right">
+                <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">توضیحات</h3>
+                <div
+                  className="text-sm sm:text-base text-base-content/80 leading-relaxed [&>*]:text-right"
+                  dangerouslySetInnerHTML={{ __html: descriptionToShow }}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* Reviews Section */}

@@ -532,6 +532,8 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 value={user.email}
                 disabled
                 readOnly
+                dir="ltr"
+                style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}
               />
               <p className="text-xs text-base-content/50 mt-1">ایمیل قابل تغییر نیست</p>
             </div>
@@ -551,6 +553,7 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
                 value={profileData.phone}
                 onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                 dir="ltr"
+                style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}
               />
             </div>
 

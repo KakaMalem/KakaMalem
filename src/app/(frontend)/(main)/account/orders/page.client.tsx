@@ -191,9 +191,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-base">
-                            سفارش #{order.orderNumber || order.id.slice(-8)}
-                          </span>
+                          <span className="font-bold text-base">سفارش #{order.orderNumber}</span>
                           <span
                             className={`badge badge-sm ${statusConfig.badge} whitespace-nowrap flex-shrink-0`}
                           >
@@ -249,9 +247,7 @@ export default function OrdersClient({ orders }: OrdersClientProps) {
                         </div>
                         <div className="flex items-center gap-1.5 text-base-content/70">
                           <Hash className="w-4 h-4" />
-                          <span className="font-mono text-xs">
-                            {order.orderNumber || order.id.slice(-8)}
-                          </span>
+                          <span className="font-mono text-xs">{order.orderNumber}</span>
                         </div>
                       </div>
 

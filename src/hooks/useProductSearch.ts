@@ -7,7 +7,7 @@ interface SearchFilters {
   minPrice?: number
   maxPrice?: number
   rating?: number
-  sort?: 'price-asc' | 'price-desc' | 'rating' | 'newest' | 'featured'
+  sort?: 'price-asc' | 'price-desc' | 'rating' | 'newest'
   page?: number
   limit?: number
 }

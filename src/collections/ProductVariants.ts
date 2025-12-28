@@ -1,5 +1,4 @@
 import { type CollectionConfig } from 'payload'
-import { isAdminOrDeveloper } from '../access/isAdminOrDeveloper'
 import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
 import { nobody } from '../access/nobody'
 import { isSuperAdminOrDeveloper } from '../access/isSuperAdminOrDeveloper'
@@ -104,36 +103,15 @@ export const ProductVariants: CollectionConfig = {
     /**
      * UPDATE ACCESS
      * - Admins/Developers: Can update any variant
-     * - Sellers: Can only update variants of their own products
+     * - Sellers: Can update variants (ownership verified in beforeChange hook)
      */
-    update: ({ req: { user } }) => {
-      if (!user) return false
-
-      // Technical staff have full access
-      if (
-        user.roles?.includes('admin') ||
-        user.roles?.includes('superadmin') ||
-        user.roles?.includes('developer')
-      ) {
-        return true
-      }
-
-      // Sellers can only update variants of products they own
-      if (user.roles?.includes('seller')) {
-        return {
-          '_product.seller': {
-            equals: user.id,
-          },
-        }
-      }
-
-      return false
-    },
+    update: isAdminSellerOrDeveloper,
     /**
      * DELETE ACCESS
-     * - Only admins/developers can delete variants
+     * - Admins/Developers: Can delete any variant
+     * - Sellers: Can delete variants (ownership verified separately)
      */
-    delete: isAdminOrDeveloper,
+    delete: isAdminSellerOrDeveloper,
   },
   hooks: {
     beforeChange: [
@@ -256,38 +234,53 @@ export const ProductVariants: CollectionConfig = {
               (v) => v.stockStatus === 'out_of_stock' || v.stockStatus === 'discontinued',
             )
 
+          // Calculate total quantity from all variants
+          const totalVariantQuantity = allVariants.docs.reduce((sum, v) => {
+            // Only count quantity if variant is tracking quantity
+            if (v.trackQuantity && typeof v.quantity === 'number') {
+              return sum + v.quantity
+            }
+            return sum
+          }, 0)
+
           // Fetch the product to check current status
           const product = await req.payload.findByID({
             collection: 'products',
             id: productId,
           })
 
+          // Build update data
+          type StockStatus =
+            | 'in_stock'
+            | 'out_of_stock'
+            | 'low_stock'
+            | 'on_backorder'
+            | 'discontinued'
+          const updateData: { stockStatus?: StockStatus; quantity?: number } = {}
+
           // Update product stock status if needed
           if (allVariantsUnavailable && product.stockStatus !== 'out_of_stock') {
-            await req.payload.update({
-              collection: 'products',
-              id: productId,
-              data: {
-                stockStatus: 'out_of_stock',
-              },
-            })
-            console.log(
-              `[ProductVariant Hook] Updated product ${productId} to out_of_stock (all variants unavailable)`,
-            )
+            updateData.stockStatus = 'out_of_stock'
           } else if (!allVariantsUnavailable && product.stockStatus === 'out_of_stock') {
             // If at least one variant is available and product was marked as out_of_stock (by this hook)
             // restore it to in_stock
             // Note: This only triggers if product is 'out_of_stock', not if it's 'discontinued'
+            updateData.stockStatus = 'in_stock'
+          }
+
+          // Update product quantity to sum of variant quantities (for products with variants)
+          if (product.hasVariants && product.quantity !== totalVariantQuantity) {
+            updateData.quantity = totalVariantQuantity
+          }
+
+          // Only update if there are changes
+          if (Object.keys(updateData).length > 0) {
             await req.payload.update({
               collection: 'products',
               id: productId,
-              data: {
-                stockStatus: 'in_stock',
-              },
+              data: updateData,
             })
-            console.log(
-              `[ProductVariant Hook] Updated product ${productId} to in_stock (variants available)`,
-            )
+            console.log(`[ProductVariant Hook] Updated product ${productId}:`, updateData)
           }
         } catch (error) {
           // Log error but don't fail the variant update
@@ -390,6 +383,13 @@ export const ProductVariants: CollectionConfig = {
           },
         },
       ],
+    },
+    {
+      name: 'description',
+      type: 'richText',
+      admin: {
+        description: 'Optional variant-specific description (shown when this variant is selected)',
+      },
     },
     {
       name: 'trackQuantity',

@@ -1,11 +1,11 @@
 import React from 'react'
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import ProductDetailsClient from './page.client'
-import { Product, ProductVariant, Media } from '@/payload-types'
+import { Product, ProductVariant, Media, Storefront } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
-import { serializeRichText } from '@/utilities/serializeRichText'
+import { serializeRichText, type LexicalContent } from '@/utilities/serializeRichText'
 import { RecentlyViewed } from '@/app/(frontend)/components/RecentlyViewed'
 
 interface Params {
@@ -189,6 +189,22 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   if (!product) return notFound()
 
+  // Check if this product is store-exclusive (has stores but NOT showOnMainStore)
+  // If so, redirect to the first store's product page
+  const hasStores = product.stores && Array.isArray(product.stores) && product.stores.length > 0
+  const isOnMainStore = product.showOnMainStore === true
+
+  if (hasStores && !isOnMainStore && product.stores) {
+    // Product is store-exclusive, redirect to the store's product page
+    const firstStore = product.stores[0]
+    const storeSlug =
+      typeof firstStore === 'object' && firstStore !== null ? (firstStore as Storefront).slug : null
+
+    if (storeSlug) {
+      redirect(`/store/${storeSlug}/product/${product.slug}`)
+    }
+  }
+
   // Check authentication on the server
   const isAuthenticated = await checkAuthentication()
 
@@ -197,6 +213,14 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   // Serialize rich text description to HTML
   const descriptionHtml = product.description ? serializeRichText(product.description) : ''
+
+  // Pre-serialize variant descriptions for client-side rendering
+  const variantDescriptions: Record<string, string> = {}
+  for (const variant of variants) {
+    if (variant.description && typeof variant.description === 'object') {
+      variantDescriptions[variant.id] = serializeRichText(variant.description as LexicalContent)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-base-100 py-8">
@@ -207,6 +231,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
           descriptionHtml={descriptionHtml}
           isAuthenticated={isAuthenticated}
           initialVariants={variants}
+          variantDescriptions={variantDescriptions}
         />
       </div>
 

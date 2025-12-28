@@ -26,11 +26,17 @@ async function Navbar() {
     console.error('❌ Error fetching user:', error)
   }
 
-  // 2. Fetch categories
+  // 2. Fetch categories for main site
+  // Only show categories that have no stores assigned OR have showOnMainStore: true
   const categoriesData = await payload.find({
     collection: 'categories',
     where: {
-      and: [{ status: { equals: 'active' } }, { showInMenu: { equals: true } }],
+      and: [
+        { showInMenu: { equals: true } },
+        {
+          or: [{ showOnMainStore: { equals: true } }, { stores: { exists: false } }],
+        },
+      ],
     },
     sort: 'displayOrder',
     limit: 100,

@@ -26,15 +26,19 @@ export const Users: CollectionConfig = {
      * ADMIN PANEL ACCESS
      * - Superadmins, Admins, Developers: Full admin panel access
      * - Sellers: Limited admin panel access (products, orders, media)
+     * - Storefront Owners: NO admin panel access (use dashboard instead)
      * - Customers: No admin panel access
      */
     admin: ({ req: { user } }) => {
       if (!user) return false
       return !!(
-        user.roles?.includes('superadmin') ||
-        user.roles?.includes('admin') ||
-        user.roles?.includes('developer') ||
-        user.roles?.includes('seller')
+        (
+          user.roles?.includes('superadmin') ||
+          user.roles?.includes('admin') ||
+          user.roles?.includes('developer') ||
+          user.roles?.includes('seller')
+        )
+        // Note: storefront_owner does NOT have admin panel access - they use the dashboard
       )
     },
     /**
@@ -357,6 +361,10 @@ export const Users: CollectionConfig = {
           value: 'customer',
         },
         {
+          label: 'Storefront Owner',
+          value: 'storefront_owner',
+        },
+        {
           label: 'Seller',
           value: 'seller',
         },
@@ -404,7 +412,14 @@ export const Users: CollectionConfig = {
         beforeChange: [
           ({ req, value, data, operation }) => {
             // Define valid roles and privilege hierarchy
-            const VALID_ROLES = ['customer', 'seller', 'admin', 'superadmin', 'developer']
+            const VALID_ROLES = [
+              'customer',
+              'storefront_owner',
+              'seller',
+              'admin',
+              'superadmin',
+              'developer',
+            ]
             // Elevated roles that only superadmin/developer can assign
             const ELEVATED_ROLES = ['admin', 'superadmin']
             // Developer role is exclusive - only developers can assign it

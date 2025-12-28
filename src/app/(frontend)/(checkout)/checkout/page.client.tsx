@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useCart } from '@/providers/cart'
+import { useStoreContext } from '@/providers'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Check, ShoppingCart } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -29,6 +30,7 @@ export interface CheckoutClientProps {
 
 export default function CheckoutClient({ user, shipping }: CheckoutClientProps) {
   const { cart: cartData, loading: cartLoading, clearCart } = useCart()
+  const { storeContext, getHomeUrl } = useStoreContext()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [processing, setProcessing] = useState(false)
@@ -78,9 +80,9 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
   useEffect(() => {
     if (!cartLoading && (!cart || cart.length === 0) && !orderPlaced) {
       toast.error('سبد خرید شما خالی است. لطفاً محصولاتی را اضافه کنید.')
-      router.push('/')
+      router.push(getHomeUrl())
     }
-  }, [cart, cartLoading, router, orderPlaced])
+  }, [cart, cartLoading, router, orderPlaced, getHomeUrl])
 
   // Show loading while checking cart
   if (cartLoading) {
@@ -272,7 +274,11 @@ export default function CheckoutClient({ user, shipping }: CheckoutClientProps) 
       {/* Header */}
       <div className="bg-base-200 border-b border-base-300">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <Breadcrumb items={[{ label: 'تصفیه حساب', active: true }]} />
+          <Breadcrumb
+            items={[{ label: 'تصفیه حساب', active: true }]}
+            storeSlug={storeContext.storeSlug || undefined}
+            storeName={storeContext.storeName || undefined}
+          />
           <div className="flex items-center gap-3 mb-6">
             <ShoppingCart className="w-8 h-8 text-primary mb-4 mt-4" />
             <h1 className="text-3xl font-bold">تصفیه حساب</h1>

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Home, ChevronRight } from 'lucide-react'
+import { Home, Store, ChevronRight } from 'lucide-react'
 
 export interface BreadcrumbItem {
   label: string
@@ -13,10 +13,25 @@ export interface BreadcrumbItem {
 interface BreadcrumbProps {
   items: BreadcrumbItem[]
   showHome?: boolean
+  /** Store context - if provided, home links to store instead of main site */
+  storeSlug?: string
+  storeName?: string
 }
 
-export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, showHome = true }) => {
-  const allItems: BreadcrumbItem[] = showHome ? [{ label: 'خانه', href: '/' }, ...items] : items
+export const Breadcrumb: React.FC<BreadcrumbProps> = ({
+  items,
+  showHome = true,
+  storeSlug,
+  storeName,
+}) => {
+  // If store context provided, link home to store instead of main site
+  const homeHref = storeSlug ? `/store/${storeSlug}` : '/'
+  const homeLabel = storeName || (storeSlug ? 'فروشگاه' : 'خانه')
+  const isStoreContext = !!storeSlug
+
+  const allItems: BreadcrumbItem[] = showHome
+    ? [{ label: homeLabel, href: homeHref }, ...items]
+    : items
 
   const truncateLabel = (label: string, maxLength: number = 30) => {
     if (label.length > maxLength) {
@@ -40,7 +55,12 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, showHome = true }
                   className="inline-flex items-center gap-1.5 text-base-content/60 hover:text-primary transition-colors group"
                   title={item.label}
                 >
-                  {isHome && <Home className="w-4 h-4 flex-shrink-0" />}
+                  {isHome &&
+                    (isStoreContext ? (
+                      <Store className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <Home className="w-4 h-4 flex-shrink-0" />
+                    ))}
                   <span className="max-w-[150px] md:max-w-[200px] truncate">
                     {truncateLabel(item.label)}
                   </span>
@@ -52,7 +72,12 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, showHome = true }
                   }`}
                   title={item.label}
                 >
-                  {isHome && <Home className="w-4 h-4 flex-shrink-0" />}
+                  {isHome &&
+                    (isStoreContext ? (
+                      <Store className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <Home className="w-4 h-4 flex-shrink-0" />
+                    ))}
                   <span className="max-w-[150px] md:max-w-[200px] truncate">
                     {truncateLabel(item.label)}
                   </span>

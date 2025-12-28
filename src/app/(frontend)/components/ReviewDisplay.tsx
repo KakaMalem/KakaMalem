@@ -133,7 +133,13 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
             <div className="avatar">
               <div className="w-10 rounded-full">
                 {profilePicture ? (
-                  <Image src={profilePicture} alt={userName} width={40} height={40} className="object-cover" />
+                  <Image
+                    src={profilePicture}
+                    alt={userName}
+                    width={40}
+                    height={40}
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="bg-neutral text-neutral-content w-full h-full flex items-center justify-center">
                     <span className="text-sm">{userName.charAt(0).toUpperCase()}</span>
@@ -148,7 +154,7 @@ const ReviewCard = ({ review, isAuthenticated }: { review: Review; isAuthenticat
             {review.verifiedPurchase && (
               <div className="badge badge-success badge-sm gap-1">
                 <CheckCircle className="w-3 h-3" />
-                تایید شده
+                خریدار
               </div>
             )}
           </div>

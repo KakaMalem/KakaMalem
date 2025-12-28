@@ -391,9 +391,6 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 />
               ))}
             </div>
-            {userReview.verifiedPurchase && (
-              <span className="badge badge-success badge-sm">خرید تایید شده</span>
-            )}
           </div>
 
           {/* Title */}

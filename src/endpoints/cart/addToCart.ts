@@ -362,6 +362,7 @@ export const addToCart: Endpoint = {
                 cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
               },
             },
+            overrideAccess: true, // Required to update analytics (access: nobody)
           }),
         ])
         // Clear guest cart cookie for authenticated users
@@ -381,6 +382,7 @@ export const addToCart: Endpoint = {
                 cartConversionRate: parseFloat(cartConversionRate.toFixed(2)),
               },
             },
+            overrideAccess: true, // Required to update analytics (access: nobody)
           }),
         ])
       }

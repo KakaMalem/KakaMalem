@@ -2,7 +2,7 @@ import { type CollectionConfig, type Where } from 'payload'
 import { isAdminOrDeveloper, isAdminOrDeveloperField } from '../access/isAdminOrDeveloper'
 import { isAdminSellerOrDeveloper } from '../access/isAdminSellerOrDeveloper'
 import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
-import { createIsAdminOrSellerOwner } from '../access/isAdminOrSellerOwner'
+import { isProductOwner } from '../access/isAdminOrSellerOwner'
 import { nobody } from '../access/nobody'
 import { isDeveloperOnly } from '../access/isDeveloper'
 import { slugField } from '../fields/slug'
@@ -146,10 +146,10 @@ export const Products: CollectionConfig = {
     /**
      * UPDATE ACCESS
      * - Admins/Developers: Can update any product
-     * - Sellers: Can only update their own products
+     * - Sellers: Can only update their own products (via seller field OR storefront ownership)
      * - Customers: No access
      */
-    update: createIsAdminOrSellerOwner('seller'),
+    update: isProductOwner,
     /**
      * DELETE ACCESS
      * - Admins/Developers: Full delete access
@@ -162,12 +162,15 @@ export const Products: CollectionConfig = {
     beforeChange: [
       populatePublishedAt,
       ({ data, req, operation }) => {
-        // Auto-populate seller when a seller creates a product
+        // Auto-populate seller when a seller or storefront owner creates a product
         if (operation === 'create' && req.user) {
           // If no seller is explicitly set
           if (!data.seller) {
-            // Sellers automatically become the seller
-            if (req.user.roles?.includes('seller')) {
+            // Sellers and storefront owners automatically become the seller
+            if (
+              req.user.roles?.includes('seller') ||
+              req.user.roles?.includes('storefront_owner')
+            ) {
               data.seller = req.user.id
             }
             // Admins can create products without a seller (platform products)
@@ -351,7 +354,7 @@ export const Products: CollectionConfig = {
         readOnly: true,
         position: 'sidebar',
         description: 'Total number of units sold',
-        condition: (data, siblingData, { user }) => isDeveloperOnly(user),
+        condition: (_data, _siblingData, { user }) => isDeveloperOnly(user),
       },
     },
     {
@@ -363,7 +366,7 @@ export const Products: CollectionConfig = {
       },
       admin: {
         description: 'Product performance analytics (system-managed)',
-        condition: (data, siblingData, { user }) => isDeveloperOnly(user),
+        condition: (_data, _siblingData, { user }) => isDeveloperOnly(user),
       },
       fields: [
         {
@@ -453,6 +456,9 @@ export const Products: CollectionConfig = {
     {
       name: 'description',
       type: 'richText',
+      admin: {
+        description: 'Full product description',
+      },
     },
     {
       name: 'shortDescription',
@@ -596,6 +602,17 @@ export const Products: CollectionConfig = {
       },
     },
     {
+      name: 'showStockInFrontend',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Show stock status to customers (disable to hide stock info while still tracking internally)',
+        condition: (data) => data?.trackQuantity === true,
+      },
+    },
+    {
       type: 'row',
       fields: [
         {
@@ -686,14 +703,6 @@ export const Products: CollectionConfig = {
       },
     },
     {
-      name: 'featured',
-      type: 'checkbox',
-      defaultValue: false,
-      admin: {
-        position: 'sidebar',
-      },
-    },
-    {
       name: 'allowBackorders',
       type: 'checkbox',
       defaultValue: false,
@@ -701,14 +710,6 @@ export const Products: CollectionConfig = {
         position: 'sidebar',
         condition: (data) => data?.trackQuantity === true,
         description: 'Allow purchases when out of stock',
-      },
-    },
-    {
-      name: 'requiresShipping',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: {
-        position: 'sidebar',
       },
     },
     ...slugField('name'),
@@ -730,7 +731,7 @@ export const Products: CollectionConfig = {
         position: 'sidebar',
         description:
           'Seller who owns this product (leave empty for platform products). Auto-assigned for sellers.',
-        condition: (data, siblingData, { user }) => {
+        condition: (_data, _siblingData, { user }) => {
           // Technical staff always see this field
           if (
             user?.roles?.includes('admin') ||
@@ -759,6 +760,73 @@ export const Products: CollectionConfig = {
         // Sellers can only see themselves
         return {
           id: {
+            equals: user?.id,
+          },
+        }
+      },
+    },
+    {
+      name: 'showOnMainStore',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: 'Show this product on the main KakaMalem store (kakamalem.com)',
+        condition: (_data, _siblingData, { user }) => {
+          // Only admins and sellers can set main store visibility
+          return !!(
+            user?.roles?.includes('admin') ||
+            user?.roles?.includes('superadmin') ||
+            user?.roles?.includes('developer') ||
+            user?.roles?.includes('seller')
+          )
+        },
+      },
+    },
+    {
+      name: 'displayOrder',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        position: 'sidebar',
+        description: 'Display order for sorting products in the store',
+      },
+    },
+    {
+      name: 'stores',
+      type: 'relationship',
+      relationTo: 'storefronts',
+      hasMany: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Storefronts where this product is sold. Products with stores but WITHOUT showOnMainStore will only be accessible at /store/[slug]/product/[product-slug]',
+        condition: (_data, _siblingData, { user }) => {
+          // Show for admins, developers, and storefront owners
+          return !!(
+            user?.roles?.includes('admin') ||
+            user?.roles?.includes('superadmin') ||
+            user?.roles?.includes('developer') ||
+            user?.roles?.includes('storefront_owner')
+          )
+        },
+      },
+      filterOptions: ({ user }) => {
+        // Technical staff can select any active storefront
+        if (
+          user?.roles?.includes('admin') ||
+          user?.roles?.includes('superadmin') ||
+          user?.roles?.includes('developer')
+        ) {
+          return {
+            status: {
+              equals: 'active',
+            },
+          } as Where
+        }
+        // Storefront owners can only select their own storefronts
+        return {
+          seller: {
             equals: user?.id,
           },
         }

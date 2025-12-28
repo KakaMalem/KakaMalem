@@ -24,12 +24,15 @@ export default function DesktopNavbar({ categories, user }: DesktopNavbarProps) 
   const lastScrollY = useRef(0)
 
   // Determine if we should render the category bar at all based on route
-  // Hide categories on: product pages, account pages, and footer link pages
+  // Hide categories on: product pages, account pages, dashboard pages, footer link pages, and special pages
   const footerPages = ['/terms', '/privacy', '/help', '/shipping', '/contact', '/faqs']
+  const specialPages = ['/become-a-seller']
   const shouldRenderCategories = pathname
     ? !pathname.startsWith('/product/') &&
       !pathname.startsWith('/account') &&
-      !footerPages.includes(pathname)
+      !pathname.startsWith('/dashboard') &&
+      !footerPages.includes(pathname) &&
+      !specialPages.includes(pathname)
     : false
 
   // --- DIMENSIONS ---

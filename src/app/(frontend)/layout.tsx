@@ -6,7 +6,7 @@ import { Rubik } from 'next/font/google'
 import { cn } from '@/utilities/ui'
 import type { Metadata } from 'next'
 
-export const rubik = Rubik({
+const rubik = Rubik({
   subsets: ['arabic'],
   weight: ['400', '500', '600', '700'],
   display: 'swap',
