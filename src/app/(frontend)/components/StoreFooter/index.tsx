@@ -1,9 +1,8 @@
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Facebook, Instagram, Phone, Mail, Truck } from 'lucide-react'
+import { Facebook, Instagram, Phone, Mail } from 'lucide-react'
 import type { Storefront, Category, Media } from '@/payload-types'
-import { formatPrice } from '@/utilities/currency'
 
 interface StoreFooterProps {
   storefront: Storefront
@@ -24,27 +23,6 @@ export default function StoreFooter({ storefront, categories }: StoreFooterProps
     socialLinks.telegram ||
     socialLinks.twitter ||
     socialLinks.tiktok
-
-  // Delivery settings
-  const deliverySettings = storefront.deliverySettings || {}
-  const deliveryMode = deliverySettings.deliveryMode || 'free_above_threshold'
-  const freeDeliveryThreshold = deliverySettings.freeDeliveryThreshold || 1000
-  const deliveryFee = deliverySettings.deliveryFee || 50
-  const deliveryNote = deliverySettings.deliveryNote
-
-  // Delivery display
-  const getDeliveryText = () => {
-    switch (deliveryMode) {
-      case 'always_free':
-        return 'ارسال رایگان'
-      case 'free_above_threshold':
-        return `ارسال رایگان برای سفارش‌های بالای ${formatPrice(freeDeliveryThreshold, 'AFN')}`
-      case 'always_charged':
-        return `هزینه ارسال: ${formatPrice(deliveryFee, 'AFN')}`
-      default:
-        return null
-    }
-  }
 
   return (
     <footer className="bg-base-200 text-base-content mt-16">
@@ -180,41 +158,34 @@ export default function StoreFooter({ storefront, categories }: StoreFooterProps
             </div>
           )}
 
-          {/* Contact & Delivery */}
-          <div>
-            <h4 className="font-semibold mb-3">تماس و ارسال</h4>
-            <ul className="space-y-3 text-sm">
-              {storefront.contactPhone && (
-                <li className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-base-content/60" />
-                  <a
-                    href={`tel:${storefront.contactPhone}`}
-                    className="hover:text-primary"
-                    dir="ltr"
-                  >
-                    {storefront.contactPhone}
-                  </a>
-                </li>
-              )}
-              {storefront.contactEmail && (
-                <li className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-base-content/60" />
-                  <a href={`mailto:${storefront.contactEmail}`} className="hover:text-primary">
-                    {storefront.contactEmail}
-                  </a>
-                </li>
-              )}
-              {getDeliveryText() && (
-                <li className="flex items-center gap-2 mt-4">
-                  <Truck className="w-4 h-4 text-primary" />
-                  <span className="text-primary font-medium">{getDeliveryText()}</span>
-                </li>
-              )}
-              {deliveryNote && (
-                <li className="text-base-content/60 text-xs mr-6">{deliveryNote}</li>
-              )}
-            </ul>
-          </div>
+          {/* Contact */}
+          {(storefront.contactPhone || storefront.contactEmail) && (
+            <div>
+              <h4 className="font-semibold mb-3">تماس با ما</h4>
+              <ul className="space-y-3 text-sm">
+                {storefront.contactPhone && (
+                  <li className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-base-content/60" />
+                    <a
+                      href={`tel:${storefront.contactPhone}`}
+                      className="hover:text-primary"
+                      dir="ltr"
+                    >
+                      {storefront.contactPhone}
+                    </a>
+                  </li>
+                )}
+                {storefront.contactEmail && (
+                  <li className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-base-content/60" />
+                    <a href={`mailto:${storefront.contactEmail}`} className="hover:text-primary">
+                      {storefront.contactEmail}
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
         <hr className="my-8 border-base-300" />

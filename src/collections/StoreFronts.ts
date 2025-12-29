@@ -289,58 +289,6 @@ export const StoreFronts: CollectionConfig = {
           ],
         },
         {
-          label: 'Delivery',
-          fields: [
-            {
-              name: 'deliverySettings',
-              type: 'group',
-              fields: [
-                {
-                  name: 'deliveryMode',
-                  type: 'select',
-                  defaultValue: 'free_above_threshold',
-                  options: [
-                    { label: 'Always Free', value: 'always_free' },
-                    { label: 'Free Above Threshold', value: 'free_above_threshold' },
-                    { label: 'Always Charged', value: 'always_charged' },
-                  ],
-                  admin: {
-                    description: 'Delivery fee mode for your store',
-                  },
-                },
-                {
-                  name: 'freeDeliveryThreshold',
-                  type: 'number',
-                  min: 0,
-                  defaultValue: 1000,
-                  admin: {
-                    description: 'Minimum order amount for free delivery (in AFN)',
-                    condition: (data) =>
-                      data?.deliverySettings?.deliveryMode === 'free_above_threshold',
-                  },
-                },
-                {
-                  name: 'deliveryFee',
-                  type: 'number',
-                  min: 0,
-                  defaultValue: 50,
-                  admin: {
-                    description: 'Delivery fee when charged (in AFN)',
-                    condition: (data) => data?.deliverySettings?.deliveryMode !== 'always_free',
-                  },
-                },
-                {
-                  name: 'deliveryNote',
-                  type: 'text',
-                  admin: {
-                    description: 'Optional note about delivery (e.g., "Delivery within 24 hours")',
-                  },
-                },
-              ],
-            },
-          ],
-        },
-        {
           label: 'SEO',
           fields: [
             {

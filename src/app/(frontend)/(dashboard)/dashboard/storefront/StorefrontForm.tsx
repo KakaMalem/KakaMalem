@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Store, Palette, Globe, Save, Loader2 } from 'lucide-react'
 import type { Storefront } from '@/payload-types'
-import ImageUpload from '@/app/(frontend)/components/ImageUpload'
+import { MediaSelector } from '@/app/(frontend)/components/MediaSelector'
 
 interface StorefrontFormProps {
   storefront: Storefront | null
@@ -259,34 +259,30 @@ export default function StorefrontForm({ storefront }: StorefrontFormProps) {
               <h3 className="card-title text-lg">لوگو</h3>
 
               {/* Logo Upload */}
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">لوگوی فروشگاه</legend>
-                <div className="bg-base-300 rounded-xl p-4">
-                  <ImageUpload
-                    imageUrl={formData.logoUrl}
-                    onUpload={(mediaId, imageUrl) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        logo: mediaId,
-                        logoUrl: imageUrl,
-                      }))
-                    }
-                    onRemove={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        logo: null,
-                        logoUrl: null,
-                      }))
-                    }
-                    alt={`${formData.name || 'Store'} Logo`}
-                    uploadLabel="آپلود لوگو"
-                    changeLabel="تغییر لوگو"
-                    recommendedSize="پیشنهاد: ۲۰۰×۲۰۰ پیکسل، PNG شفاف"
-                    shape="square"
-                    size="md"
-                  />
-                </div>
-              </fieldset>
+              <MediaSelector
+                value={formData.logo || undefined}
+                imageUrl={formData.logoUrl}
+                onChange={(mediaId, imageUrl) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    logo: mediaId,
+                    logoUrl: imageUrl,
+                  }))
+                }
+                onRemove={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    logo: null,
+                    logoUrl: null,
+                  }))
+                }
+                label="Store Logo"
+                description="Recommended: 200×200 pixels, transparent PNG"
+                shape="square"
+                aspectRatio="aspect-square"
+                allowUpload={true}
+                allowLibrarySelection={true}
+              />
             </div>
           </div>
 

@@ -401,6 +401,17 @@ export const ProductVariants: CollectionConfig = {
       },
     },
     {
+      name: 'showStockInFrontend',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Show stock status to customers (disable to hide stock info while still tracking internally)',
+        condition: (data) => data?.trackQuantity === true,
+      },
+    },
+    {
       type: 'row',
       fields: [
         {

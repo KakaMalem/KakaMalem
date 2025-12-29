@@ -92,22 +92,24 @@ export default async function VariantEditPage({ params }: VariantEditPageProps) 
   const variantTitle = variant.options?.map((o) => o.value).join(' / ') || 'تنوع'
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <Link
             href={`/dashboard/products/${id}?tab=variants`}
-            className="btn btn-ghost btn-sm btn-square"
+            className="btn btn-ghost btn-sm btn-square flex-shrink-0"
           >
             <ArrowRight className="w-5 h-5" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold">ویرایش تنوع</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-base-content/60">{product.name}</span>
-              <span className="text-base-content/40">•</span>
-              <span className="font-medium">{variantTitle}</span>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold">ویرایش تنوع</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+              <span className="text-sm sm:text-base text-base-content/60 truncate">
+                {product.name}
+              </span>
+              <span className="text-base-content/40 hidden sm:inline">•</span>
+              <span className="text-sm sm:text-base font-medium truncate">{variantTitle}</span>
             </div>
           </div>
         </div>

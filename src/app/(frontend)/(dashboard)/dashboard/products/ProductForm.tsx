@@ -1,9 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import Image from 'next/image'
 import {
   Package,
   DollarSign,
@@ -11,32 +10,14 @@ import {
   Settings,
   Save,
   Loader2,
-  X,
   Plus,
   Trash2,
-  GripVertical,
   RefreshCw,
+  GripVertical,
+  X,
 } from 'lucide-react'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import type { Product, Category, Media } from '@/payload-types'
-import ImageUpload from '@/app/(frontend)/components/ImageUpload'
+import { MultiMediaSelector } from '@/app/(frontend)/components/MultiMediaSelector'
 import RichTextEditor from '@/app/(frontend)/components/RichTextEditor'
 import { htmlToLexical, lexicalToHtml, type LexicalContent } from '@/utilities/serializeRichText'
 import VariantManager from './VariantManager'
@@ -57,65 +38,22 @@ type VariantOption = {
   values: { value: string; image?: string | null }[]
 }
 
-// Sortable Image Component
-interface SortableImageItemProps {
-  image: ProductImage
-  onRemove: (id: string) => void
-}
-
-function SortableImageItem({ image, onRemove }: SortableImageItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: image.id,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : undefined,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} className="relative group">
-      <div
-        className={`aspect-square rounded-lg overflow-hidden bg-base-300 ${isDragging ? 'ring-2 ring-primary' : ''}`}
-      >
-        <Image
-          src={image.url}
-          alt="Product image"
-          width={200}
-          height={200}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      {/* Drag handle */}
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="absolute top-2 left-2 btn btn-circle btn-xs bg-base-100/80 hover:bg-base-100 cursor-grab active:cursor-grabbing touch-none"
-        title="بکشید برای تغییر ترتیب"
-      >
-        <GripVertical className="w-3 h-3" />
-      </button>
-      {/* Remove button */}
-      <button
-        type="button"
-        onClick={() => onRemove(image.id)}
-        className="absolute top-2 right-2 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-opacity"
-        title="حذف تصویر"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  )
-}
-
 export default function ProductForm({ product, categories, storefrontId }: ProductFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+
+  // Get initial tab from URL query parameter
+  const getInitialTab = (): 'basic' | 'pricing' | 'inventory' | 'variants' => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'pricing' || tabParam === 'inventory' || tabParam === 'variants') {
+      return tabParam
+    }
+    return 'basic'
+  }
+
   const [activeTab, setActiveTab] = useState<'basic' | 'pricing' | 'inventory' | 'variants'>(
-    'basic',
+    getInitialTab(),
   )
 
   // Helper to extract images from product
@@ -169,38 +107,6 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
   // Images state
   const [images, setImages] = useState<ProductImage[]>(getProductImages())
 
-  // Drag and drop sensors for touch screen support
-  const imageSensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  )
-
-  // Handle image reordering
-  const handleImageDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (!over || active.id === over.id) {
-      return
-    }
-
-    const oldIndex = images.findIndex((img) => img.id === active.id)
-    const newIndex = images.findIndex((img) => img.id === over.id)
-
-    setImages(arrayMove(images, oldIndex, newIndex))
-  }
-
   // Selected categories
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
     if (!product?.categories) return []
@@ -219,14 +125,6 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
       ...prev,
       [name]: type === 'checkbox' ? checked : type === 'number' ? parseFloat(value) || 0 : value,
     }))
-  }
-
-  const handleImageUpload = (mediaId: string, imageUrl: string) => {
-    setImages((prev) => [...prev, { id: mediaId, url: imageUrl }])
-  }
-
-  const handleImageRemove = (imageId: string) => {
-    setImages((prev) => prev.filter((img) => img.id !== imageId))
   }
 
   const toggleCategory = (categoryId: string) => {
@@ -404,6 +302,18 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
         })
       }
 
+      // Auto-generate SKU if empty
+      let finalSku = formData.sku
+      if (!finalSku || finalSku.trim() === '') {
+        const randomNum = Math.floor(100000 + Math.random() * 900000)
+        const prefix = formData.name
+          .split(' ')[0]
+          .substring(0, 3)
+          .toUpperCase()
+          .replace(/[^A-Z]/g, '')
+        finalSku = `${prefix || 'PRD'}-${randomNum}`
+      }
+
       const payload = {
         name: formData.name,
         shortDescription: formData.shortDescription,
@@ -412,7 +322,7 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
         // Pricing
         price: formData.price,
         salePrice: formData.salePrice || null,
-        sku: formData.sku || null,
+        sku: finalSku,
         // Inventory
         trackQuantity: formData.trackQuantity,
         showStockInFrontend: formData.trackQuantity ? formData.showStockInFrontend : true,
@@ -447,7 +357,7 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
         throw new Error(data.errors?.[0]?.message || 'خطا در ذخیره محصول')
       }
 
-      await res.json()
+      const result = await res.json()
 
       // Update local state to reflect saved status
       setFormData((prev) => ({ ...prev, _status: statusToUse }))
@@ -461,7 +371,12 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
             ? 'محصول ذخیره شد'
             : 'محصول به عنوان پیش‌نویس ذخیره شد'
       toast.success(successMessage)
-      router.push('/dashboard/products')
+
+      // If creating a new product, redirect to edit page so user can see generated variants
+      // If editing, stay on the same page and just refresh to show updated data
+      if (!product && result.doc?.id) {
+        router.push(`/dashboard/products/${result.doc.id}?tab=variants`)
+      }
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'خطا در ذخیره محصول')
@@ -564,54 +479,16 @@ export default function ProductForm({ product, categories, storefrontId }: Produ
           {/* Images */}
           <div className="card bg-base-200">
             <div className="card-body space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="card-title text-lg">تصاویر محصول</h3>
-                {images.length > 1 && (
-                  <span className="text-xs text-base-content/60">
-                    تصویر اول به عنوان تصویر اصلی نمایش داده می‌شود
-                  </span>
-                )}
-              </div>
-
-              <DndContext
-                sensors={imageSensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleImageDragEnd}
-              >
-                <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {images.map((image, index) => (
-                      <div key={image.id} className="relative">
-                        {index === 0 && images.length > 0 && (
-                          <div className="absolute -top-2 -right-2 z-10 badge badge-primary badge-sm">
-                            اصلی
-                          </div>
-                        )}
-                        <SortableImageItem image={image} onRemove={handleImageRemove} />
-                      </div>
-                    ))}
-
-                    {/* Upload new image */}
-                    <div className="aspect-square">
-                      <ImageUpload
-                        imageUrl={null}
-                        onUpload={handleImageUpload}
-                        onRemove={() => {}}
-                        alt="Add product image"
-                        uploadLabel="افزودن تصویر"
-                        shape="square"
-                        size="md"
-                      />
-                    </div>
-                  </div>
-                </SortableContext>
-              </DndContext>
-
-              {images.length > 1 && (
-                <p className="text-xs text-base-content/60 mt-2">
-                  برای تغییر ترتیب تصاویر، آن‌ها را بکشید و در محل مورد نظر رها کنید
-                </p>
-              )}
+              <MultiMediaSelector
+                value={images}
+                onChange={setImages}
+                label="تصاویر محصول"
+                description="تصویر آپلود کنید یا از آرشیو عکس انتخاب کنید. اولین تصویر، تصویر اصلی محصول خواهد بود. برای تغییر ترتیب، بکشید."
+                maxItems={10}
+                allowUpload={true}
+                allowLibrarySelection={true}
+                allowReorder={true}
+              />
             </div>
           </div>
 

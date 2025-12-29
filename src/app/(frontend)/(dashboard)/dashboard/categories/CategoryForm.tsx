@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Save, Loader2 } from 'lucide-react'
 import type { Category, Media } from '@/payload-types'
-import ImageUpload from '@/app/(frontend)/components/ImageUpload'
+import { MediaSelector } from '@/app/(frontend)/components/MediaSelector'
 
 interface CategoryFormProps {
   category: Category | null
@@ -166,34 +166,30 @@ export default function CategoryForm({ category, storefrontId }: CategoryFormPro
         <div className="card-body space-y-6">
           <h3 className="card-title text-lg">تصاویر</h3>
 
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">تصویر دسته‌بندی</legend>
-            <div className="bg-base-300 rounded-xl p-4">
-              <ImageUpload
-                imageUrl={formData.smallCategoryImageUrl}
-                onUpload={(mediaId, imageUrl) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    smallCategoryImage: mediaId,
-                    smallCategoryImageUrl: imageUrl,
-                  }))
-                }
-                onRemove={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    smallCategoryImage: null,
-                    smallCategoryImageUrl: null,
-                  }))
-                }
-                alt={formData.name || 'Category'}
-                uploadLabel="آپلود تصویر"
-                changeLabel="تغییر تصویر"
-                recommendedSize="پیشنهاد: ۲۰۰×۲۰۰ پیکسل"
-                shape="square"
-                size="md"
-              />
-            </div>
-          </fieldset>
+          <MediaSelector
+            value={formData.smallCategoryImage || undefined}
+            imageUrl={formData.smallCategoryImageUrl}
+            onChange={(mediaId, imageUrl) =>
+              setFormData((prev) => ({
+                ...prev,
+                smallCategoryImage: mediaId,
+                smallCategoryImageUrl: imageUrl,
+              }))
+            }
+            onRemove={() =>
+              setFormData((prev) => ({
+                ...prev,
+                smallCategoryImage: null,
+                smallCategoryImageUrl: null,
+              }))
+            }
+            label="Category Image"
+            description="Recommended: 200×200 pixels"
+            shape="square"
+            aspectRatio="aspect-square"
+            allowUpload={true}
+            allowLibrarySelection={true}
+          />
         </div>
       </div>
 

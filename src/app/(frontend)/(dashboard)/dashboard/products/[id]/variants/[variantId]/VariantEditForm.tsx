@@ -2,15 +2,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import toast from 'react-hot-toast'
 import {
   Save,
   Loader2,
   X,
-  ImageIcon,
-  GripVertical,
-  Upload,
   DollarSign,
   Layers,
   Star,
@@ -18,25 +14,8 @@ import {
   AlertTriangle,
   Package,
 } from 'lucide-react'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import type { ProductVariant, Media } from '@/payload-types'
+import { MultiMediaSelector } from '@/app/(frontend)/components/MultiMediaSelector'
 import RichTextEditor from '@/app/(frontend)/components/RichTextEditor'
 import { htmlToLexical, lexicalToHtml, type LexicalContent } from '@/utilities/serializeRichText'
 
@@ -67,56 +46,6 @@ const stockStatusConfig: Record<string, { label: string; class: string; icon: Re
   discontinued: { label: 'توقف', class: 'badge-ghost', icon: <X className="w-3 h-3" /> },
 }
 
-// Sortable Image Component
-interface SortableVariantImageProps {
-  image: VariantImage
-  onRemove: (id: string) => void
-}
-
-function SortableVariantImage({ image, onRemove }: SortableVariantImageProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: image.id,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : undefined,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} className="relative group">
-      <div
-        className={`aspect-square rounded-lg overflow-hidden bg-base-300 ${isDragging ? 'ring-2 ring-primary' : ''}`}
-      >
-        <Image
-          src={image.url}
-          alt="Variant image"
-          width={120}
-          height={120}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="absolute top-2 left-2 btn btn-circle btn-xs bg-base-100/80 hover:bg-base-100 cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical className="w-3 h-3" />
-      </button>
-      <button
-        type="button"
-        onClick={() => onRemove(image.id)}
-        className="absolute top-2 right-2 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  )
-}
-
 // Helper to get description as HTML for rich text editing
 const getDescriptionHtml = (description: ProductVariant['description']): string => {
   if (!description) return ''
@@ -140,6 +69,7 @@ export default function VariantEditForm({
     sku: string
     description: string
     trackQuantity: boolean
+    showStockInFrontend: boolean
     quantity: number
     lowStockThreshold: number
     stockStatus: StockStatus
@@ -151,6 +81,7 @@ export default function VariantEditForm({
     sku: variant.sku || '',
     description: getDescriptionHtml(variant.description),
     trackQuantity: variant.trackQuantity ?? true,
+    showStockInFrontend: variant.showStockInFrontend ?? true,
     quantity: variant.quantity ?? 0,
     lowStockThreshold: variant.lowStockThreshold ?? 5,
     stockStatus: (variant.stockStatus as StockStatus) || 'in_stock',
@@ -158,7 +89,6 @@ export default function VariantEditForm({
     isDefault: variant.isDefault ?? false,
   })
   const [images, setImages] = useState<VariantImage[]>([])
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   // Extract images from variant
   useEffect(() => {
@@ -176,61 +106,6 @@ export default function VariantEditForm({
       setImages([])
     }
   }, [variant])
-
-  // Drag and drop sensors
-  const imageSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  const handleImageDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = images.findIndex((img) => img.id === active.id)
-    const newIndex = images.findIndex((img) => img.id === over.id)
-    setImages(arrayMove(images, oldIndex, newIndex))
-  }
-
-  const handleImageRemove = (imageId: string) => {
-    setImages((prev) => prev.filter((img) => img.id !== imageId))
-  }
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    setIsUploadingImage(true)
-    try {
-      for (const file of Array.from(files)) {
-        const uploadFormData = new FormData()
-        uploadFormData.append('file', file)
-        uploadFormData.append('alt', 'Variant image')
-
-        const res = await fetch('/api/media', {
-          method: 'POST',
-          credentials: 'include',
-          body: uploadFormData,
-        })
-
-        if (!res.ok) {
-          throw new Error('آپلود تصویر ناموفق بود')
-        }
-
-        const data = await res.json()
-        if (data.doc) {
-          setImages((prev) => [...prev, { id: data.doc.id, url: data.doc.url }])
-        }
-      }
-      toast.success('تصاویر آپلود شدند')
-    } catch (error) {
-      console.error('Upload error:', error)
-      toast.error(error instanceof Error ? error.message : 'خطا در آپلود تصویر')
-    } finally {
-      setIsUploadingImage(false)
-      e.target.value = ''
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -271,21 +146,23 @@ export default function VariantEditForm({
     formData.compareAtPrice ?? (formData.price ? productPrice : undefined)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 w-full min-w-0">
       {/* Variant Title Card */}
-      <div className="card bg-base-200">
-        <div className="card-body p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl font-bold">{variantTitle}</div>
+      <div className="card bg-base-200 w-full">
+        <div className="card-body p-4 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <div className="text-lg sm:text-2xl font-bold truncate">{variantTitle}</div>
               {variant.isDefault && (
-                <span className="badge badge-warning gap-1">
+                <span className="badge badge-warning gap-1 flex-shrink-0">
                   <Star className="w-3 h-3 fill-current" />
                   پیش‌فرض
                 </span>
               )}
             </div>
-            <div className={`badge ${stockStatusConfig[formData.stockStatus]?.class || ''} gap-1`}>
+            <div
+              className={`badge ${stockStatusConfig[formData.stockStatus]?.class || ''} gap-1 self-start sm:self-auto flex-shrink-0`}
+            >
               {stockStatusConfig[formData.stockStatus]?.icon}
               {stockStatusConfig[formData.stockStatus]?.label}
             </div>
@@ -294,17 +171,19 @@ export default function VariantEditForm({
       </div>
 
       {/* Pricing Section */}
-      <div className="card bg-base-200">
-        <div className="card-body space-y-4">
+      <div className="card bg-base-200 w-full">
+        <div className="card-body space-y-4 min-w-0">
           <div className="flex items-center gap-2 text-lg font-medium">
             <DollarSign className="w-5 h-5" />
             قیمت‌گذاری
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">قیمت فروش</legend>
-              <div className="input-group">
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">قیمت فروش</span>
+              </label>
+              <div className="join w-full">
                 <input
                   type="number"
                   value={formData.price ?? ''}
@@ -314,20 +193,24 @@ export default function VariantEditForm({
                       price: e.target.value ? parseFloat(e.target.value) : undefined,
                     })
                   }
-                  className="input input-bordered w-full"
+                  className="input input-bordered join-item flex-1 min-w-0"
                   placeholder={`پیش‌فرض: ${productSalePrice || productPrice}`}
                   min={0}
                 />
-                <span className="bg-base-300 px-4 flex items-center">؋</span>
+                <span className="btn btn-disabled join-item">؋</span>
               </div>
-              <p className="text-xs text-base-content/60 mt-1">
-                خالی بگذارید تا از قیمت محصول استفاده شود
-              </p>
-            </fieldset>
+              <label className="label">
+                <span className="label-text-alt text-base-content/60 whitespace-normal break-words">
+                  خالی بگذارید تا از قیمت محصول استفاده شود
+                </span>
+              </label>
+            </div>
 
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">قیمت قبلی (خط‌خورده)</legend>
-              <div className="input-group">
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">قیمت قبلی (خط‌خورده)</span>
+              </label>
+              <div className="join w-full">
                 <input
                   type="number"
                   value={formData.compareAtPrice ?? ''}
@@ -337,13 +220,13 @@ export default function VariantEditForm({
                       compareAtPrice: e.target.value ? parseFloat(e.target.value) : undefined,
                     })
                   }
-                  className="input input-bordered w-full"
+                  className="input input-bordered join-item flex-1 min-w-0"
                   placeholder="اختیاری"
                   min={0}
                 />
-                <span className="bg-base-300 px-4 flex items-center">؋</span>
+                <span className="btn btn-disabled join-item">؋</span>
               </div>
-            </fieldset>
+            </div>
           </div>
 
           <div className="alert alert-info py-2">
@@ -360,63 +243,90 @@ export default function VariantEditForm({
       </div>
 
       {/* SKU & Description */}
-      <div className="card bg-base-200">
-        <div className="card-body space-y-4">
+      <div className="card bg-base-200 w-full">
+        <div className="card-body space-y-4 min-w-0">
           <h3 className="text-lg font-medium">اطلاعات تنوع</h3>
 
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">شناسه (SKU)</legend>
+          <div className="form-control w-full">
+            <label className="label">
+              <span className="label-text font-medium">شناسه (SKU)</span>
+            </label>
             <input
               type="text"
               value={formData.sku}
               onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-              className="input input-bordered w-full max-w-md"
+              className="input input-bordered w-full"
               dir="ltr"
               placeholder="PROD-001-RED-L"
             />
-          </fieldset>
+          </div>
 
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">توضیحات تنوع</legend>
+          <div className="form-control w-full">
+            <label className="label">
+              <span className="label-text font-medium">توضیحات تنوع</span>
+            </label>
             <RichTextEditor
               value={formData.description}
               onChange={(value) => setFormData({ ...formData, description: value })}
               placeholder="توضیحات خاص این تنوع (مثلاً دستورات مراقبتی خاص این رنگ)"
             />
-            <p className="text-xs text-base-content/60 mt-1">
-              این توضیحات در صفحه محصول نمایش داده می‌شود وقتی این تنوع انتخاب شود
-            </p>
-          </fieldset>
+            <label className="label">
+              <span className="label-text-alt text-base-content/60 whitespace-normal break-words">
+                این توضیحات در صفحه محصول نمایش داده می‌شود وقتی این تنوع انتخاب شود
+              </span>
+            </label>
+          </div>
         </div>
       </div>
 
       {/* Inventory Section */}
-      <div className="card bg-base-200">
-        <div className="card-body space-y-4">
+      <div className="card bg-base-200 w-full">
+        <div className="card-body space-y-4 min-w-0">
           <div className="flex items-center gap-2 text-lg font-medium">
             <Layers className="w-5 h-5" />
             موجودی
           </div>
 
-          <label className="label cursor-pointer justify-start gap-4">
+          <label className="flex items-start cursor-pointer gap-4">
             <input
               type="checkbox"
               checked={formData.trackQuantity}
               onChange={(e) => setFormData({ ...formData, trackQuantity: e.target.checked })}
-              className="toggle toggle-primary"
+              className="toggle toggle-primary flex-shrink-0 mt-0.5"
             />
-            <div>
+            <div className="flex-1">
               <span className="label-text font-medium">ردیابی موجودی</span>
-              <p className="text-xs text-base-content/60">
+              <p className="text-xs text-base-content/60 mt-1 break-words">
                 وضعیت موجودی خودکار بر اساس تعداد محاسبه می‌شود
               </p>
             </div>
           </label>
 
+          {formData.trackQuantity && (
+            <label className="flex items-start cursor-pointer gap-4">
+              <input
+                type="checkbox"
+                checked={formData.showStockInFrontend}
+                onChange={(e) =>
+                  setFormData({ ...formData, showStockInFrontend: e.target.checked })
+                }
+                className="toggle toggle-primary flex-shrink-0 mt-0.5"
+              />
+              <div className="flex-1">
+                <span className="label-text font-medium">نمایش موجودی به مشتریان</span>
+                <p className="text-xs text-base-content/60 mt-1 break-words">
+                  غیرفعال کنید تا موجودی از دید مشتریان پنهان شود (ردیابی داخلی ادامه می‌یابد)
+                </p>
+              </div>
+            </label>
+          )}
+
           {formData.trackQuantity ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">تعداد موجودی</legend>
+              <div className="form-control w-full">
+                <label className="label">
+                  <span className="label-text font-medium">تعداد موجودی</span>
+                </label>
                 <input
                   type="number"
                   value={formData.quantity}
@@ -426,10 +336,12 @@ export default function VariantEditForm({
                   className="input input-bordered w-full"
                   min={0}
                 />
-              </fieldset>
+              </div>
 
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">آستانه هشدار کم بودن</legend>
+              <div className="form-control w-full">
+                <label className="label">
+                  <span className="label-text font-medium">آستانه هشدار کم بودن</span>
+                </label>
                 <input
                   type="number"
                   value={formData.lowStockThreshold}
@@ -442,135 +354,95 @@ export default function VariantEditForm({
                   className="input input-bordered w-full"
                   min={0}
                 />
-              </fieldset>
+              </div>
 
               <div className="md:col-span-2">
-                <label className="label cursor-pointer justify-start gap-4">
+                <label className="flex items-start cursor-pointer gap-4">
                   <input
                     type="checkbox"
                     checked={formData.allowBackorders}
                     onChange={(e) =>
                       setFormData({ ...formData, allowBackorders: e.target.checked })
                     }
-                    className="checkbox checkbox-primary"
+                    className="checkbox checkbox-primary flex-shrink-0 mt-0.5"
                   />
-                  <div>
+                  <div className="flex-1">
                     <span className="label-text font-medium">قبول پیش‌سفارش</span>
-                    <p className="text-xs text-base-content/60">اجازه سفارش وقتی موجودی صفر است</p>
+                    <p className="text-xs text-base-content/60 mt-1 break-words">
+                      اجازه سفارش وقتی موجودی صفر است
+                    </p>
                   </div>
                 </label>
               </div>
             </div>
           ) : (
-            <fieldset className="fieldset pt-4">
-              <legend className="fieldset-legend">وضعیت موجودی</legend>
-              <select
-                value={formData.stockStatus}
-                onChange={(e) =>
-                  setFormData({ ...formData, stockStatus: e.target.value as StockStatus })
-                }
-                className="select select-bordered w-full max-w-xs"
-              >
-                {Object.entries(stockStatusConfig).map(([value, config]) => (
-                  <option key={value} value={value}>
-                    {config.label}
-                  </option>
-                ))}
-              </select>
-            </fieldset>
+            <select
+              value={formData.stockStatus}
+              onChange={(e) =>
+                setFormData({ ...formData, stockStatus: e.target.value as StockStatus })
+              }
+              className="select select-bordered w-full mt-4"
+            >
+              {Object.entries(stockStatusConfig).map(([value, config]) => (
+                <option key={value} value={value}>
+                  {config.label}
+                </option>
+              ))}
+            </select>
           )}
         </div>
       </div>
 
       {/* Images Section */}
-      <div className="card bg-base-200">
-        <div className="card-body space-y-4">
-          <div className="flex items-center gap-2 text-lg font-medium">
-            <ImageIcon className="w-5 h-5" />
-            تصاویر تنوع
-          </div>
-
-          <DndContext
-            sensors={imageSensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleImageDragEnd}
-          >
-            <SortableContext items={images.map((i) => i.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                {images.map((image, index) => (
-                  <div key={image.id} className="relative">
-                    {index === 0 && images.length > 0 && (
-                      <div className="absolute -top-2 -right-2 z-10 badge badge-primary badge-sm">
-                        اصلی
-                      </div>
-                    )}
-                    <SortableVariantImage image={image} onRemove={handleImageRemove} />
-                  </div>
-                ))}
-
-                {/* Upload button */}
-                <label className="aspect-square rounded-lg border-2 border-dashed border-base-content/20 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-base-300/50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={isUploadingImage}
-                  />
-                  {isUploadingImage ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-base-content/40" />
-                  ) : (
-                    <>
-                      <Upload className="w-6 h-6 text-base-content/40" />
-                      <span className="text-xs text-base-content/40 mt-1">افزودن</span>
-                    </>
-                  )}
-                </label>
-              </div>
-            </SortableContext>
-          </DndContext>
-
-          <p className="text-xs text-base-content/60">
-            تصاویر این تنوع وقتی انتخاب شود نمایش داده می‌شوند. تصویر اول به عنوان تصویر اصلی نمایش
-            داده می‌شود.
-          </p>
+      <div className="card bg-base-200 w-full">
+        <div className="card-body space-y-4 min-w-0">
+          <MultiMediaSelector
+            value={images}
+            onChange={setImages}
+            label="تصاویر تنوع"
+            description="این تصاویر هنگام انتخاب این تنوع نمایش داده می‌شوند. اولین تصویر، تصویر اصلی تنوع خواهد بود. برای تغییر ترتیب، بکشید."
+            maxItems={10}
+            allowUpload={true}
+            allowLibrarySelection={true}
+            allowReorder={true}
+          />
         </div>
       </div>
 
       {/* Default Variant Toggle */}
-      <div className="card bg-base-200">
-        <div className="card-body">
-          <label className="label cursor-pointer justify-start gap-4">
+      <div className="card bg-base-200 w-full">
+        <div className="card-body min-w-0">
+          <label className="label cursor-pointer justify-start gap-4 flex-nowrap">
             <input
               type="checkbox"
               checked={formData.isDefault}
               onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-              className="checkbox checkbox-warning"
+              className="checkbox checkbox-warning flex-shrink-0"
             />
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-warning" />
+                <Star className="w-4 h-4 text-warning flex-shrink-0" />
                 <span className="label-text font-medium">تنوع پیش‌فرض</span>
               </div>
-              <p className="text-xs text-base-content/60">
-                این تنوع هنگام باز شدن صفحه محصول به صورت پیش‌فرض انتخاب شده باشد
-              </p>
             </div>
           </label>
         </div>
       </div>
 
       {/* Submit Buttons */}
-      <div className="flex items-center justify-between gap-4 p-4 bg-base-200 rounded-lg sticky bottom-0">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 p-4 bg-base-200 rounded-lg sticky bottom-0 w-full">
         <button
           type="button"
           onClick={() => router.push(`/dashboard/products/${productId}?tab=variants`)}
-          className="btn btn-ghost"
+          className="btn btn-ghost order-2 sm:order-1"
         >
           انصراف
         </button>
-        <button type="submit" disabled={isLoading} className="btn btn-primary gap-2">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="btn btn-primary gap-2 order-1 sm:order-2"
+        >
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
