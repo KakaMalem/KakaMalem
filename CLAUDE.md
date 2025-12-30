@@ -70,9 +70,14 @@ The app follows **Next.js 15 App Router** with route groups:
   - Comprehensive analytics tracking: viewCount, uniqueViewCount, addToCartCount, wishlistCount, conversion rates
   - Analytics are system-managed (read-only) and automatically updated via endpoints
   - **Variant auto-generation**: When `hasVariants` is enabled and `variantOptions` are defined, all variant combinations are automatically created in the ProductVariants collection via `afterChange` hook
+    - Variants inherit product price (salePrice if available, otherwise price) as default
+    - Variants inherit images from variant option values (e.g., color swatches) if set, otherwise from product images
+    - Variant prices and images can be customized individually after creation
 - `Categories` - Product organization with slugs used in routing
 - `ProductVariants` - Product variant combinations (sizes, colors, etc.)
   - **Auto-generated** from product's `variantOptions` - no manual creation needed!
+  - Inherit product price as default, can be customized per variant
+  - Inherit images from variant option values (priority) or product images (fallback)
   - Each variant has independent pricing, stock, and images
   - First variant auto-marked as default
 - `Orders` - Transaction records with automated `totalSold` updates

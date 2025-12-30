@@ -242,8 +242,8 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                         stockSource.trackQuantity &&
                         stockSource.quantity &&
                         !stockSource.allowBackorders
-                          ? Math.min(99, stockSource.quantity)
-                          : 99
+                          ? Math.min(9999, stockSource.quantity)
+                          : 9999
 
                       // Check if at max quantity
                       const isAtMaxQuantity = item.quantity >= maxQuantity
@@ -329,9 +329,23 @@ export default function DesktopCartSidebar({ isOpen, onClose }: DesktopCartSideb
                                 >
                                   <Minus className="w-4 h-4" />
                                 </button>
-                                <span className="px-4 font-medium min-w-[3rem] text-center">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={maxQuantity}
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 1
+                                    const clampedValue = Math.min(Math.max(1, value), maxQuantity)
+                                    handleQuantityChange(
+                                      item.productId,
+                                      item.variantId,
+                                      clampedValue,
+                                    )
+                                  }}
+                                  className="w-16 px-2 text-center font-medium bg-transparent border-none focus:outline-none focus:ring-0 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                  aria-label="تعداد"
+                                />
                                 <button
                                   onClick={() =>
                                     handleQuantityChange(

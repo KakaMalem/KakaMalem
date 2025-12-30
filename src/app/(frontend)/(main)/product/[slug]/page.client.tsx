@@ -218,8 +218,8 @@ export default function ProductDetailsClient({
   const showStockToCustomer = product.showStockInFrontend !== false
   const maxQuantity =
     stockSource.trackQuantity && stockSource.quantity && !stockSource.allowBackorders
-      ? Math.min(99, Math.max(0, stockSource.quantity - quantityInCart))
-      : 99
+      ? Math.min(9999, Math.max(0, stockSource.quantity - quantityInCart))
+      : 9999
 
   const increase = () => setQty((q) => Math.min(maxQuantity, q + 1))
   const decrease = () => setQty((q) => Math.max(1, q - 1))
@@ -805,9 +805,21 @@ export default function ProductDetailsClient({
                   >
                     <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
-                  <div className="join-item flex items-center justify-center min-w-[40px] sm:min-w-[50px] px-2 sm:px-3 font-semibold text-sm sm:text-base">
-                    {qty}
-                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxQuantity}
+                    value={qty}
+                    onChange={(e) => {
+                      if (isOutOfStock || isAddingToCart) return
+                      const value = parseInt(e.target.value) || 1
+                      const clampedValue = Math.min(Math.max(1, value), maxQuantity)
+                      setQty(clampedValue)
+                    }}
+                    disabled={isOutOfStock || isAddingToCart}
+                    className="join-item w-16 sm:w-20 text-center font-semibold text-sm sm:text-base bg-transparent border-none focus:outline-none focus:ring-0 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    aria-label="تعداد"
+                  />
                   <button
                     onClick={increase}
                     className="btn btn-sm join-item border-none"

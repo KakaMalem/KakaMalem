@@ -19,13 +19,11 @@ export const SlugComponent: React.FC<SlugComponentProps> = ({
   path,
   readOnly: readOnlyFromProps,
 }) => {
-  const { label } = field
-
   const checkboxFieldPath = path?.includes('.')
     ? `${path}.${checkboxFieldPathFromProps}`
     : checkboxFieldPathFromProps
 
-  const { value, setValue } = useField<string>({ path: path || field.name })
+  const { value, setValue } = useField<string>({ path: path || field?.name })
 
   const { dispatchFields } = useForm()
 
@@ -66,6 +64,13 @@ export const SlugComponent: React.FC<SlugComponentProps> = ({
   )
 
   const readOnly = readOnlyFromProps || checkboxValue
+
+  // Return null if field is not defined (after all hooks have been called)
+  if (!field) {
+    return null
+  }
+
+  const { label } = field
 
   return (
     <div className="field-type slug-field-component">

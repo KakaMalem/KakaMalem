@@ -69,7 +69,7 @@ export const CartItem: React.FC<CartItemProps> = ({
   const maxQuantity =
     stockSource.trackQuantity && stockSource.quantity !== null && stockSource.quantity !== undefined
       ? stockSource.quantity
-      : 99
+      : 9999
 
   const isOutOfStock = !!(
     stockSource.trackQuantity &&
@@ -156,9 +156,21 @@ export const CartItem: React.FC<CartItemProps> = ({
             >
               <Minus className="w-3 h-3" />
             </button>
-            <div className="join-item flex items-center justify-center min-w-[40px] px-2 text-sm font-medium">
-              {quantity}
-            </div>
+            <input
+              type="number"
+              min="1"
+              max={maxQuantity}
+              value={quantity}
+              onChange={(e) => {
+                if (loading) return
+                const value = parseInt(e.target.value) || 1
+                const clampedValue = Math.min(Math.max(1, value), maxQuantity)
+                onUpdateQuantity(productId, clampedValue, variantId)
+              }}
+              disabled={loading || isOutOfStock}
+              className="join-item w-14 text-center text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-0 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              aria-label="Quantity"
+            />
             <button
               onClick={handleIncrease}
               disabled={loading || quantity >= maxQuantity || isOutOfStock}

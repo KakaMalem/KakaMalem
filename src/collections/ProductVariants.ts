@@ -403,7 +403,7 @@ export const ProductVariants: CollectionConfig = {
     {
       name: 'showStockInFrontend',
       type: 'checkbox',
-      defaultValue: true,
+      defaultValue: false,
       admin: {
         position: 'sidebar',
         description:
@@ -428,7 +428,7 @@ export const ProductVariants: CollectionConfig = {
         {
           name: 'lowStockThreshold',
           type: 'number',
-          defaultValue: 5,
+          defaultValue: 0,
           min: 0,
           admin: {
             width: '50%',
@@ -491,8 +491,7 @@ export const ProductVariants: CollectionConfig = {
       relationTo: 'media',
       hasMany: true,
       admin: {
-        description:
-          '🎨 Upload variant-specific images here (e.g., different colors). Images auto-switch when customers select this variant!',
+        description: 'Upload variant-specific images here (e.g., different colors).',
       },
     },
     {

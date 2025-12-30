@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useState, useCallback, useEffect, use } from 'react'
+import { createContext, useState, useCallback, useEffect, use, useRef } from 'react'
 import * as cartApi from './cartApi'
 import type { CartData, CartContextType } from './types'
 
@@ -23,6 +23,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Track pending operations to prevent race conditions
+  const pendingOperations = useRef<Set<string>>(new Set())
+  // Track debounce timers for quantity updates
+  const updateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  // Track the latest quantity for each item (for debounced updates)
+  const latestQuantities = useRef<Map<string, number>>(new Map())
+
   /**
    * Refresh cart from server
    */
@@ -44,88 +51,170 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   /**
-   * Add item to cart
+   * Add item to cart (with optimistic update for better responsiveness)
    */
   const addItem = useCallback(
     async (productId: string, quantity: number = 1, variantId?: string) => {
-      const response = await cartApi.addToCart(productId, quantity, variantId)
+      const operationKey = `add-${productId}-${variantId || 'no-variant'}`
 
-      if (response.success) {
-        await refreshCart()
-      } else {
-        // Don't set global error state for add failures - just throw
-        // This prevents error messages from persisting when navigating to cart page
-        throw new Error(response.error || 'Failed to add item')
+      // Skip if same operation is already pending
+      if (pendingOperations.current.has(operationKey)) {
+        return
+      }
+
+      pendingOperations.current.add(operationKey)
+
+      try {
+        // Optimistic update: add/update item immediately
+        setCart((prevCart) => {
+          const existingIndex = prevCart.items.findIndex(
+            (item) =>
+              item.productId === productId &&
+              (variantId ? item.variantId === variantId : !item.variantId),
+          )
+
+          if (existingIndex !== -1) {
+            // Update existing item
+            const newItems = [...prevCart.items]
+            newItems[existingIndex] = {
+              ...newItems[existingIndex],
+              quantity: newItems[existingIndex].quantity + quantity,
+            }
+            return { items: newItems }
+          } else {
+            // Add new item (will be populated with full data after API call)
+            return {
+              items: [
+                ...prevCart.items,
+                {
+                  productId,
+                  quantity,
+                  variantId,
+                  addedAt: new Date().toISOString(),
+                },
+              ],
+            }
+          }
+        })
+
+        // Make API call in background
+        const response = await cartApi.addToCart(productId, quantity, variantId)
+
+        if (response.success) {
+          // Refresh to get full product data populated
+          await refreshCart()
+        } else {
+          // On failure, refresh to revert optimistic update
+          await refreshCart()
+          throw new Error(response.error || 'Failed to add item')
+        }
+      } finally {
+        pendingOperations.current.delete(operationKey)
       }
     },
     [refreshCart],
   )
 
   /**
-   * Remove item from cart (with optimistic update)
+   * Remove item from cart (with optimistic update and debouncing)
    */
   const removeItem = useCallback(
     async (productId: string, variantId?: string) => {
+      const operationKey = `remove-${productId}-${variantId || 'no-variant'}`
+
+      // Skip if this exact operation is already pending
+      if (pendingOperations.current.has(operationKey)) {
+        return
+      }
+
+      pendingOperations.current.add(operationKey)
       setError(null)
 
-      // Optimistic update: remove item immediately
-      const previousCart = { ...cart }
-      const optimisticItems = cart.items.filter(
-        (item) =>
-          !(
-            item.productId === productId &&
-            (variantId ? item.variantId === variantId : !item.variantId)
+      try {
+        // Optimistic update using functional setState to get latest state
+        setCart((prevCart) => ({
+          items: prevCart.items.filter(
+            (item) =>
+              !(
+                item.productId === productId &&
+                (variantId ? item.variantId === variantId : !item.variantId)
+              ),
           ),
-      )
-      setCart({ items: optimisticItems })
+        }))
 
-      // Make API call in background
-      const response = await cartApi.removeFromCart(productId, variantId)
+        // Make API call in background
+        const response = await cartApi.removeFromCart(productId, variantId)
 
-      if (!response.success) {
-        // Revert optimistic update on failure
-        setCart(previousCart)
-        setError(response.error || 'Failed to remove item')
-        throw new Error(response.error || 'Failed to remove item')
+        if (!response.success) {
+          // On failure, just refresh from server to get accurate state
+          await refreshCart()
+          setError(response.error || 'Failed to remove item')
+          throw new Error(response.error || 'Failed to remove item')
+        }
+      } finally {
+        pendingOperations.current.delete(operationKey)
       }
     },
-    [cart],
+    [refreshCart],
   )
 
   /**
-   * Update item quantity (with optimistic update)
+   * Update item quantity (with optimistic update and debouncing)
    */
   const updateQuantity = useCallback(
     async (productId: string, quantity: number, variantId?: string) => {
+      const operationKey = `update-${productId}-${variantId || 'no-variant'}`
+
       setError(null)
 
-      // Optimistic update: update quantity immediately
-      const previousCart = { ...cart }
-      const optimisticItems = cart.items
-        .map((item) => {
-          if (
-            item.productId === productId &&
-            (variantId ? item.variantId === variantId : !item.variantId)
-          ) {
-            return quantity === 0 ? null : { ...item, quantity }
-          }
-          return item
-        })
-        .filter(Boolean) as typeof cart.items
+      // Update UI immediately (optimistic update)
+      setCart((prevCart) => ({
+        items: prevCart.items
+          .map((item) => {
+            if (
+              item.productId === productId &&
+              (variantId ? item.variantId === variantId : !item.variantId)
+            ) {
+              return quantity === 0 ? null : { ...item, quantity }
+            }
+            return item
+          })
+          .filter(Boolean) as typeof prevCart.items,
+      }))
 
-      setCart({ items: optimisticItems })
+      // Store the latest quantity
+      latestQuantities.current.set(operationKey, quantity)
 
-      // Make API call in background
-      const response = await cartApi.updateCartItem(productId, quantity, variantId)
-
-      if (!response.success) {
-        // Revert optimistic update on failure
-        setCart(previousCart)
-        setError(response.error || 'Failed to update quantity')
-        throw new Error(response.error || 'Failed to update quantity')
+      // Clear any existing timer for this item
+      const existingTimer = updateTimers.current.get(operationKey)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
       }
+
+      // Debounce the API call
+      const timer = setTimeout(async () => {
+        const latestQty = latestQuantities.current.get(operationKey) || quantity
+
+        try {
+          const response = await cartApi.updateCartItem(productId, latestQty, variantId)
+
+          if (!response.success) {
+            // On failure, refresh from server to get accurate state
+            await refreshCart()
+            setError(response.error || 'Failed to update quantity')
+          }
+        } catch (err) {
+          console.error('Update quantity error:', err)
+          await refreshCart()
+        } finally {
+          updateTimers.current.delete(operationKey)
+          latestQuantities.current.delete(operationKey)
+        }
+      }, 300) // 300ms debounce
+
+      updateTimers.current.set(operationKey, timer)
     },
-    [cart],
+    [refreshCart],
   )
 
   /**

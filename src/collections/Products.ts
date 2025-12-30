@@ -224,22 +224,35 @@ export const Products: CollectionConfig = {
               // Generate all possible combinations
               type VariantOption = { name: string; value: string }
               type VariantCombination = VariantOption[]
+              type VariantOptionValue = { value: string; image?: string | { id: string } }
 
+              // Track variant option images for each combination
               const generateCombinations = (
-                options: Array<{ name: string; values: Array<{ value: string }> }>,
-              ): VariantCombination[] => {
-                if (options.length === 0) return [[]]
+                options: Array<{ name: string; values: VariantOptionValue[] }>,
+              ): Array<{ combo: VariantCombination; images: string[] }> => {
+                if (options.length === 0) return [{ combo: [], images: [] }]
                 if (options.length === 1) {
-                  return options[0].values.map((v) => [{ name: options[0].name, value: v.value }])
+                  return options[0].values.map((v) => ({
+                    combo: [{ name: options[0].name, value: v.value }],
+                    images: v.image ? [typeof v.image === 'string' ? v.image : v.image.id] : [],
+                  }))
                 }
 
                 const [first, ...rest] = options
                 const restCombinations = generateCombinations(rest)
-                const combinations: VariantCombination[] = []
+                const combinations: Array<{ combo: VariantCombination; images: string[] }> = []
 
                 for (const value of first.values) {
+                  const imageId = value.image
+                    ? typeof value.image === 'string'
+                      ? value.image
+                      : value.image.id
+                    : null
                   for (const restCombo of restCombinations) {
-                    combinations.push([{ name: first.name, value: value.value }, ...restCombo])
+                    combinations.push({
+                      combo: [{ name: first.name, value: value.value }, ...restCombo.combo],
+                      images: imageId ? [imageId, ...restCombo.images] : [...restCombo.images],
+                    })
                   }
                 }
 
@@ -250,7 +263,7 @@ export const Products: CollectionConfig = {
 
               // Create variants for new combinations
               let createdCount = 0
-              for (const combo of combinations) {
+              for (const { combo, images: optionImages } of combinations) {
                 // Check if this combination already exists
                 const exists = existingVariants.docs.some((v) => {
                   return (
@@ -273,23 +286,54 @@ export const Products: CollectionConfig = {
                   })
                   const sku = skuParts.join('-')
 
-                  // Inherit images from product (so you can customize per variant later)
-                  const variantImages = doc.images || []
+                  // Inherit images from variant option values if available, otherwise from product
+                  // Priority: variant option images > product images
+                  const variantImages = optionImages.length > 0 ? optionImages : doc.images || []
+
+                  // Prepare variant data with optional price inheritance
+                  type StockStatus =
+                    | 'in_stock'
+                    | 'out_of_stock'
+                    | 'low_stock'
+                    | 'on_backorder'
+                    | 'discontinued'
+
+                  const variantData: {
+                    product: string
+                    sku: string
+                    options: VariantCombination
+                    isDefault: boolean
+                    trackQuantity: boolean
+                    quantity: number
+                    lowStockThreshold: number
+                    stockStatus: StockStatus
+                    allowBackorders: boolean
+                    images: typeof variantImages
+                    price?: number
+                  } = {
+                    product: doc.id,
+                    sku: `${sku}-${Date.now()}`, // Add timestamp to ensure uniqueness
+                    options: combo,
+                    isDefault: createdCount === 0, // First variant is default
+                    trackQuantity: doc.trackQuantity || false,
+                    quantity: doc.quantity || 0,
+                    lowStockThreshold: doc.lowStockThreshold || 5,
+                    stockStatus: (doc.stockStatus as StockStatus) || 'in_stock',
+                    allowBackorders: doc.allowBackorders || false,
+                    images: variantImages, // Inherit product images by default
+                  }
+
+                  // Inherit product price as default (can be customized per variant later)
+                  // Use salePrice if available, otherwise regular price
+                  if (doc.salePrice) {
+                    variantData.price = doc.salePrice
+                  } else if (doc.price) {
+                    variantData.price = doc.price
+                  }
 
                   await req.payload.create({
                     collection: 'product-variants',
-                    data: {
-                      product: doc.id,
-                      sku: `${sku}-${Date.now()}`, // Add timestamp to ensure uniqueness
-                      options: combo,
-                      isDefault: createdCount === 0, // First variant is default
-                      trackQuantity: doc.trackQuantity || false,
-                      quantity: doc.quantity || 0,
-                      lowStockThreshold: doc.lowStockThreshold || 5,
-                      stockStatus: doc.stockStatus || 'in_stock',
-                      allowBackorders: doc.allowBackorders || false,
-                      images: variantImages, // Inherit product images by default
-                    },
+                    data: variantData,
                   })
                   createdCount++
                 }
@@ -604,7 +648,7 @@ export const Products: CollectionConfig = {
     {
       name: 'showStockInFrontend',
       type: 'checkbox',
-      defaultValue: true,
+      defaultValue: false,
       admin: {
         position: 'sidebar',
         description:
@@ -629,7 +673,7 @@ export const Products: CollectionConfig = {
         {
           name: 'lowStockThreshold',
           type: 'number',
-          defaultValue: 5,
+          defaultValue: 0,
           min: 0,
           admin: {
             width: '50%',

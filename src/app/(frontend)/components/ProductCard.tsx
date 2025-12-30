@@ -202,7 +202,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, storeSlug }) 
   const allowBackorders = product.allowBackorders // Variants inherit this from product
 
   const maxQuantity =
-    trackQuantity && availableQuantity && !allowBackorders ? Math.min(99, availableQuantity) : 99
+    trackQuantity && availableQuantity && !allowBackorders
+      ? Math.min(9999, availableQuantity)
+      : 9999
 
   // Check if at max quantity
   const isAtMaxQuantity = quantityInCart >= maxQuantity
