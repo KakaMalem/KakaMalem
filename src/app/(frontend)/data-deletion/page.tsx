@@ -18,7 +18,7 @@ export default function DataDeletionPage() {
               </a>
             </li>
             <li>Go to your account settings</li>
-            <li>Click on "Delete Account"</li>
+            <li>Click on &ldquo;Delete Account&ldquo;</li>
             <li>Confirm the deletion</li>
           </ol>
 
